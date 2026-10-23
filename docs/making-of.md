@@ -165,7 +165,7 @@ University of Cassino, M/H; Leo's own words not read).
 Each engine stage is a scene. The show is a pure function of time (it can seek and hold still), as
 in Paint by Moonlight's making-of. A tile is never painted on: it drops in from above, a little
 large, its shadow under it, settles, and catches a warm light as it lands. That is the gold, and
-the only gold, in line with the guardians' caution.
+the only gold: gold only where a tile catches the light.
 
 | Scene | Engine stage | What is drawn | Card (title / line / credit) | s |
 | --- | --- | --- | --- | --- |
