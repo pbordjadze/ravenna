@@ -22,6 +22,7 @@ SCENES = [("model", 3.0), ("smalti", 5.5), ("sinopia", 5.0), ("bed", 3.5), ("fac
 BUILD = ("face", "outlines", "andamento")
 SET_TIME = 0.42          # seconds a tile takes to drop and settle
 FADE = 0.5               # a card's fade in and out
+MIN_STAGE = 2.5          # the least of the continuous build a stage takes, so its card can be read
 
 # The cards (title, line, credit). Their words and sources: docs/making-of.md.
 CARDS = {
@@ -215,10 +216,21 @@ class Plan:
             s = self.times[BUILD[0]][0]
             d = 0.0
             for k in BUILD: d += self.times[k][1]      # not sum(): Python 3.12's sum compensates, Swift's + doesn't
-            idx = [i for k in BUILD for i in self.order[k]]
-            for j, i in enumerate(idx):
-                u = (j / (len(idx) - 1) if len(idx) > 1 else 0.0) ** 0.7
-                self.start[i] = s + 0.06 * d + u * (0.88 * d - SET_TIME)
+            # One build: each stage MIN_STAGE seconds of it, so every stage's card stays up long enough to
+            # read (a face's few strands included), and the rest shared out by the stages' tiles.
+            span = 0.88 * d - SET_TIME
+            stages = [k for k in BUILD if self.order[k]]
+            total = 0
+            for k in stages: total += len(self.order[k])
+            floor = min(MIN_STAGE / span, 1.0 / len(stages))
+            share = {k: floor + (1 - floor * len(stages)) * len(self.order[k]) / total for k in stages}
+            at = 0.0
+            for k in stages:
+                idx = self.order[k]
+                for j, i in enumerate(idx):
+                    # Within a stage, slow to begin and quicker as it fills.
+                    self.start[i] = s + 0.06 * d + (at + share[k] * (j / len(idx)) ** 0.8) * span
+                at += share[k]
         # The cards: one a scene, or in the continuous build one a stage from its first tile to the next's.
         self.cards = []
         for name, _ in SCENES:

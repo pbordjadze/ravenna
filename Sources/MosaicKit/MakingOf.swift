@@ -61,6 +61,8 @@ nonisolated public enum MakingOf {
     public static let setTime = 0.42
     /// A card's fade in and out, in seconds.
     public static let fade = 0.5
+    /// The least of the continuous build a stage takes, in seconds, so its card can be read.
+    public static let minStage = 2.5
 
     /// A tile in flight: its lift above its place and its scale (0 and 1 when it lands), in canvas
     /// units; the strength of its shadow under it; the warm light it catches as it lands.
@@ -231,10 +233,25 @@ nonisolated public enum MakingOf {
                 let s = times[Scene.build[0]]!.start
                 var d = 0.0
                 for k in Scene.build { d += times[k]!.length }
-                let idx = Scene.build.flatMap { order[$0]! }
-                for (j, i) in idx.enumerated() {
-                    let u = pow(idx.count > 1 ? Double(j) / Double(idx.count - 1) : 0, 0.7)
-                    start[i] = s + 0.06 * d + u * (0.88 * d - MakingOf.setTime)
+                // One build: each stage `minStage` seconds of it, so every stage's card stays up long enough
+                // to read (a face's few strands included), and the rest shared out by the stages' tiles.
+                let span = 0.88 * d - MakingOf.setTime
+                let stages = Scene.build.filter { !order[$0]!.isEmpty }
+                var total = 0
+                for k in stages { total += order[k]!.count }
+                let floor = min(MakingOf.minStage / span, 1.0 / Double(stages.count))
+                var share: [Scene: Double] = [:]
+                for k in stages {
+                    share[k] = floor + (1 - floor * Double(stages.count)) * Double(order[k]!.count) / Double(total)
+                }
+                var at = 0.0
+                for k in stages {
+                    let idx = order[k]!
+                    for (j, i) in idx.enumerated() {
+                        // Within a stage, slow to begin and quicker as it fills.
+                        start[i] = s + 0.06 * d + (at + share[k]! * pow(Double(j) / Double(idx.count), 0.8)) * span
+                    }
+                    at += share[k]!
                 }
             }
             self.start = start
