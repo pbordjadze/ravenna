@@ -1,0 +1,625 @@
+#if canImport(Darwin)
+import Darwin
+#else
+import Glibc
+#endif
+
+nonisolated extension MosaicEngine {
+    // The image primitives the prototype took from OpenCV and SciPy, in plain Swift: blurs, resizes,
+    // morphology, distance transforms and filters over row-major rasters. Bit-exact parity with those
+    // libraries isn't the aim; the same behaviour at the borders and the same kernels are.
+
+    /// A float raster, row-major.
+    nonisolated struct Plane: Sendable, Equatable {
+        var width: Int
+        var height: Int
+        var pixels: [Float]
+
+        init(width: Int, height: Int, value: Float = 0) {
+            self.width = width; self.height = height
+            pixels = [Float](repeating: value, count: width * height)
+        }
+
+        init(width: Int, height: Int, pixels: [Float]) {
+            precondition(pixels.count == width * height, "a plane's pixels are width × height")
+            self.width = width; self.height = height; self.pixels = pixels
+        }
+
+        @inline(__always) subscript(x: Int, y: Int) -> Float {
+            get { pixels[y * width + x] }
+            set { pixels[y * width + x] = newValue }
+        }
+
+        var max: Float { pixels.max() ?? 0 }
+    }
+
+    /// SciPy's `reflect` border (d c b a | a b c d | d c b a), for any index.
+    @inline(__always) static func reflectIndex(_ i: Int, _ n: Int) -> Int {
+        if n <= 1 { return 0 }
+        let period = 2 * n
+        var m = i % period
+        if m < 0 { m += period }
+        return m < n ? m : period - 1 - m
+    }
+
+    @inline(__always) static func clampIndex(_ i: Int, _ n: Int) -> Int { i < 0 ? 0 : (i >= n ? n - 1 : i) }
+
+    nonisolated enum Blur {
+        /// SciPy's Gaussian kernel: radius `int(4σ + 0.5)`, normalised.
+        static func kernel(sigma: Double) -> [Float] {
+            let r = Int(4 * sigma + 0.5)
+            var w = [Double](repeating: 0, count: 2 * r + 1)
+            var sum = 0.0
+            for i in -r...r {
+                let v = exp(-0.5 * Double(i * i) / (sigma * sigma))
+                w[i + r] = v; sum += v
+            }
+            return w.map { Float($0 / sum) }
+        }
+
+        /// `scipy.ndimage.gaussian_filter` (reflect border). Large sigmas go through three box blurs,
+        /// which match a Gaussian to within a percent or two at a fraction of the cost.
+        static func gaussian(_ p: Plane, sigma: Double) -> Plane {
+            guard sigma > 0, p.width > 0, p.height > 0 else { return p }
+            if sigma > 5 { return boxGaussian(p, sigma: sigma) }
+            let k = kernel(sigma: sigma)
+            let h = convolveRows(p.pixels, width: p.width, height: p.height, kernel: k)
+            return Plane(width: p.width, height: p.height,
+                         pixels: convolveColumns(h, width: p.width, height: p.height, kernel: k))
+        }
+
+        static func convolveRows(_ src: [Float], width w: Int, height h: Int, kernel k: [Float]) -> [Float] {
+            let r = k.count / 2, n = w + 2 * r
+            var out = [Float](repeating: 0, count: w * h)
+            let index = (0..<n).map { reflectIndex($0 - r, w) }
+            var line = [Float](repeating: 0, count: n)
+            src.withUnsafeBufferPointer { s in
+                out.withUnsafeMutableBufferPointer { o in
+                    line.withUnsafeMutableBufferPointer { l in
+                        index.withUnsafeBufferPointer { ix in
+                            k.withUnsafeBufferPointer { kk in
+                                for y in 0..<h {
+                                    let row = y * w
+                                    for i in 0..<n { l[i] = s[row + ix[i]] }
+                                    let dst = o.baseAddress! + row
+                                    for x in 0..<w { dst[x] = 0 }
+                                    for j in 0..<kk.count {
+                                        let wj = kk[j], src = l.baseAddress! + j
+                                        for x in 0..<w { dst[x] += wj * src[x] }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return out
+        }
+
+        static func convolveColumns(_ src: [Float], width w: Int, height h: Int, kernel k: [Float]) -> [Float] {
+            let r = k.count / 2
+            var out = [Float](repeating: 0, count: w * h)
+            src.withUnsafeBufferPointer { s in
+                out.withUnsafeMutableBufferPointer { o in
+                    k.withUnsafeBufferPointer { kk in
+                        for y in 0..<h {
+                            let dst = o.baseAddress! + y * w
+                            for j in 0..<kk.count {
+                                let wj = kk[j], row = s.baseAddress! + reflectIndex(y + j - r, h) * w
+                                for x in 0..<w { dst[x] += wj * row[x] }
+                            }
+                        }
+                    }
+                }
+            }
+            return out
+        }
+
+        /// The widths of three box blurs whose sum approximates a Gaussian (Kovesi's construction).
+        static func boxWidths(sigma: Double, passes n: Int = 3) -> [Int] {
+            let ideal = (12 * sigma * sigma / Double(n) + 1).squareRoot()
+            var wl = Int(ideal)
+            if wl % 2 == 0 { wl -= 1 }
+            wl = Swift.max(wl, 1)
+            let wu = wl + 2
+            let mIdeal = (12 * sigma * sigma - Double(n * wl * wl + 4 * n * wl + 3 * n)) / Double(-4 * wl - 4)
+            let m = Int(mIdeal.rounded())
+            return (0..<n).map { $0 < m ? wl : wu }
+        }
+
+        static func boxGaussian(_ p: Plane, sigma: Double) -> Plane {
+            var px = p.pixels
+            for width in boxWidths(sigma: sigma) {
+                let r = (width - 1) / 2
+                guard r > 0 else { continue }
+                px = boxRows(px, width: p.width, height: p.height, radius: r)
+                px = boxColumns(px, width: p.width, height: p.height, radius: r)
+            }
+            return Plane(width: p.width, height: p.height, pixels: px)
+        }
+
+        static func boxRows(_ src: [Float], width w: Int, height h: Int, radius r: Int) -> [Float] {
+            let n = w + 2 * r, inv = 1 / Double(2 * r + 1)
+            var out = [Float](repeating: 0, count: w * h)
+            let index = (0..<n).map { reflectIndex($0 - r, w) }
+            var line = [Double](repeating: 0, count: n)
+            src.withUnsafeBufferPointer { s in
+                out.withUnsafeMutableBufferPointer { o in
+                    line.withUnsafeMutableBufferPointer { l in
+                        index.withUnsafeBufferPointer { ix in
+                            for y in 0..<h {
+                                let row = y * w
+                                for i in 0..<n { l[i] = Double(s[row + ix[i]]) }
+                                var sum = 0.0
+                                for i in 0...(2 * r) { sum += l[i] }
+                                o[row] = Float(sum * inv)
+                                if w > 1 {
+                                    for x in 1..<w {
+                                        sum += l[x + 2 * r] - l[x - 1]
+                                        o[row + x] = Float(sum * inv)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return out
+        }
+
+        static func boxColumns(_ src: [Float], width w: Int, height h: Int, radius r: Int) -> [Float] {
+            let inv = 1 / Double(2 * r + 1)
+            var out = [Float](repeating: 0, count: w * h)
+            var acc = [Double](repeating: 0, count: w)
+            src.withUnsafeBufferPointer { s in
+                out.withUnsafeMutableBufferPointer { o in
+                    acc.withUnsafeMutableBufferPointer { a in
+                        for j in -r...r {
+                            let row = s.baseAddress! + reflectIndex(j, h) * w
+                            for x in 0..<w { a[x] += Double(row[x]) }
+                        }
+                        for y in 0..<h {
+                            if y > 0 {
+                                let add = s.baseAddress! + reflectIndex(y + r, h) * w
+                                let sub = s.baseAddress! + reflectIndex(y - r - 1, h) * w
+                                for x in 0..<w { a[x] += Double(add[x]) - Double(sub[x]) }
+                            }
+                            let dst = o.baseAddress! + y * w
+                            for x in 0..<w { dst[x] = Float(a[x] * inv) }
+                        }
+                    }
+                }
+            }
+            return out
+        }
+
+        /// `scipy.ndimage.gaussian_filter1d` along a polyline's coordinates, `nearest` border (open
+        /// lines) or `wrap` (rings).
+        static func smooth(_ pts: [SIMD2<Double>], sigma: Double, wrap: Bool) -> [SIMD2<Double>] {
+            let n = pts.count
+            guard n > 1, sigma > 0 else { return pts }
+            let r = Int(4 * sigma + 0.5)
+            var w = [Double](repeating: 0, count: 2 * r + 1), sum = 0.0
+            for i in -r...r { let v = exp(-0.5 * Double(i * i) / (sigma * sigma)); w[i + r] = v; sum += v }
+            for i in w.indices { w[i] /= sum }
+            var out = [SIMD2<Double>](repeating: .zero, count: n)
+            for i in 0..<n {
+                var acc = SIMD2<Double>.zero
+                for j in -r...r {
+                    var k = i + j
+                    if wrap { k %= n; if k < 0 { k += n } } else { k = clampIndex(k, n) }
+                    acc += w[j + r] * pts[k]
+                }
+                out[i] = acc
+            }
+            return out
+        }
+    }
+
+    nonisolated enum Resize {
+        /// OpenCV's bicubic weights (A = −0.75) for a fractional offset.
+        static func cubic(_ x: Float) -> SIMD4<Float> {
+            let a: Float = -0.75
+            let c0 = ((a * (x + 1) - 5 * a) * (x + 1) + 8 * a) * (x + 1) - 4 * a
+            let c1 = ((a + 2) * x - (a + 3)) * x * x + 1
+            let c2 = ((a + 2) * (1 - x) - (a + 3)) * (1 - x) * (1 - x) + 1
+            return SIMD4(c0, c1, c2, 1 - c0 - c1 - c2)
+        }
+
+        /// `cv2.resize(…, 2×, INTER_CUBIC)`: half-pixel centres, the border replicated.
+        static func upscale2x(_ src: [Float], width w: Int, height h: Int) -> [Float] {
+            let W = 2 * w, H = 2 * h
+            let even = cubic(0.75), odd = cubic(0.25)
+            // Rows: w → W.
+            var mid = [Float](repeating: 0, count: W * h)
+            src.withUnsafeBufferPointer { s in
+                mid.withUnsafeMutableBufferPointer { m in
+                    for y in 0..<h {
+                        let row = s.baseAddress! + y * w, dst = m.baseAddress! + y * W
+                        for i in 0..<w {
+                            let a = row[clampIndex(i - 2, w)], b = row[clampIndex(i - 1, w)], c = row[i]
+                            let d = row[clampIndex(i + 1, w)], e = row[clampIndex(i + 2, w)]
+                            dst[2 * i] = even.x * a + even.y * b + even.z * c + even.w * d
+                            dst[2 * i + 1] = odd.x * b + odd.y * c + odd.z * d + odd.w * e
+                        }
+                    }
+                }
+            }
+            // Columns: h → H.
+            var out = [Float](repeating: 0, count: W * H)
+            mid.withUnsafeBufferPointer { m in
+                out.withUnsafeMutableBufferPointer { o in
+                    for i in 0..<h {
+                        let a = m.baseAddress! + clampIndex(i - 2, h) * W, b = m.baseAddress! + clampIndex(i - 1, h) * W
+                        let c = m.baseAddress! + i * W
+                        let d = m.baseAddress! + clampIndex(i + 1, h) * W, e = m.baseAddress! + clampIndex(i + 2, h) * W
+                        let r0 = o.baseAddress! + 2 * i * W, r1 = r0 + W
+                        for x in 0..<W {
+                            r0[x] = even.x * a[x] + even.y * b[x] + even.z * c[x] + even.w * d[x]
+                            r1[x] = odd.x * b[x] + odd.y * c[x] + odd.z * d[x] + odd.w * e[x]
+                        }
+                    }
+                }
+            }
+            return out
+        }
+
+        /// `cv2.resize(…, INTER_LINEAR)` to any size: half-pixel centres, the border replicated.
+        static func bilinear(_ src: [Float], width w: Int, height h: Int, to W: Int, _ H: Int) -> [Float] {
+            if w == W && h == H { return src }
+            func taps(_ n: Int, _ N: Int) -> [(Int, Int, Float)] {
+                let scale = Double(n) / Double(N)
+                return (0..<N).map { d in
+                    let f = (Double(d) + 0.5) * scale - 0.5
+                    var s = Int(f.rounded(.down)), t = Float(f - Double(s))
+                    if s < 0 { s = 0; t = 0 }
+                    if s >= n - 1 { s = n - 1; t = 0 }
+                    return (s, Swift.min(s + 1, n - 1), t)
+                }
+            }
+            let xs = taps(w, W), ys = taps(h, H)
+            var out = [Float](repeating: 0, count: W * H)
+            src.withUnsafeBufferPointer { s in
+                for y in 0..<H {
+                    let (y0, y1, ty) = ys[y]
+                    for x in 0..<W {
+                        let (x0, x1, tx) = xs[x]
+                        let top = s[y0 * w + x0] * (1 - tx) + s[y0 * w + x1] * tx
+                        let bottom = s[y1 * w + x0] * (1 - tx) + s[y1 * w + x1] * tx
+                        out[y * W + x] = top * (1 - ty) + bottom * ty
+                    }
+                }
+            }
+            return out
+        }
+
+        /// An area-averaging downscale (or bilinear upscale) of an RGB image: the CLI's `--long-side`.
+        static func rgb(_ src: [SIMD3<Float>], width w: Int, height h: Int, to W: Int, _ H: Int) -> [SIMD3<Float>] {
+            if w == W && h == H { return src }
+            if W > w || H > h {
+                let ch = (0..<3).map { c in bilinear(src.map { $0[c] }, width: w, height: h, to: W, H) }
+                return (0..<(W * H)).map { SIMD3(ch[0][$0], ch[1][$0], ch[2][$0]) }
+            }
+            var out = [SIMD3<Float>](repeating: .zero, count: W * H)
+            let sx = Double(w) / Double(W), sy = Double(h) / Double(H)
+            for y in 0..<H {
+                let fy0 = Double(y) * sy, fy1 = fy0 + sy
+                for x in 0..<W {
+                    let fx0 = Double(x) * sx, fx1 = fx0 + sx
+                    var acc = SIMD3<Double>.zero, wsum = 0.0
+                    var yy = Int(fy0)
+                    while Double(yy) < fy1 && yy < h {
+                        let wy = Swift.min(Double(yy + 1), fy1) - Swift.max(Double(yy), fy0)
+                        var xx = Int(fx0)
+                        while Double(xx) < fx1 && xx < w {
+                            let wx = Swift.min(Double(xx + 1), fx1) - Swift.max(Double(xx), fx0)
+                            let v = src[yy * w + xx]
+                            acc += SIMD3(Double(v.x), Double(v.y), Double(v.z)) * (wx * wy); wsum += wx * wy
+                            xx += 1
+                        }
+                        yy += 1
+                    }
+                    let m = acc / Swift.max(wsum, 1e-12)
+                    out[y * W + x] = SIMD3(Float(m.x), Float(m.y), Float(m.z))
+                }
+            }
+            return out
+        }
+    }
+
+    nonisolated enum Morph {
+        /// Dilation (`max`) or erosion (`min`) of a binary mask by a (2r+1)² square, pixels outside the
+        /// image ignored, as OpenCV's morphology treats its default border.
+        static func rect(_ m: [UInt8], width w: Int, height h: Int, radius r: Int, dilate: Bool) -> [UInt8] {
+            var tmp = [UInt8](repeating: 0, count: w * h), out = tmp
+            let hit: UInt8 = dilate ? 1 : 0
+            m.withUnsafeBufferPointer { s in
+                tmp.withUnsafeMutableBufferPointer { t in
+                    for y in 0..<h {
+                        let row = y * w
+                        for x in 0..<w {
+                            var v: UInt8 = dilate ? 0 : 1
+                            for k in Swift.max(x - r, 0)...Swift.min(x + r, w - 1) where (s[row + k] != 0) == dilate {
+                                v = hit; break
+                            }
+                            t[row + x] = v
+                        }
+                    }
+                }
+            }
+            tmp.withUnsafeBufferPointer { t in
+                out.withUnsafeMutableBufferPointer { o in
+                    for y in 0..<h {
+                        for x in 0..<w {
+                            var v: UInt8 = dilate ? 0 : 1
+                            for k in Swift.max(y - r, 0)...Swift.min(y + r, h - 1) where (t[k * w + x] != 0) == dilate {
+                                v = hit; break
+                            }
+                            o[y * w + x] = v
+                        }
+                    }
+                }
+            }
+            return out
+        }
+
+        /// `MORPH_CLOSE` with a (2r+1)² square.
+        static func close(_ m: [UInt8], width w: Int, height h: Int, radius r: Int) -> [UInt8] {
+            rect(rect(m, width: w, height: h, radius: r, dilate: true), width: w, height: h, radius: r, dilate: false)
+        }
+
+        /// `cv2.getStructuringElement(MORPH_ELLIPSE, (2r+1, 2r+1))` as the half-width of each row, top to bottom.
+        static func ellipseRows(radius r: Int) -> [Int] {
+            guard r > 0 else { return [0] }
+            let inv = 1 / Double(r * r)
+            return (0...(2 * r)).map { i in
+                let dy = i - r
+                return Int((Double(r) * (Double(r * r - dy * dy) * inv).squareRoot()).rounded(.toNearestOrEven))
+            }
+        }
+
+        /// A 3×3 morphological gradient of a label image: whether any neighbour in the image differs.
+        static func labelEdges(_ labels: [UInt8], width w: Int, height h: Int) -> [UInt8] {
+            var out = [UInt8](repeating: 0, count: w * h)
+            labels.withUnsafeBufferPointer { l in
+                out.withUnsafeMutableBufferPointer { o in
+                    for y in 0..<h {
+                        let y0 = Swift.max(y - 1, 0), y1 = Swift.min(y + 1, h - 1)
+                        for x in 0..<w {
+                            let v = l[y * w + x]
+                            let x0 = Swift.max(x - 1, 0), x1 = Swift.min(x + 1, w - 1)
+                            var edge: UInt8 = 0
+                            outer: for yy in y0...y1 {
+                                for xx in x0...x1 where l[yy * w + xx] != v { edge = 1; break outer }
+                            }
+                            o[y * w + x] = edge
+                        }
+                    }
+                }
+            }
+            return out
+        }
+
+        /// `cv2.medianBlur(labels, k)` for small label values (all under `levels`), the border replicated:
+        /// a sliding histogram along each row.
+        static func median(_ labels: [UInt8], width w: Int, height h: Int, size k: Int, levels: Int) -> [UInt8] {
+            let r = k / 2, half = (k * k) / 2
+            var out = [UInt8](repeating: 0, count: w * h)
+            var hist = [Int](repeating: 0, count: Swift.max(levels, 1))
+            let bins = hist.count
+            labels.withUnsafeBufferPointer { l in
+                out.withUnsafeMutableBufferPointer { o in
+                    hist.withUnsafeMutableBufferPointer { hs in
+                        for y in 0..<h {
+                            for b in 0..<bins { hs[b] = 0 }
+                            let rows = (-r...r).map { clampIndex(y + $0, h) * w }
+                            for dx in -r...r {
+                                let xx = clampIndex(dx, w)
+                                for row in rows { hs[Int(l[row + xx])] += 1 }
+                            }
+                            for x in 0..<w {
+                                if x > 0 {
+                                    let add = clampIndex(x + r, w), sub = clampIndex(x - r - 1, w)
+                                    for row in rows { hs[Int(l[row + add])] += 1; hs[Int(l[row + sub])] -= 1 }
+                                }
+                                var c = 0, v = 0
+                                while v < bins { c += hs[v]; if c > half { break }; v += 1 }
+                                o[y * w + x] = UInt8(Swift.min(v, bins - 1))
+                            }
+                        }
+                    }
+                }
+            }
+            return out
+        }
+
+        /// A blocked transpose of a row-major raster.
+        static func transpose<T>(_ src: [T], width w: Int, height h: Int, zero: T) -> [T] {
+            var out = [T](repeating: zero, count: w * h)
+            let b = 32
+            src.withUnsafeBufferPointer { s in
+                out.withUnsafeMutableBufferPointer { o in
+                    var y0 = 0
+                    while y0 < h {
+                        var x0 = 0
+                        while x0 < w {
+                            for y in y0..<Swift.min(y0 + b, h) {
+                                for x in x0..<Swift.min(x0 + b, w) { o[x * h + y] = s[y * w + x] }
+                            }
+                            x0 += b
+                        }
+                        y0 += b
+                    }
+                }
+            }
+            return out
+        }
+
+        /// The maximum over a window [x − before, x + after] × [y − before, y + after] clipped to the
+        /// image: `cv2.dilate(src, np.ones((k, k)))` with its anchor at k/2 (before = k/2, after = k − 1 − k/2).
+        static func maxFilter(_ p: Plane, before: Int, after: Int) -> Plane {
+            let w = p.width, h = p.height
+            let rows = slidingMaxRows(p.pixels, width: w, height: h, before: before, after: after)
+            let t = transpose(rows, width: w, height: h, zero: 0)
+            let cols = slidingMaxRows(t, width: h, height: w, before: before, after: after)
+            return Plane(width: w, height: h, pixels: transpose(cols, width: h, height: w, zero: 0))
+        }
+
+        static func slidingMaxRows(_ src: [Float], width w: Int, height h: Int, before: Int, after: Int) -> [Float] {
+            var out = [Float](repeating: 0, count: w * h)
+            var dq = [Int](repeating: 0, count: w)
+            src.withUnsafeBufferPointer { s in
+                out.withUnsafeMutableBufferPointer { o in
+                    dq.withUnsafeMutableBufferPointer { q in
+                        for y in 0..<h {
+                            let row = s.baseAddress! + y * w, dst = o.baseAddress! + y * w
+                            var head = 0, tail = 0, j = 0
+                            for i in 0..<w {
+                                let right = Swift.min(i + after, w - 1)
+                                while j <= right {
+                                    let v = row[j]
+                                    while tail > head && row[q[tail - 1]] <= v { tail -= 1 }
+                                    q[tail] = j; tail += 1; j += 1
+                                }
+                                while q[head] < i - before { head += 1 }
+                                dst[i] = row[q[head]]
+                            }
+                        }
+                    }
+                }
+            }
+            return out
+        }
+    }
+
+    nonisolated enum Distance {
+        /// The exact Euclidean distance from each pixel to the nearest pixel where `seed` is set
+        /// (Felzenszwalb and Huttenlocher, 2012): `distance_transform_edt(~seed)`. Without any seed
+        /// every distance is `far`.
+        static func edt(seed: [UInt8], width w: Int, height h: Int, far: Float = 1e9) -> Plane {
+            let inf = 1e20
+            // Along rows: the 1D distance to the nearest seed, squared.
+            var g = [Double](repeating: inf, count: w * h)
+            seed.withUnsafeBufferPointer { s in
+                g.withUnsafeMutableBufferPointer { gg in
+                    for y in 0..<h {
+                        let row = y * w
+                        var last = -1
+                        for x in 0..<w {
+                            if s[row + x] != 0 { last = x }
+                            if last >= 0 { let d = Double(x - last); gg[row + x] = d * d }
+                        }
+                        last = -1
+                        for x in stride(from: w - 1, through: 0, by: -1) {
+                            if s[row + x] != 0 { last = x }
+                            if last >= 0 { let d = Double(last - x); gg[row + x] = Swift.min(gg[row + x], d * d) }
+                        }
+                    }
+                }
+            }
+            // Along columns: the lower envelope of parabolas.
+            let t = Morph.transpose(g, width: w, height: h, zero: 0)
+            var d = [Double](repeating: 0, count: w * h)
+            var v = [Int](repeating: 0, count: h), z = [Double](repeating: 0, count: h + 1)
+            t.withUnsafeBufferPointer { tt in
+                d.withUnsafeMutableBufferPointer { dd in
+                    for x in 0..<w {
+                        lowerEnvelope(tt.baseAddress! + x * h, count: h, out: dd.baseAddress! + x * h, v: &v, z: &z)
+                    }
+                }
+            }
+            let back = Morph.transpose(d, width: h, height: w, zero: 0)
+            return Plane(width: w, height: h, pixels: back.map { $0 >= inf * 0.5 ? far : Float($0.squareRoot()) })
+        }
+
+        static func lowerEnvelope(_ f: UnsafePointer<Double>, count n: Int, out: UnsafeMutablePointer<Double>,
+                                  v: inout [Int], z: inout [Double]) {
+            guard n > 0 else { return }
+            var k = 0
+            v[0] = 0; z[0] = -.infinity; z[1] = .infinity
+            if n > 1 {
+                for q in 1..<n {
+                    let fq = f[q] + Double(q * q)
+                    var s = (fq - (f[v[k]] + Double(v[k] * v[k]))) / Double(2 * q - 2 * v[k])
+                    while s <= z[k] {   // z[0] is −∞, so k never drops below 0
+                        k -= 1
+                        s = (fq - (f[v[k]] + Double(v[k] * v[k]))) / Double(2 * q - 2 * v[k])
+                    }
+                    k += 1
+                    v[k] = q; z[k] = s; z[k + 1] = .infinity
+                }
+            }
+            k = 0
+            for q in 0..<n {
+                while z[k + 1] < Double(q) { k += 1 }
+                let dq = Double(q - v[k])
+                out[q] = dq * dq + f[v[k]]
+            }
+        }
+
+        /// `np.gradient`: central differences inside, one-sided at the edges. Returns (d/dy, d/dx).
+        static func gradient(_ p: Plane) -> (gy: Plane, gx: Plane) {
+            let w = p.width, h = p.height
+            var gx = Plane(width: w, height: h), gy = Plane(width: w, height: h)
+            guard w > 1 || h > 1 else { return (gy, gx) }
+            for y in 0..<h {
+                for x in 0..<w {
+                    if w > 1 {
+                        gx[x, y] = x == 0 ? p[1, y] - p[0, y] : x == w - 1 ? p[w - 1, y] - p[w - 2, y] : (p[x + 1, y] - p[x - 1, y]) / 2
+                    }
+                    if h > 1 {
+                        gy[x, y] = y == 0 ? p[x, 1] - p[x, 0] : y == h - 1 ? p[x, h - 1] - p[x, h - 2] : (p[x, y + 1] - p[x, y - 1]) / 2
+                    }
+                }
+            }
+            return (gy, gx)
+        }
+    }
+
+    nonisolated enum Components {
+        /// Labels 4- (or 8-) connected components of a mask in raster order of their first pixel
+        /// (1, 2, …; 0 is the background) and counts their pixels (`sizes[0]` unused).
+        static func label(_ m: [UInt8], width w: Int, height h: Int, eight: Bool = false) -> (labels: [Int32], sizes: [Int]) {
+            var labels = [Int32](repeating: 0, count: w * h)
+            var sizes = [0]
+            var stack = [Int]()
+            m.withUnsafeBufferPointer { mm in
+                labels.withUnsafeMutableBufferPointer { l in
+                    for start in 0..<(w * h) where mm[start] != 0 && l[start] == 0 {
+                        let id = Int32(sizes.count)
+                        var n = 0
+                        l[start] = id; stack.append(start)
+                        while let p = stack.popLast() {
+                            n += 1
+                            let x = p % w, y = p / w
+                            @inline(__always) func visit(_ q: Int) {
+                                if mm[q] != 0 && l[q] == 0 { l[q] = id; stack.append(q) }
+                            }
+                            if x > 0 { visit(p - 1) }
+                            if x < w - 1 { visit(p + 1) }
+                            if y > 0 { visit(p - w) }
+                            if y < h - 1 { visit(p + w) }
+                            if eight {
+                                if x > 0 && y > 0 { visit(p - w - 1) }
+                                if x < w - 1 && y > 0 { visit(p - w + 1) }
+                                if x > 0 && y < h - 1 { visit(p + w - 1) }
+                                if x < w - 1 && y < h - 1 { visit(p + w + 1) }
+                            }
+                        }
+                        sizes.append(n)
+                    }
+                }
+            }
+            return (labels, sizes)
+        }
+
+        /// `skimage.morphology.remove_small_objects(m, max_size=…)` (4-connected): drops every
+        /// component of at most `maxSize` pixels.
+        static func removeSmall(_ m: [UInt8], width w: Int, height h: Int, maxSize: Int) -> [UInt8] {
+            let (labels, sizes) = label(m, width: w, height: h)
+            var out = m
+            for i in out.indices where labels[i] > 0 && sizes[Int(labels[i])] <= maxSize { out[i] = 0 }
+            return out
+        }
+    }
+}

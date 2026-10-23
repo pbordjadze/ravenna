@@ -26,6 +26,12 @@ let package = Package(
         // resolving PaintCore, and Linux tests them.
         .target(name: "MosaicKit"),
         .testTarget(name: "MosaicKitTests", dependencies: ["MosaicKit"]),
+        // The engine: a photo, its contours and its faces' features made into a Mosaic, ported from
+        // `prototype/mosaic_faces.py`. Plain Swift on MosaicKit's types only, so the app compiles
+        // these files directly too; `mosaic` runs it on files for comparison with the prototype.
+        .target(name: "MosaicEngine", dependencies: ["MosaicKit"]),
+        .testTarget(name: "MosaicEngineTests", dependencies: ["MosaicEngine", "MosaicKit"]),
+        .executableTarget(name: "mosaic", dependencies: ["MosaicEngine", "MosaicKit"]),
         .target(
             name: "MosaicCore",
             dependencies: [.product(name: "PaintCore", package: "paint-by-number")]
