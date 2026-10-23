@@ -16,6 +16,7 @@ struct SettingView: View {
     @State private var keepsake: Keepsake?
     @State private var making = false
     @State private var wide = false
+    @State private var height: CGFloat = 800
     @AppStorage(Keys.border) private var border = Border.none
     @AppStorage(Keys.ground) private var ground = GroundChoice.picture
 
@@ -33,7 +34,8 @@ struct SettingView: View {
                     // place, so the whole wall stays in view.
                     if bench.setting.isComplete(bench.mosaic), bench.rake == nil {
                         Finished(work: work, tiles: bench.mosaic.tiles.count, paints: bench.mosaic.palette.count,
-                                 axis: wide ? .vertical : .horizontal, making: making, share: share) { showingWork = true }
+                                 axis: wide ? .vertical : .horizontal, most: height * 0.45,
+                                 making: making, share: share) { showingWork = true }
                             .transition(.opacity)
                     } else {
                         Tray(bench: bench, axis: wide ? .vertical : .horizontal)
@@ -67,6 +69,7 @@ struct SettingView: View {
         }
         .animation(.easeInOut(duration: 0.5), value: bench?.rake == nil)
         .onGeometryChange(for: Bool.self) { $0.size.width > $0.size.height * 1.15 } action: { wide = $0 }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
         .task(id: "\(library.detail.rawValue)-\(ground.rawValue)") {
             bench = nil
             failed = false
@@ -401,20 +404,24 @@ private struct Finished: View {
     let paints: Int
     /// Below the wall, or down its side.
     let axis: Axis
+    /// Below the wall, the most height it takes before it scrolls.
+    let most: CGFloat
     /// The picture to share is being made.
     let making: Bool
     let share: () -> Void
     let about: () -> Void
 
+    @State private var cardHeight: CGFloat = 200
+
     var body: some View {
-        // As it is when it fits; scrolling when the text is large.
-        ViewThatFits(in: .vertical) {
-            card
-            ScrollView { card }.scrollBounceBehavior(.basedOnSize)
+        // As tall as its words below the wall, up to `most`, then scrolling.
+        ScrollView {
+            card.onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardHeight = $0 }
         }
-        .frame(maxWidth: axis == .vertical ? 320 : .infinity, maxHeight: axis == .vertical ? .infinity : 360)
+        .scrollBounceBehavior(.basedOnSize)
+        .frame(maxWidth: axis == .vertical ? 320 : .infinity)
+        .frame(height: axis == .horizontal ? min(cardHeight, most) : nil)
         .background(Theme.panel)
-        .layoutPriority(1)
     }
 
     private var card: some View {
@@ -423,9 +430,11 @@ private struct Finished: View {
                 .accessibilityAddTraits(.isHeader)
             Text("Every tile of \(work.title) is in place.").font(Theme.body(15)).foregroundStyle(Theme.plaster)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
             Text("\(tiles.formatted()) tiles in \(paints) colours, set by your hand.")
                 .font(Theme.body(13)).foregroundStyle(Theme.muted)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
             // Side by side, or one above the other at the largest text sizes.
             ViewThatFits {
                 HStack(spacing: 10) { buttons }

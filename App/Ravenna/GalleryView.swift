@@ -149,7 +149,7 @@ private struct WorkCard: View {
             Text(work.isOwn ? work.place : "\(work.place), \(work.date)").font(Theme.body(13)).foregroundStyle(Theme.muted)
             if progress > 0 {
                 Text(progress >= 1 ? "Set" : "\(Int((progress * 100).rounded(.down)))% set")
-                    .font(.caption.monospacedDigit()).foregroundStyle(progress >= 1 ? Theme.gold : Theme.muted)
+                    .font(Theme.body(13).monospacedDigit()).foregroundStyle(progress >= 1 ? Theme.gold : Theme.muted)
             }
         }
         .contentShape(Rectangle())
