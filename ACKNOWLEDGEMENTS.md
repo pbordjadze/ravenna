@@ -51,6 +51,19 @@ Apache License, Version 2.0 (in full below).
 - Face landmarks: Apple's Vision framework on the device; on the sketchbook's bench, Google's
   MediaPipe face landmarker (Apache-2.0), which never ships in the app.
 
+## Type
+
+Alegreya and Alegreya SC, designed by Juan Pablo del Peral for Huerta Tipográfica
+(https://github.com/huertatipografica/Alegreya), copied from Google Fonts
+(https://github.com/google/fonts, `ofl/alegreya`, `ofl/alegreyasc`) into
+`App/Ravenna/Resources/Fonts`. Copyright 2011 The Alegreya Project Authors. SIL Open Font
+License 1.1, in full beside the fonts (`Alegreya-OFL.txt`, the same for both families).
+
+## Sound
+
+Every sound in the app is synthesized by it (`Sources/MosaicKit/Hand.swift`, `Voice`): noise and
+decaying sine partials, computed at launch. No recordings or samples are used.
+
 ## Apache License, Version 2.0
 
 TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
