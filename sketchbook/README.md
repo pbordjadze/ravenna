@@ -34,6 +34,8 @@ controlnet_aux 0.0.10.
 | 1 | kodim04, kodim15, kodim17, astronaut, chelsea | Nothing: the prototype as the proposal left it, the baseline. |
 | 2 | kodim04, chelsea | 3 finishes at 1024 px (`render.py` A, B, C; B and C draw `mosaic_faces.py` with `GROUT=2 TIGHT=1`), and C at the detail slider's ends (`prep.py` at 724 and 1774 px: about ½ and 3× the tiles). |
 | 3 | kodim04, kodim15, astronaut, two Fayum portraits (the Met, public domain; scratch only) | Faces: the features set as pieces (`features.py` → `FEATURES`), tight set, finish C; each beside its face without them. |
+| 4 | the young woman in red, kodim04, chelsea | The Swift engine beside the Python bench (`.build/release/mosaic`, same inputs). |
+| 5 | kodim04, kodim15, astronaut, two Fayum portraits | The mouth: as in the photo, or Byzantine (`mosaic --mouth byzantine`), small and closed. |
 
 `bundle.py` makes the app's bundled mosaics with the app's own engine (`swift build -c release`
 first; it runs `.build/release/mosaic`), so each tile carries its build stage for the making-of.

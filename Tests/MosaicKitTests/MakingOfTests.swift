@@ -131,11 +131,24 @@ struct MakingOfTests {
         #expect(show.sceneOf.allSatisfy { $0 == .andamento } && show.start.allSatisfy { $0.isFinite })
     }
 
+    @Test func everyCardInTheContinuousBuildStaysLongEnoughToRead() throws {
+        // The fixture's face holds all but 4 of its strands: their stage still gets its time.
+        let show = MakingOf.Show(try Self.mosaic(), options: MakingOf.Options(flow: .continuous))
+        var seen: [MakingOf.Scene: Double] = [:]
+        for k in 0..<Int(show.duration * 100) {
+            if let c = show.card(at: Double(k) / 100) { seen[c.scene, default: 0] += 0.01 }
+        }
+        let shown = MakingOf.Scene.build.compactMap { seen[$0] }
+        #expect(shown.count == 3, "every stage has its card")
+        let least = MakingOf.minStage * 0.9
+        #expect(shown.allSatisfy { $0 >= least }, "none flashes by")
+    }
+
     @Test func eachBundledMosaicPlaysItsStages() throws {
         let dir = Self.fixtures.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("App/Ravenna/Resources/Mosaics")
         let files = try FileManager.default.contentsOfDirectory(atPath: dir.path).filter { $0.hasSuffix("-standard.json") }
-        #expect(files.count == 5)
+        #expect(files.count == 9)
         for f in files {
             let m = try JSONDecoder().decode(Mosaic.self, from: Data(contentsOf: dir.appendingPathComponent(f)))
             let show = MakingOf.Show(m)

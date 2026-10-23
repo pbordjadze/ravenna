@@ -40,6 +40,41 @@
       "title": "William the Hippopotamus",
       "date": "ca. 1961–1878 BCE",
       "place": "Middle Kingdom Egypt"
+    },
+    {
+      "id": "man-with-a-mole",
+      "met": 547857,
+      "face": true,
+      "title": "A Man with a Mole on His Nose",
+      "date": "130–150 CE",
+      "place": "Roman Egypt"
+    },
+    {
+      "id": "elderly-lady",
+      "met": 547859,
+      "face": true,
+      "title": "An Elderly Lady with a Gold Wreath",
+      "date": "100–125 CE",
+      "place": "Roman Egypt"
+    },
+    {
+      "id": "mother-and-child-gold-glass",
+      "met": 463989,
+      "face": true,
+      "title": "A Mother and Child in Gold Glass",
+      "date": "early 4th century",
+      "place": "Roman, probably Alexandria",
+      "window": "0.396,0.415,0.25"
+    },
+    {
+      "id": "hodegetria",
+      "met": 831188,
+      "face": true,
+      "title": "The Virgin and Child, a Hodegetria Icon",
+      "date": "13th century",
+      "place": "Byzantine or Crusader, Egypt",
+      "window": "0.223,0.083,0.25",
+      "features": "eyes"
     }
   ]
 }
