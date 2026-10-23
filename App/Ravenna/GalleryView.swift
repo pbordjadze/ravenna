@@ -115,7 +115,7 @@ struct GalleryView: View {
                 .accessibilityAddTraits(.isHeader)
             if let note { Text(note).font(Theme.body(14)).foregroundStyle(Theme.muted) }
             // One column at the largest text sizes, so titles have room.
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 300 : 160), spacing: 16)], spacing: 22) { content() }
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 300 : 160), spacing: 16, alignment: .top)], spacing: 22) { content() }
         }
     }
 }
@@ -149,7 +149,7 @@ private struct WorkCard: View {
             Text(work.isOwn ? work.place : "\(work.place), \(work.date)").font(Theme.body(13)).foregroundStyle(Theme.muted)
             if progress > 0 {
                 Text(progress >= 1 ? "Set" : "\(Int((progress * 100).rounded(.down)))% set")
-                    .font(.caption.monospacedDigit()).foregroundStyle(progress >= 1 ? Theme.gold : Theme.muted)
+                    .font(Theme.body(13).monospacedDigit()).foregroundStyle(progress >= 1 ? Theme.gold : Theme.muted)
             }
         }
         .contentShape(Rectangle())

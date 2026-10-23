@@ -16,6 +16,7 @@ struct SettingView: View {
     @State private var keepsake: Keepsake?
     @State private var making = false
     @State private var wide = false
+    @State private var height: CGFloat = 800
     @AppStorage(Keys.border) private var border = Border.none
     @AppStorage(Keys.ground) private var ground = GroundChoice.picture
 
@@ -29,13 +30,16 @@ struct SettingView: View {
                     Wall(bench: bench, finish: library.finish, bed: library.image(work, "bed")) { set in
                         library.save(set, work, library.detail)
                     }
-                    Tray(bench: bench, axis: wide ? .vertical : .horizontal)
-                }
-                // The word Set once the light has passed over the finished wall.
-                if bench.setting.isComplete(bench.mosaic), bench.rake == nil {
-                    Finished(work: work, tiles: bench.mosaic.tiles.count, paints: bench.mosaic.palette.count,
-                             making: making, share: share) { showingWork = true }
-                        .transition(.opacity)
+                    // Once the light has passed over the finished wall, the word Set takes the tray's
+                    // place, so the whole wall stays in view.
+                    if bench.setting.isComplete(bench.mosaic), bench.rake == nil {
+                        Finished(work: work, tiles: bench.mosaic.tiles.count, paints: bench.mosaic.palette.count,
+                                 axis: wide ? .vertical : .horizontal, most: height * 0.45,
+                                 making: making, share: share) { showingWork = true }
+                            .transition(.opacity)
+                    } else {
+                        Tray(bench: bench, axis: wide ? .vertical : .horizontal)
+                    }
                 }
             } else if failed {
                 ContentUnavailableView("Couldn't open this mosaic", systemImage: "square.grid.3x3",
@@ -65,6 +69,7 @@ struct SettingView: View {
         }
         .animation(.easeInOut(duration: 0.5), value: bench?.rake == nil)
         .onGeometryChange(for: Bool.self) { $0.size.width > $0.size.height * 1.15 } action: { wide = $0 }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
         .task(id: "\(library.detail.rawValue)-\(ground.rawValue)") {
             bench = nil
             failed = false
@@ -397,36 +402,53 @@ private struct Finished: View {
     let work: Work
     let tiles: Int
     let paints: Int
+    /// Below the wall, or down its side.
+    let axis: Axis
+    /// Below the wall, the most height it takes before it scrolls.
+    let most: CGFloat
     /// The picture to share is being made.
     let making: Bool
     let share: () -> Void
     let about: () -> Void
 
+    @State private var cardHeight: CGFloat = 200
+
     var body: some View {
+        // As tall as its words below the wall, up to `most`, then scrolling.
+        ScrollView {
+            card.onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardHeight = $0 }
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .frame(maxWidth: axis == .vertical ? 320 : .infinity)
+        .frame(height: axis == .horizontal ? min(cardHeight, most) : nil)
+        .background(Theme.panel)
+    }
+
+    private var card: some View {
         VStack(spacing: 10) {
             Text("Set").font(Theme.title(28)).foregroundStyle(Theme.gold)
                 .accessibilityAddTraits(.isHeader)
             Text("Every tile of \(work.title) is in place.").font(Theme.body(15)).foregroundStyle(Theme.plaster)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
             Text("\(tiles.formatted()) tiles in \(paints) colours, set by your hand.")
                 .font(Theme.body(13)).foregroundStyle(Theme.muted)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
             // Side by side, or one above the other at the largest text sizes.
             ViewThatFits {
                 HStack(spacing: 10) { buttons }
                 VStack(spacing: 8) { buttons }
             }
         }
-        .padding(20)
-        .background(Theme.panel.opacity(0.94), in: RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal, 24)
-        .frame(maxHeight: .infinity, alignment: .top)
-        .padding(.top, 12)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder private var buttons: some View {
         Button(action: share) {
-            if making { ProgressView() } else { Label("Share", systemImage: "square.and.arrow.up") }
+            if making { ProgressView() } else { Label("Share", systemImage: "square.and.arrow.up").foregroundStyle(Theme.ground) }
         }
         .buttonStyle(.borderedProminent)
         .disabled(making)

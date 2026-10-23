@@ -106,7 +106,7 @@ struct NewMosaicView: View {
                 Button {
                     lay()
                 } label: {
-                    Text("Lay the tiles").font(Theme.title(18)).frame(maxWidth: .infinity)
+                    Text("Lay the tiles").font(Theme.title(18)).foregroundStyle(Theme.ground).frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
