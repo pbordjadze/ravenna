@@ -1,7 +1,9 @@
 """mosaic_faces.py <photo> <contours.png> <out prefix> [pitch] [paints] [cut]: mosaic_look.py with the two
 habits mosaicists keep for faces. Environment: FINE (the pitch inside detail boxes), BOXES
 ("x0,y0,x1,y1;..." photo pixels: where a face is), CUT_FINE (a lower outline cut inside them),
-EYES ("cx,cy,r[,pupil];...": each eye one round piece, a slit pupil when given). Hand-marked
+EYES ("cx,cy,r[,pupil];...": each eye one round piece, a slit pupil when given), GROUT (the joint, px at
+twice the photo's scale, default 4), TIGHT=1 (a tight set: rows cut to fit at their ends, the
+gaps filled with pieces cut to the space rather than loose squares). Hand-marked
 here; in the app they would come from the face detection the coloring book already runs.
 From mosaic_look.py: The coloring book's own outlines (the contour model's map) give the cartoon:
 its strong lines, smoothed, laid as single rows of tiles in a dark smalti of the local hue. The
@@ -23,7 +25,8 @@ import os
 FINE = float(os.environ.get("FINE", "0"))
 BOXES = [tuple(map(float, b.split(","))) for b in os.environ.get("BOXES", "").split(";") if b]
 EYES = [tuple(map(float, e.split(","))) for e in os.environ.get("EYES", "").split(";") if e]
-G = 4
+G = int(os.environ.get("GROUT", "4"))
+TIGHT = os.environ.get("TIGHT") == "1"
 T = S - G
 SCALE = 2
 src = cv2.cvtColor(cv2.imread(photo), cv2.COLOR_BGR2RGB).astype(np.float32) / 255
@@ -133,8 +136,8 @@ def place(poly, strand, min_frac=0.45, eye=None):
     sy0, sx0 = max(ya, 0), max(xa, 0); sy1, sx1 = min(ya + q.shape[0], H), min(xa + q.shape[1], W)
     np.maximum(forbid[sy0:sy1, sx0:sx1], q[sy0 - ya:sy1 - ya, sx0 - xa:sx1 - xa], out=forbid[sy0:sy1, sx0:sx1])
     tiles.append({"poly": p, "strand": strand, "eye": eye}); return True
-def square(c, t):
-    h = (pitch(c) - G) / 2
+def square(c, t, grow=1.0):
+    h = grow * (pitch(c) - G) / 2
     t = t / (np.hypot(*t) + 1e-9); n = np.array([-t[1], t[0]])
     return np.array([c + a * h * t + b * h * n for a, b in ((-1, -1), (1, -1), (1, 1), (-1, 1))])
 def resample(P, step=None, closed=False):
@@ -208,16 +211,16 @@ while 0.5 + G / S + k < Dn.max():
         pts, length = resample(np.vstack([R, R[:1]]))
         if length < pitch(R[0]) or len(pts) < 1: continue
         for i, p in enumerate(pts):
-            place(square(p, pts[(i + 1) % len(pts)] - pts[(i - 1) % len(pts)]), False)
+            place(square(p, pts[(i + 1) % len(pts)] - pts[(i - 1) % len(pts)]), False, 0.25 if TIGHT else 0.45)
     k += 1
-gy, gx = np.gradient(D)
+gy, gx = np.gradient(gaussian_filter(D, S * 0.6) if TIGHT else D)
 for _ in range(4):
     free = ((forbid == 0) & (inside > 0)).astype(np.uint8)
     dt = cv2.distanceTransform(free, cv2.DIST_L2, 5)
     peaks = np.argwhere((dt >= 0.3 * (PITCH - G)) & (dt == cv2.dilate(dt, np.ones((int(S), int(S)), np.uint8))))
     added = 0
     for y, x in sorted(peaks.tolist(), key=lambda q: -dt[q[0], q[1]]):
-        if not forbid[y, x] and place(square(np.array([x, y], float), np.array([-gy[y, x], gx[y, x]]) + 1e-6), False, 0.3): added += 1
+        if not forbid[y, x] and place(square(np.array([x, y], float), np.array([-gy[y, x], gx[y, x]]) + 1e-6, 1.12 if TIGHT else 1.0), False, 0.3): added += 1
     if not added: break
 stage("3-rows", fill=lambda i, t: INK + 0.08 if t["strand"] else None)
 tiles.extend(pupils)

@@ -15,6 +15,9 @@ FINE=17 CUT_FINE=0.45 BOXES=... EYES=... python3 prototype/mosaic_faces.py \
   DIR/<name>-1024.ppm DIR/<name>-1024-contours.pgm DIR/<name> 30 18 0.72
 ```
 
+`render.py <design.json> <photo> A|B|C <out.png> [boxes]` draws a design in one of the finishes
+(its docstring says what each changes); the drawing changes, never the template.
+
 `marks.py` stands in for the face detection the app runs (OpenCV's Haar cascades; needs
 opencv-python-headless 4.x, since 5 dropped them); its misses are corrected by hand in the
 round's marks file: `name|face box x0,y0,x1,y1|eyes cx,cy,r[,pupil];...` in the photo's own
@@ -24,3 +27,4 @@ controlnet_aux 0.0.10.
 | Round | Photos | What changed |
 | --- | --- | --- |
 | 1 | kodim04, kodim15, kodim17, astronaut, chelsea | Nothing: the prototype as the proposal left it, the baseline. |
+| 2 | kodim04, chelsea | The dial-in grid: 3 tile counts (`prep.py` at 1024, 1448, 2048 px, same pitch) × 3 finishes (`render.py` A, B, C; B and C draw `mosaic_faces.py` with `GROUT=2 TIGHT=1`). |
