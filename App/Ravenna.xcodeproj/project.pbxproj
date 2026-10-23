@@ -23,6 +23,12 @@
 			path = ../Sources/MosaicKit;
 			sourceTree = "<group>";
 		};
+		0B0000000000000000000D03 /* MosaicEngine */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			name = MosaicEngine;
+			path = ../Sources/MosaicEngine;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,6 +47,7 @@
 			children = (
 				0B0000000000000000000D01 /* Ravenna */,
 				0B0000000000000000000D02 /* MosaicKit */,
+				0B0000000000000000000D03 /* MosaicEngine */,
 				0B0000000000000000000004 /* Config */,
 				0B0000000000000000000003 /* Products */,
 			);
@@ -80,6 +87,7 @@
 			fileSystemSynchronizedGroups = (
 				0B0000000000000000000D01 /* Ravenna */,
 				0B0000000000000000000D02 /* MosaicKit */,
+				0B0000000000000000000D03 /* MosaicEngine */,
 			);
 			name = Ravenna;
 			productName = Ravenna;

@@ -3,8 +3,8 @@ import UIKit
 
 /// What drawing a mosaic needs, worked out once per finish, and the drawing of one tile in it with
 /// Core Graphics: the same code bakes set tiles into the wall's image and draws tiles still settling.
-/// Canvas units, y down.
-struct Drawing {
+/// Canvas units, y down. Plain Core Graphics, so walls and covers are drawn off the main thread.
+nonisolated struct Drawing: @unchecked Sendable {
     let finish: Finish
     var paths: [CGPath] = []
     var corners: [[SIMD2<Float>]] = []
@@ -94,7 +94,7 @@ struct Drawing {
     }
 
     static let space = CGColorSpace(name: CGColorSpace.sRGB)!
-    static let glow = CGGradient(colorsSpace: space, colors: [CGColor(srgbRed: 1, green: 0.98, blue: 0.92, alpha: 0.16),
+    nonisolated(unsafe) static let glow = CGGradient(colorsSpace: space, colors: [CGColor(srgbRed: 1, green: 0.98, blue: 0.92, alpha: 0.16),
                                                               CGColor(srgbRed: 1, green: 0.98, blue: 0.92, alpha: 0)] as CFArray,
                                  locations: [0, 1])!
 
@@ -106,8 +106,9 @@ struct Drawing {
 }
 
 /// The wall as an image: its ground, the outlines of tiles to set, and every set tile, baked as it
-/// goes in, so a wall of thousands moves as lightly as one of a few hundred.
-final class WallImage {
+/// goes in, so a wall of thousands moves as lightly as one of a few hundred. Made off the main thread
+/// and then used only on it.
+nonisolated final class WallImage: @unchecked Sendable {
     let drawing: Drawing
     /// Image pixels per canvas unit.
     let scale: CGFloat
@@ -118,9 +119,10 @@ final class WallImage {
     private(set) var baked = Set<Int>()
     private var image: CGImage?
 
-    init?(_ m: Mosaic, drawing: Drawing, bed: UIImage?) {
+    /// `longest`: the image's longest side in pixels; `outlines`: draw the places of tiles to set.
+    init?(_ m: Mosaic, drawing: Drawing, bed: CGImage?, longest: CGFloat = 3200, outlines: Bool = true) {
         size = CGSize(width: CGFloat(m.width), height: CGFloat(m.height))
-        scale = min(3, 3200 / max(size.width, size.height))
+        scale = min(3, longest / max(size.width, size.height))
         guard let cg = CGContext(data: nil, width: Int(size.width * scale), height: Int(size.height * scale), bitsPerComponent: 8,
                                  bytesPerRow: 0, space: Drawing.space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
         else { return nil }
@@ -130,13 +132,22 @@ final class WallImage {
         cg.interpolationQuality = .high
         context = cg
         self.drawing = drawing
-        self.bed = drawing.finish.paintedBed ? bed?.cgImage : nil
+        self.bed = drawing.finish.paintedBed ? bed : nil
         grout = CGColor(srgbRed: CGFloat(m.grout.x), green: CGFloat(m.grout.y), blue: CGFloat(m.grout.z), alpha: 1)
         ground()
+        guard outlines else { return }
         cg.setStrokeColor(drawing.outline)
         cg.setLineWidth(1.2 / scale)
         for p in drawing.paths { cg.addPath(p) }
         cg.strokePath()
+    }
+
+    /// A wall with the painter's tiles set, made in one go: for the bench, a cover, or sharing.
+    static func make(_ m: Mosaic, _ finish: Finish, bed: CGImage?, set: Set<Int>, drawing: Drawing? = nil,
+                     longest: CGFloat = 3200, outlines: Bool = true) -> WallImage? {
+        let image = WallImage(m, drawing: drawing ?? Drawing(m, finish: finish), bed: bed, longest: longest, outlines: outlines)
+        image?.bake(set.sorted())
+        return image
     }
 
     /// Bakes set tiles in; answers whether any were new.

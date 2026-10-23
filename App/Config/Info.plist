@@ -4,6 +4,8 @@
 <dict>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Ravenna saves a mosaic to your photo library when you choose Save Image.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Alegreya-Variable.ttf</string>

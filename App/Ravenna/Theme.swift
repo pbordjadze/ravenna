@@ -3,7 +3,7 @@ import SwiftUI
 /// Ravenna's look, provisional (the design page: https://claude.ai/artifact/8F7FXLE2aSLQ2Vb5XArJR6):
 /// the dark of an apse, lime-plaster white for words and the tint, and gold kept for where a tile is
 /// being set (the guardians' caution: no gold spread over every screen).
-enum Theme {
+nonisolated enum Theme {
     static let ground = Color(red: 0.082, green: 0.075, blue: 0.059)
     static let panel = Color(red: 0.118, green: 0.106, blue: 0.086)
     static let rule = Color(red: 0.227, green: 0.204, blue: 0.165)

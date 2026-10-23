@@ -4,7 +4,7 @@ name: CI
 # macOS, only when asked or when the app changed on main: the five macOS runners are shared with
 # Paint by Moonlight, which always goes first (CLAUDE.md). Ask its setup session for a slot first.
 #   compile  `[compile]` in a branch's pushed commit message: an unsigned Debug build of the app.
-#   ipa      main, when App/ or Sources/MosaicKit/ changed (or `[ipa]` on a branch, which archives
+#   ipa      main, when App/, Sources/MosaicKit/ or Sources/MosaicEngine/ changed (or `[ipa]` on a branch, which archives
 #            without publishing): an unsigned Release archive as a `build-<n>` prerelease (five
 #            kept) and the SideStore source on the `sidestore` branch. Adapted from paint-by-number.
 
@@ -40,7 +40,7 @@ jobs:
         run: |
           if [[ -z "$BEFORE" || "$BEFORE" =~ ^0+$ ]] || ! git cat-file -e "$BEFORE" 2>/dev/null; then
             echo "app=true" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only "$BEFORE" "$GITHUB_SHA" | grep -qE '^(App/|Sources/MosaicKit/)'; then
+          elif git diff --name-only "$BEFORE" "$GITHUB_SHA" | grep -qE '^(App/|Sources/MosaicKit/|Sources/MosaicEngine/)'; then
             echo "app=true" >> "$GITHUB_OUTPUT"
           else
             echo "app=false" >> "$GITHUB_OUTPUT"
@@ -101,8 +101,8 @@ jobs:
       - name: Publish release and SideStore source
         if: github.ref_name == 'main'
         run: |
-          # The commit's subject without CI tags such as [compile] or [ipa].
-          git log -1 --format=%s | sed -E 's/ *\[(compile|ipa)\]//g' > out/notes.txt
+          # The last non-merge commit's subject, without CI tags such as [compile] or [ipa].
+          git log -1 --no-merges --format=%s | sed -E 's/ *\[(compile|ipa)\]//g' > out/notes.txt
           gh release create "build-$BUILD" out/Ravenna.ipa --prerelease --target "$GITHUB_SHA" \
             --title "Build $BUILD" --notes-file out/notes.txt
           # Keep the five newest builds (KEEP in ci/sidestore_source.py: the same number).

@@ -12,19 +12,26 @@ struct SettingView: View {
     @State private var failed = false
     @State private var showingWork = false
     @State private var showingOptions = false
+    @State private var keepsake: Keepsake?
+    @State private var making = false
+    @State private var wide = false
 
     var body: some View {
         ZStack {
             Theme.ground.ignoresSafeArea()
             if let bench {
-                VStack(spacing: 0) {
+                // The tray below the wall, or beside it when the screen is wide (landscape, iPad).
+                let layout = wide ? AnyLayout(HStackLayout(spacing: 0)) : AnyLayout(VStackLayout(spacing: 0))
+                layout {
                     Wall(bench: bench, finish: library.finish, bed: library.image(work, "bed")) { set in
                         library.save(set, work, library.detail)
                     }
-                    Tray(bench: bench)
+                    Tray(bench: bench, axis: wide ? .vertical : .horizontal)
                 }
-                if bench.setting.isComplete(bench.mosaic) {
-                    Finished(work: work) { showingWork = true }
+                // The word Set once the light has passed over the finished wall.
+                if bench.setting.isComplete(bench.mosaic), bench.rake == nil {
+                    Finished(work: work, making: making, share: share) { showingWork = true }
+                        .transition(.opacity)
                 }
             } else if failed {
                 ContentUnavailableView("Couldn't open this mosaic", systemImage: "square.grid.3x3",
@@ -39,21 +46,47 @@ struct SettingView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu("More", systemImage: "ellipsis.circle") {
                     Button("About this work", systemImage: "info.circle") { showingWork = true }
+                    Button("Share the wall", systemImage: "square.and.arrow.up", action: share)
+                        .disabled(bench == nil || making)
                     Button("Options", systemImage: "slider.horizontal.3") { showingOptions = true }
                 }
             }
         }
         .sheet(isPresented: $showingWork) { WorkView(work: work) }
         .sheet(isPresented: $showingOptions) { OptionsView() }
+        .sheet(item: $keepsake) { k in
+            ShareSheet(items: [k.image]).presentationDetents([.medium, .large]).ignoresSafeArea()
+        }
+        .animation(.easeInOut(duration: 0.5), value: bench?.rake == nil)
+        .onGeometryChange(for: Bool.self) { $0.size.width > $0.size.height * 1.15 } action: { wide = $0 }
         .task(id: library.detail) {
             bench = nil
             failed = false
             do {
                 let mosaic = try await library.mosaic(work, library.detail)
-                bench = Bench(mosaic: mosaic, setting: library.setting(work, library.detail))
+                let b = Bench(mosaic: mosaic, setting: library.setting(work, library.detail))
+                // The wall's image is made off the main thread, so a wall of thousands opens without a stall.
+                await b.prepare(library.finish, bed: library.image(work, "bed"))
+                bench = b
             } catch {
                 failed = true
             }
+        }
+        .onChange(of: library.finish) { _, finish in
+            guard let bench else { return }
+            let bed = library.image(work, "bed")
+            Task { await bench.prepare(finish, bed: bed) }
+        }
+    }
+
+    /// The wall as it stands, as a picture to keep or send.
+    private func share() {
+        guard let bench, !making else { return }
+        making = true
+        let bed = library.image(work, "bed")
+        Task {
+            keepsake = await Keepsake.make(bench.mosaic, library.finish, setting: bench.setting, bed: bed)
+            making = false
         }
     }
 }
@@ -79,6 +112,10 @@ final class Bench {
     @ObservationIgnored private var laidInStroke = false
     @ObservationIgnored private var drawings: [Finish: Drawing] = [:]
     @ObservationIgnored private var wallImage: (finish: Finish, image: WallImage?)?
+    /// The finish whose image is being made off the main thread.
+    @ObservationIgnored private var preparing: Finish?
+    /// Tiles set since the wall's image was made, not yet baked into it.
+    @ObservationIgnored private var unbaked: [Int] = []
     /// A middling tile's side, to weigh each tile's sound and tap by its size.
     private let typical: Float
 
@@ -106,12 +143,46 @@ final class Bench {
         return d
     }
 
-    /// The wall's baked image in a finish; only the current finish's is kept.
+    /// The wall's baked image in a finish; only the current finish's is kept. While another
+    /// finish's is being made, the one there is stands in.
     func wall(_ finish: Finish, bed: UIImage?) -> WallImage? {
-        if let w = wallImage, w.finish == finish { return w.image }
-        let image = WallImage(mosaic, drawing: drawing(finish), bed: bed)
+        if let w = wallImage, w.finish == finish || preparing == finish { return w.image }
+        let image = WallImage.make(mosaic, finish, bed: bed?.cgImage, set: setting.set, drawing: drawing(finish))
         wallImage = (finish, image)
+        unbaked = []
         return image
+    }
+
+    /// Makes the wall's image in a finish off the main thread.
+    func prepare(_ finish: Finish, bed: UIImage?) async {
+        guard wallImage?.finish != finish, preparing != finish else { return }
+        preparing = finish
+        let m = mosaic, set = setting.set, ground = Unchecked(bed?.cgImage)
+        let known = drawings[finish]
+        let (d, image) = await Task.detached(priority: .userInitiated) {
+            let d = known ?? Drawing(m, finish: finish)
+            return (d, WallImage.make(m, finish, bed: ground.value, set: set, drawing: d))
+        }.value
+        drawings[finish] = d
+        guard preparing == finish else { return }
+        preparing = nil
+        // Tiles set while it was being made.
+        image?.bake(setting.set.subtracting(set).sorted())
+        wallImage = (finish, image)
+        unbaked = []
+    }
+
+    /// Bakes tiles that have finished settling into the wall's image, once nothing is moving or
+    /// many are waiting; answers the ones to draw live meanwhile.
+    func bakeSettled(_ image: WallImage, settling: [Int: Date]) -> [Int] {
+        let done = unbaked.filter { settling[$0] == nil }
+        guard !done.isEmpty else { return [] }
+        if settling.isEmpty || done.count > 120 {
+            image.bake(done)
+            unbaked.removeAll { settling[$0] == nil }
+            return []
+        }
+        return done
     }
 
     /// How large a tile is against a middling one, 0...1, for how loud and firm it lands.
@@ -191,6 +262,7 @@ final class Bench {
     private func settle(_ tiles: [(tile: Int, at: Date)]) {
         guard let end = tiles.map(\.at).max() else { return }
         for (t, at) in tiles { recent[t] = at }
+        unbaked.append(contentsOf: tiles.map(\.tile))
         // Once they are all down, they leave `recent` and the wall's image takes them.
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(max(end.timeIntervalSinceNow + Motion.total + 0.05, 0)))
@@ -201,18 +273,30 @@ final class Bench {
     }
 }
 
+/// A value handed to a task off the main thread that only reads it.
+nonisolated struct Unchecked<T>: @unchecked Sendable {
+    let value: T
+    init(_ value: T) { self.value = value }
+}
+
 /// The smalti in hand: one chip per paint, its number and how many tiles it has left.
 private struct Tray: View {
     let bench: Bench
+    /// Along the bottom, or down the side.
+    let axis: Axis
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let left = bench.setting.remaining(in: bench.mosaic)
+        let chips = axis == .horizontal ? AnyLayout(HStackLayout(spacing: 10)) : AnyLayout(VStackLayout(spacing: 8))
         VStack(spacing: 6) {
             Text("\(bench.setting.set.count.formatted()) of \(bench.mosaic.tiles.count.formatted()) tiles set")
                 .font(Theme.body(13).monospacedDigit()).foregroundStyle(Theme.muted)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 8)
             ScrollViewReader { proxy in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
+                ScrollView(axis == .horizontal ? .horizontal : .vertical, showsIndicators: false) {
+                    chips {
                         ForEach(bench.mosaic.palette.indices, id: \.self) { p in
                             Button { bench.paint = p } label: {
                                 Chip(color: bench.mosaic.palette[p], number: p + 1, left: left[p], held: bench.paint == p, cut: p)
@@ -222,16 +306,17 @@ private struct Tray: View {
                             .id(p)
                         }
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, axis == .horizontal ? 16 : 10)
                     .padding(.vertical, 6)
                 }
                 .onChange(of: bench.paint) { _, p in
-                    if let p { withAnimation { proxy.scrollTo(p, anchor: .center) } }
+                    if let p { withAnimation(reduceMotion ? nil : .default) { proxy.scrollTo(p, anchor: .center) } }
                 }
             }
         }
         .padding(.top, 8)
         .padding(.bottom, 4)
+        .frame(maxWidth: axis == .vertical ? 112 : .infinity)
         .background(Theme.panel)
     }
 }
@@ -245,6 +330,7 @@ private struct Chip: View {
     /// Which cut: each paint's chip is its own shape, always the same.
     let cut: Int
     @ScaledMetric(relativeTo: .body) private var scaled: CGFloat = 44
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let light = 0.2126 * color.x + 0.7152 * color.y + 0.0722 * color.z > 0.55
@@ -267,7 +353,7 @@ private struct Chip: View {
                         .stroke(held ? Theme.tint : .clear, lineWidth: 2)
                 }
                 .scaleEffect(held ? 1.06 : 1)
-                .animation(.snappy(duration: 0.18), value: held)
+                .animation(reduceMotion ? nil : .snappy(duration: 0.18), value: held)
             Text(left == 0 ? " " : "\(left)").font(Theme.body(12).monospacedDigit()).foregroundStyle(Theme.muted)
         }
         .opacity(left == 0 ? 0.4 : 1)
@@ -296,6 +382,9 @@ private struct Tessera: Shape {
 /// Every tile in place.
 private struct Finished: View {
     let work: Work
+    /// The picture to share is being made.
+    let making: Bool
+    let share: () -> Void
     let about: () -> Void
 
     var body: some View {
@@ -303,13 +392,26 @@ private struct Finished: View {
             Text("Set").font(Theme.title(28)).foregroundStyle(Theme.gold)
             Text("Every tile of \(work.title) is in place.").font(Theme.body(15)).foregroundStyle(Theme.plaster)
                 .multilineTextAlignment(.center)
-            Button("About this work", action: about).buttonStyle(.bordered)
+            // Side by side, or one above the other at the largest text sizes.
+            ViewThatFits {
+                HStack(spacing: 10) { buttons }
+                VStack(spacing: 8) { buttons }
+            }
         }
         .padding(20)
         .background(Theme.panel.opacity(0.94), in: RoundedRectangle(cornerRadius: 14))
         .padding(.horizontal, 24)
         .frame(maxHeight: .infinity, alignment: .top)
         .padding(.top, 12)
+    }
+
+    @ViewBuilder private var buttons: some View {
+        Button(action: share) {
+            if making { ProgressView() } else { Label("Share", systemImage: "square.and.arrow.up") }
+        }
+        .buttonStyle(.borderedProminent)
+        .disabled(making)
+        Button("About this work", action: about).buttonStyle(.bordered)
     }
 }
 
@@ -329,9 +431,9 @@ struct WorkView: View {
                     }
                     Text(work.title).font(Theme.title(24)).foregroundStyle(Theme.plaster)
                     Text("\(work.place), \(work.date)").font(Theme.body(16)).foregroundStyle(Theme.muted)
-                    Text(work.medium).font(Theme.body(15)).foregroundStyle(Theme.muted)
+                    if !work.medium.isEmpty { Text(work.medium).font(Theme.body(15)).foregroundStyle(Theme.muted) }
                     Text(work.credit).font(Theme.body(14)).foregroundStyle(Theme.muted)
-                    Link("See it at the Met", destination: work.url).font(Theme.body(15))
+                    if let url = work.url { Link("See it at the Met", destination: url).font(Theme.body(15)) }
                 }
                 .padding(20)
             }
