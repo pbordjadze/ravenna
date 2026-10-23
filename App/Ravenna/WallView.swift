@@ -91,6 +91,7 @@ struct Wall: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("The wall")
         .accessibilityValue(spoken)
+        .accessibilityHint("Use the actions to set tiles of the paint in hand, or choose a paint from the tray.")
         .accessibilityAction(named: "Set the next tile") { setNearest(1, canvas) }
         .accessibilityAction(named: "Set ten tiles") { setNearest(10, canvas) }
         .accessibilityAction(named: "Zoom in") { fly(zoom: lens.zoom * 2, around: centre, canvas) }
@@ -199,8 +200,11 @@ struct Wall: View {
         if o.finished {
             if touch { TileTouch.shared.finished() }
             if !reduceMotion { bench.beginRake() }
-        } else if o.ranOut, touch {
-            TileTouch.shared.paintDone()
+        } else if o.ranOut {
+            if touch { TileTouch.shared.paintDone() }
+            if UIAccessibility.isVoiceOverRunning, let p = bench.paint {
+                AccessibilityNotification.Announcement("That paint is done. Paint \(p + 1) in hand.").post()
+            }
         }
     }
 
@@ -277,11 +281,9 @@ struct Wall: View {
         let m = bench.mosaic, d = bench.drawing(finish), s = vp.scale
         let wall = CGRect(origin: .zero, size: vp.canvas)
         let settling = state.recent.filter { now.timeIntervalSince($0.value) < Motion.total }
-        // Tiles that have finished settling go into the wall's image.
+        // Tiles that have finished settling go into the wall's image; until then they're drawn live.
         let image = bench.wall(finish, bed: bed)
-        if let image, image.baked.count < state.setting.set.count {
-            image.bake(state.setting.set.lazy.filter { settling[$0] == nil })
-        }
+        let live = image.map { bench.bakeSettled($0, settling: settling) } ?? []
 
         var g = ctx
         g.translateBy(x: vp.size.width / 2 + vp.offset.width, y: vp.size.height / 2 + vp.offset.height)
@@ -299,6 +301,7 @@ struct Wall: View {
         let sharp = s * displayScale > (image?.scale ?? 0) * 1.4
         let reduce = reduceMotion
         g.withCGContext { cg in
+            for i in live where !sharp { d.draw(i, in: cg) }
             if sharp {
                 for i in visible where settling[i] == nil && state.setting.isSet(i) { d.draw(i, in: cg) }
                 for i in visible where !state.setting.isSet(i) { cg.addPath(d.paths[i]) }

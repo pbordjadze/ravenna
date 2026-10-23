@@ -44,13 +44,7 @@ private struct WorkCard: View {
     var body: some View {
         let progress = library.progress(work)
         VStack(alignment: .leading, spacing: 8) {
-            Group {
-                if let bed = library.image(work, "bed") {
-                    Image(uiImage: bed).resizable().scaledToFill()
-                } else {
-                    Theme.panel
-                }
-            }
+            Cover(work: work)
             .frame(height: 210)
             .frame(maxWidth: .infinity)
             .clipped()
