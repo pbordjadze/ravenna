@@ -16,43 +16,54 @@ struct NewMosaicView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
-                if let preview = UIImage(data: data) {
-                    Image(uiImage: preview).resizable().scaledToFit()
-                        .frame(maxHeight: 340)
-                        .accessibilityLabel("Your photo")
-                }
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Pieces").font(Theme.title(18)).foregroundStyle(Theme.plaster)
-                    Slider(value: $pieces, in: 0...1) {
-                        Text("Pieces")
-                    } minimumValueLabel: {
-                        Text("Fewer").font(Theme.body(13))
-                    } maximumValueLabel: {
-                        Text("More").font(Theme.body(13))
+            ScrollView {
+                VStack(spacing: 20) {
+                    if let preview = UIImage(data: data) {
+                        // The photo as the setter's cartoon, pinned on the bench.
+                        Image(uiImage: preview).resizable().scaledToFit()
+                            .frame(maxHeight: 340)
+                            .padding(6)
+                            .background(Theme.panel)
+                            .overlay { Rectangle().stroke(Theme.rule, lineWidth: 1) }
+                            .accessibilityLabel("Your photo")
                     }
-                    .disabled(progress.stage != nil)
-                    Text("More pieces take longer to lay, and to set.").font(Theme.body(13)).foregroundStyle(Theme.muted)
-                }
-                if let stage = progress.stage {
-                    HStack(spacing: 10) {
-                        ProgressView().tint(Theme.tint)
-                        Text(stage.rawValue).font(Theme.body(15)).foregroundStyle(Theme.plaster)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Pieces").font(Theme.title(18)).foregroundStyle(Theme.plaster)
+                        Slider(value: $pieces, in: 0...1) {
+                            Text("Pieces")
+                        } minimumValueLabel: {
+                            Text("Fewer").font(Theme.body(13))
+                        } maximumValueLabel: {
+                            Text("More").font(Theme.body(13))
+                        }
+                        .disabled(progress.stage != nil)
+                        Text("More pieces take longer to lay, and to set.").font(Theme.body(13)).foregroundStyle(Theme.muted)
                     }
-                } else if let failure {
-                    Text(failure).font(Theme.body(14)).foregroundStyle(Theme.muted)
+                    if let stage = progress.stage {
+                        HStack(spacing: 10) {
+                            ProgressView().tint(Theme.tint)
+                            Text(stage.rawValue).font(Theme.body(15)).foregroundStyle(Theme.plaster)
+                        }
+                    } else if let failure {
+                        Text(failure).font(Theme.body(14)).foregroundStyle(Theme.muted)
+                    }
                 }
-                Spacer(minLength: 0)
+                .padding(20)
+            }
+            // The button stays in reach however large the text, the rest scrolls.
+            .safeAreaInset(edge: .bottom) {
                 Button {
                     lay()
                 } label: {
-                    Text("Lay the tiles").frame(maxWidth: .infinity)
+                    Text("Lay the tiles").font(Theme.title(18)).frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
                 .disabled(progress.stage != nil)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(Theme.ground)
             }
-            .padding(20)
             .background(Theme.ground)
             .navigationTitle("New mosaic")
             .navigationBarTitleDisplayMode(.inline)

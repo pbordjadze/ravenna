@@ -10,6 +10,7 @@ struct GalleryView: View {
     @State private var picked: PhotosPickerItem?
     @State private var photo: PickedPhoto?
     @State private var removing: Work?
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -78,7 +79,8 @@ struct GalleryView: View {
     private func shelf<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title).font(Theme.title(20)).foregroundStyle(Theme.muted)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 16)], spacing: 22) { content() }
+            // One column at the largest text sizes, so titles have room.
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 300 : 160), spacing: 16)], spacing: 22) { content() }
         }
     }
 }
@@ -96,13 +98,7 @@ private struct WorkCard: View {
     var body: some View {
         let progress = library.progress(work)
         VStack(alignment: .leading, spacing: 8) {
-            Group {
-                if let bed = library.image(work, "bed") {
-                    Image(uiImage: bed).resizable().scaledToFill()
-                } else {
-                    Theme.panel
-                }
-            }
+            Cover(work: work)
             .frame(height: 210)
             .frame(maxWidth: .infinity)
             .clipped()
@@ -113,7 +109,7 @@ private struct WorkCard: View {
                 .frame(height: 3)
             }
             Text(work.title).font(Theme.body(16).weight(.medium)).foregroundStyle(Theme.plaster)
-                .lineLimit(2)
+                .lineLimit(3)
             Text(work.isOwn ? work.place : "\(work.place), \(work.date)").font(Theme.body(13)).foregroundStyle(Theme.muted)
             if progress > 0 {
                 Text(progress >= 1 ? "Set" : "\(Int((progress * 100).rounded(.down)))% set")
