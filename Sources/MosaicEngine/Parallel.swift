@@ -3,7 +3,9 @@ import Dispatch
 nonisolated extension MosaicEngine {
     /// Work spread over the cores. Each part computes exactly what it would alone (the same
     /// arithmetic in the same order for each pixel or row it owns), so the mosaic is the same bits
-    /// however many cores there are and however the parts interleave.
+    /// however many cores there are and however the parts interleave. The parts are cut by the
+    /// work's size alone, never by the core count, and no part keeps a partial sum of its own: a
+    /// total is summed in order afterwards (KMeans.assign).
     nonisolated enum Parallel {
         /// Calls `body` with consecutive ranges covering `0..<n`, several at once. A range owns its
         /// indices: `body` writes only to what they index, through pointers taken before the call
