@@ -6,6 +6,7 @@ enum Keys {
     static let finger = "oneFinger"
     static let sound = "sound"
     static let touch = "touch"
+    static let border = "border"
 }
 
 /// What one finger does on the wall (an option until Paul narrows it).
@@ -52,6 +53,7 @@ struct OptionsView: View {
     @AppStorage(Keys.finger) private var finger = OneFinger.lays
     @AppStorage(Keys.sound) private var sound = true
     @AppStorage(Keys.touch) private var touch = true
+    @AppStorage(Keys.border) private var border = Border.none
     @State private var icon = AppIcon.current
 
     var body: some View {
@@ -100,6 +102,15 @@ struct OptionsView: View {
                     Text("Setting")
                 } footer: {
                     Text("Sound: each tile's knock is made by the app as it goes in, glass ringing, stone duller, gold with a shimmer; the silent switch silences it. Touch: a tap on the finger as each tile lands.")
+                }
+                Section {
+                    Picker("Border", selection: $border) {
+                        ForEach(Border.allCases) { Text($0.name).tag($0) }
+                    }
+                } header: {
+                    Text("Sharing")
+                } footer: {
+                    Text("What goes round the picture of the wall when you share or save it.")
                 }
                 Section {
                     ForEach(AppIcon.allCases) { choice in
