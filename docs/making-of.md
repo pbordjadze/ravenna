@@ -5,7 +5,8 @@ named and credited to mosaic artists, the animations could be different, it migh
 paint going down, maybe it would look like tiles being placed."
 
 This page has the research behind the show's cards and the storyboard. The prototype is
-`prototype/making_of.py`, and its stills and clip are on the storyboard page
+`prototype/making_of.py` (drawing) on `prototype/making_of_plan.py` (the plan, which `MakingOf` in
+Sources/MosaicKit ports and its tests check against), and its stills and clip are on the storyboard page
 (<https://claude.ai/artifact/2AWJhg62kn11pxj3hNctci>, private). Every claim here has a source that was fetched and read (October 2026).
 Confidence: **H** is a primary text, museum or peer-reviewed source read directly. **M** is a
 reputable secondary source. **L** is Wikipedia or a single unclear source, kept only as a pointer.
@@ -176,14 +177,22 @@ the only gold, in line with the guardians' caution.
 | outlines | strands | The strands, nearest first, tile by tile along each line | The outlines / "the outline of the wing is shown by a row" / Hagia Sophia, the Deesis; anonymous | 5 |
 | andamento | echo rows and field | Ring after ring outward from the strands, quickening | Andamento / each row carries on the curve of the one before / Italian for "the way it goes", a workshop word | 9 |
 | light | the material finish | A light crossing the finished mosaic; each tile flares at its own tilt, gold most, stone least | Set at a tilt / gold and glass at slightly different angles / Hagia Sophia; the Nativity, Bethlehem | 5.5 |
-| hold | — | The finished mosaic | The makers / a few names survive: Sosus, Gnosis, Dioskourides, Ephraim; most are anonymous / Pliny, NH 36.184, and the works they signed | 5 |
+| hold | — | The finished mosaic | The makers / most mosaicists are anonymous; a few names survive / no source names the mosaicists of Ravenna or Hagia Sophia (named version behind `names`) | 5 |
 
 About 48 seconds. The order follows the engine rather than one site's practice: at Hagia Sophia the
 drawing was on the second bed and each section of the third was painted just before it was set.
 The show compresses that into one drawing and one painted bed.
 
-**Options** (creative forks, per Paul): the sinopia's colour (red, Ravenna; indigo, Hagia Sophia).
-Still to try: the setter's hand shown or not; one scene per stage or a continuous build with cards.
+**Options** (creative forks, per Paul), in `MakingOf.Options` and the prototype's environment:
+- the drawing's colour: red earth as at Ravenna, or indigo as at Hagia Sophia (`sinopia`);
+- the setter's hand: shown as the shadow of a finger pressing each tile home, or not (`hand`);
+- the flow: one scene a stage with a card each, or one continuous build that quickens, its cards following
+  the stage being set (`flow`);
+- the closing card's names (`names`), below.
 
-**For Paul, through the setup session:** the closing card names Sosus, Gnosis, Dioskourides and
-Ephraim, which is lore. It waits on him.
+The drawing is the strands' and features' own tiles chained into strokes, so the app needs no contour
+map to draw it: it is exactly the lines the outline rows will follow.
+
+**For Paul, through the setup session:** the closing card can name Sosus, Gnosis, Dioskourides and
+Ephraim, which is lore, so it waits on him. Until he answers, it reads "Most mosaicists are anonymous; a
+few names survive." with no names, and the named version is behind `names`.
