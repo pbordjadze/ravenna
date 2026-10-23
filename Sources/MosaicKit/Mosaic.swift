@@ -11,9 +11,12 @@ nonisolated public struct Mosaic: Sendable, Equatable {
         public var paint: Int
         /// Matte stone rather than glass: the tiles of a face, as Byzantine faces were set.
         public var stone: Bool
+        /// The stage of the build that laid it, when the engine recorded it (nil in older files).
+        /// With the tiles' order, which is the order they were laid, the making-of replays the build.
+        public var stage: Stage?
 
-        public init(corners: [SIMD2<Float>], paint: Int, stone: Bool = false) {
-            self.corners = corners; self.paint = paint; self.stone = stone
+        public init(corners: [SIMD2<Float>], paint: Int, stone: Bool = false, stage: Stage? = nil) {
+            self.corners = corners; self.paint = paint; self.stone = stone; self.stage = stage
         }
 
         /// The mean of the corners: where a tile's number sits and where it grows from when set.
@@ -42,6 +45,21 @@ nonisolated public struct Mosaic: Sendable, Equatable {
         }
     }
 
+    /// The stages a mosaic is built in, in order: a mosaicist's habit of setting the features
+    /// first, then the outlines' strands, then the rows that echo them, then the field between.
+    nonisolated public enum Stage: String, Sendable, Codable, CaseIterable {
+        /// A face's feature, as its own row of pieces: lids, brows, the nose's shadow side, lips.
+        case feature
+        /// An eye's iris or pupil, each one round piece.
+        case eye
+        /// A strand: a row laid along one of the picture's strong outlines.
+        case strand
+        /// A row echoing the strands, the picture's colour edges and its frame (andamento).
+        case row
+        /// The pieces cut to fill the gaps that are left.
+        case field
+    }
+
     /// Canvas size in units.
     public var width: Float
     public var height: Float
@@ -65,7 +83,7 @@ nonisolated public struct Mosaic: Sendable, Equatable {
 
 nonisolated extension Mosaic: Codable {
     private enum Keys: String, CodingKey { case size, grout, palette, tiles }
-    private enum TileKeys: String, CodingKey { case c, p, s }
+    private enum TileKeys: String, CodingKey { case c, p, s, g }
 
     public enum FormatError: Error, Equatable {
         case badSize, badColor, badTile(Int)
@@ -90,7 +108,8 @@ nonisolated extension Mosaic: Codable {
                 throw FormatError.badTile(tiles.count)
             }
             let corners = stride(from: 0, to: flat.count, by: 2).map { SIMD2(flat[$0], flat[$0 + 1]) }
-            tiles.append(Tile(corners: corners, paint: paint, stone: (try t.decodeIfPresent(Int.self, forKey: .s) ?? 0) != 0))
+            tiles.append(Tile(corners: corners, paint: paint, stone: (try t.decodeIfPresent(Int.self, forKey: .s) ?? 0) != 0,
+                              stage: try t.decodeIfPresent(Stage.self, forKey: .g)))
         }
         self.init(width: size[0], height: size[1], grout: try color(try k.decode([Float].self, forKey: .grout)),
                   palette: palette, tiles: tiles)
@@ -107,6 +126,7 @@ nonisolated extension Mosaic: Codable {
             try c.encode(t.corners.flatMap { [$0.x, $0.y] }, forKey: .c)
             try c.encode(t.paint, forKey: .p)
             if t.stone { try c.encode(1, forKey: .s) }
+            try c.encodeIfPresent(t.stage, forKey: .g)
         }
     }
 }

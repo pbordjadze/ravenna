@@ -7,7 +7,7 @@ import Testing
 struct MosaicKitTests {
     static let json = #"""
     {"size":[20,10],"grout":[0.86,0.85,0.84],"palette":[[0.8,0.1,0.1],[0.83,0.68,0.24]],
-     "tiles":[{"c":[1,1,9,1,9,9,1,9],"p":0},{"c":[11,1,19,1,19,9,11,9],"p":1,"s":1}]}
+     "tiles":[{"c":[1,1,9,1,9,9,1,9],"p":0},{"c":[11,1,19,1,19,9,11,9],"p":1,"s":1,"g":"row"}]}
     """#
 
     static func mosaic() throws -> Mosaic { try JSONDecoder().decode(Mosaic.self, from: Data(json.utf8)) }
@@ -17,6 +17,7 @@ struct MosaicKitTests {
         #expect(m.width == 20 && m.height == 10 && m.palette.count == 2 && m.tiles.count == 2)
         #expect(m.tiles[0].corners == [SIMD2(1, 1), SIMD2(9, 1), SIMD2(9, 9), SIMD2(1, 9)])
         #expect(!m.tiles[0].stone && m.tiles[1].stone)
+        #expect(m.tiles[0].stage == nil && m.tiles[1].stage == .row, "the stage is optional: older files have none")
         #expect(m.tiles[1].centre == SIMD2(15, 5))
         #expect(m.tilesPerPaint == [1, 1])
         let again = try JSONDecoder().decode(Mosaic.self, from: JSONEncoder().encode(m))
