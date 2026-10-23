@@ -98,7 +98,13 @@ nonisolated public enum MosaicEngine {
     }
 
     /// contours: the HED contour map at the photo's size, 0...1, row-major. faces: may be empty (then
-    /// no face boxes, no fine pitch, no eyes). `cancel` is polled between stages.
+    /// no face boxes, no fine pitch, no eyes). `cancel` is polled between stages (throwing
+    /// `CancellationError`).
+    ///
+    /// The mosaic's tiles come in the order they were laid, each with its `stage`: the eyes' irises
+    /// and the features' rows first, then the strands, the rows, the field, and last the pupils (each
+    /// laid over its iris, as the script does). The making-of replays the build from that order.
+    /// Corners are in the photo's pixels; a tile is stone when its centre is in a face's box.
     public static func make(photo: Photo, contours: [Float], faces: [Face], settings: Settings = Settings(),
                             cancel: () -> Bool = { false }) throws -> Mosaic {
         var trace = Trace()
@@ -150,9 +156,7 @@ nonisolated extension MosaicEngine {
                 Resize.upscale2x(rgb.map { $0[c] }, width: photo.width, height: photo.height).map { Swift.min(Swift.max($0, 0), 1) }
             }
             red = channel(0); green = channel(1); blue = channel(2)
-            // The script resizes the 8-bit map, so the drawing comes in 8-bit steps.
             draw = Resize.bilinear(contours, width: photo.width, height: photo.height, to: W, H)
-                .map { ($0 * 255).rounded() / 255 }
             pitchMap = Plane(width: W, height: H, value: Float(s))
             layout = Layout(width: W, height: H, grout: g, pitchMap: [])
         }
@@ -200,7 +204,7 @@ nonisolated extension MosaicEngine {
 
             let pupils = features()
             for P in guides {
-                lay(row: P, strand: true, minFrac: 0.35, feature: nil)
+                lay(row: P, stage: .strand, strand: true, minFrac: 0.35, feature: nil)
             }
             try lap("strands")
 
@@ -275,12 +279,12 @@ nonisolated extension MosaicEngine {
         }
 
         /// A row of square tiles along a polyline.
-        func lay(row P: [SIMD2<Double>], strand: Bool, minFrac: Double, feature: String?) {
+        func lay(row P: [SIMD2<Double>], stage: Mosaic.Stage, strand: Bool, minFrac: Double, feature: String?) {
             let (pts, _) = layout.resample(P)
             for (i, p) in pts.enumerated() {
                 var a = pts[Swift.max(i - 1, 0)], b = pts[Swift.min(i + 1, pts.count - 1)]
                 if pts.count == 1 { a = P[0]; b = P[P.count - 1] }
-                layout.place(layout.square(p, b - a), strand: strand, minFrac: minFrac, feature: feature)
+                layout.place(layout.square(p, b - a), stage: stage, strand: strand, minFrac: minFrac, feature: feature)
             }
         }
 
@@ -306,10 +310,10 @@ nonisolated extension MosaicEngine {
                         return c + SIMD2(rx * cos(a), ry * sin(a))
                     }
                 }
-                layout.place(lidded(ring(rr, rr)), strand: false, minFrac: 0.1, eye: .iris)
+                layout.place(lidded(ring(rr, rr)), stage: .eye, strand: false, minFrac: 0.1, eye: .iris)
                 if e.count > 3 {
                     let px = Double(e[3]) * k, py = Double(e.count > 4 ? e[4] : e[3]) * k
-                    pupils.append(Layout.Piece(poly: lidded(ring(px, py)), strand: false, eye: .pupil, feature: nil))
+                    pupils.append(Layout.Piece(poly: lidded(ring(px, py)), strand: false, eye: .pupil, feature: nil, stage: .eye))
                 }
             }
             for ln in lines where ln.kind != "eye" && ln.kind != "lips" {
@@ -323,7 +327,7 @@ nonisolated extension MosaicEngine {
                 }
                 P.append(last)
                 P = Blur.smooth(P, sigma: fine * 0.2, wrap: false)
-                lay(row: P, strand: ln.kind == "dark", minFrac: 0.3, feature: ln.kind)
+                lay(row: P, stage: .feature, strand: ln.kind == "dark", minFrac: 0.3, feature: ln.kind)
             }
             return pupils
         }
@@ -369,7 +373,8 @@ nonisolated extension MosaicEngine {
                     guard length >= layout.pitch(R[0]), !pts.isEmpty else { continue }
                     let n = pts.count
                     for i in 0..<n {
-                        layout.place(layout.square(pts[i], pts[(i + 1) % n] - pts[(i + n - 1) % n]), strand: false, minFrac: 0.25)
+                        layout.place(layout.square(pts[i], pts[(i + 1) % n] - pts[(i + n - 1) % n]), stage: .row,
+                                     strand: false, minFrac: 0.25)
                     }
                 }
                 k += 1
@@ -398,7 +403,8 @@ nonisolated extension MosaicEngine {
                 for i in peaks where layout.forbid[i] == 0 {
                     let x = i % W, y = i / W
                     let t = SIMD2(Double(-gy.pixels[i]), Double(gx.pixels[i])) + 1e-6
-                    if layout.place(layout.square(SIMD2(Double(x), Double(y)), t, grow: 1.12), strand: false, minFrac: 0.3) {
+                    if layout.place(layout.square(SIMD2(Double(x), Double(y)), t, grow: 1.12), stage: .field, strand: false,
+                                    minFrac: 0.3) {
                         added += 1
                     }
                 }
@@ -546,7 +552,7 @@ nonisolated extension MosaicEngine {
                 let corners = t.poly.map { SIMD2<Float>(Float($0.x * half), Float($0.y * half)) }
                 let c = corners.reduce(SIMD2<Float>(0, 0), +) / Float(corners.count)
                 let stone = boxes.contains { b in c.x >= b[0] && c.x <= b[2] && c.y >= b[1] && c.y <= b[3] }
-                return Mosaic.Tile(corners: corners, paint: paint[i], stone: stone)
+                return Mosaic.Tile(corners: corners, paint: paint[i], stone: stone, stage: t.stage)
             }
             return Mosaic(width: Float(w0), height: Float(h0), grout: grout, palette: palette, tiles: tiles)
         }

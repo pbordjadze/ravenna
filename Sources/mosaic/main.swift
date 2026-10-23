@@ -185,7 +185,8 @@ out += "\"tiles\": ["
 out += mosaic.tiles.enumerated().map { i, t in
     let corners = t.corners.map { "[\(json(Double($0.x), 1000)), \(json(Double($0.y), 1000))]" }.joined(separator: ", ")
     let feature = trace.feature[i].map { ", \"feature\": \"\($0)\"" } ?? ""
-    return "{\"corners\": [\(corners)], \"paint\": \(t.paint), \"strand\": \(trace.strand[i])\(feature)}"
+    let stage = t.stage.map { ", \"stage\": \"\($0.rawValue)\"" } ?? ""
+    return "{\"corners\": [\(corners)], \"paint\": \(t.paint), \"strand\": \(trace.strand[i])\(feature)\(stage)}"
 }.joined(separator: ", ")
 out += "]}"
 let path = positional[2] + ".json"

@@ -1,3 +1,6 @@
+#if canImport(MosaicKit)
+import MosaicKit
+#endif
 #if canImport(Darwin)
 import Darwin
 #else
@@ -16,6 +19,8 @@ nonisolated extension MosaicEngine {
             var strand: Bool
             var eye: Eye?
             var feature: String?
+            /// The stage of the build that laid it.
+            var stage: Mosaic.Stage
         }
 
         let width: Int, height: Int
@@ -88,7 +93,8 @@ nonisolated extension MosaicEngine {
         /// frame; its biggest piece kept if big enough (`minFrac` of a whole tile), outlined and
         /// simplified, then forbidden to later tiles with the joint round it.
         @discardableResult
-        func place(_ poly: [SIMD2<Double>], strand: Bool, minFrac: Double, eye: Eye? = nil, feature: String? = nil) -> Bool {
+        func place(_ poly: [SIMD2<Double>], stage: Mosaic.Stage, strand: Bool, minFrac: Double, eye: Eye? = nil,
+                   feature: String? = nil) -> Bool {
             guard poly.count >= 3 else { return false }
             var lo = poly[0], hi = poly[0]
             for p in poly { lo = pointwiseMin(lo, p); hi = pointwiseMax(hi, p) }
@@ -125,7 +131,7 @@ nonisolated extension MosaicEngine {
             let p = Polygon.simplify(closed: outline, epsilon: 1.4)
             guard p.count >= 3 else { return false }
             stamp(p)
-            pieces.append(Piece(poly: p, strand: strand, eye: eye, feature: feature))
+            pieces.append(Piece(poly: p, strand: strand, eye: eye, feature: feature, stage: stage))
             return true
         }
 
