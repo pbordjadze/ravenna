@@ -1,0 +1,46 @@
+name: CI
+
+# Linux only: MosaicCore and its tests with SwiftPM, on every push. No macOS jobs yet: the five
+# macOS runners are shared with Paint by Moonlight, which always goes first (see CLAUDE.md).
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core:
+    name: MosaicCore build and tests (Linux)
+    runs-on: ubuntu-latest
+    container: swift:6.2-noble
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with: { persist-credentials: false }
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: swiftpm-${{ runner.os }}-${{ hashFiles('Package.swift', 'Package.resolved') }}
+      - name: PaintCore from a slim mirror
+        # Only the pinned commit, not paint-by-number's every ref (many gigabytes of CI reports).
+        shell: bash
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          tools/paintcore-mirror.sh
+      - name: Build
+        shell: bash
+        run: |
+          set -o pipefail
+          swift build --build-tests 2>&1 | grep -vE '^\[[0-9]+/[0-9]+\]'
+      - name: Test
+        shell: bash
+        run: |
+          set -o pipefail
+          swift test --skip-build 2>&1 | grep -vE '^\[[0-9]+/[0-9]+\]'
