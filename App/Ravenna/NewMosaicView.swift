@@ -6,6 +6,7 @@ import UIKit
 struct NewMosaicView: View {
     @Environment(Library.self) private var library
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
     let data: Data
     let made: (Work) -> Void
 
@@ -42,11 +43,14 @@ struct NewMosaicView: View {
                     }
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Eyes").font(Theme.title(18)).foregroundStyle(Theme.plaster)
-                        Picker("Eyes", selection: $eyes) {
-                            Text("As they look").tag(MosaicEngine.Eyes.asTheyLook)
-                            Text("The photo's colours").tag(MosaicEngine.Eyes.asInThePhoto)
+                        // Segments truncate at the accessibility sizes; a menu keeps the words whole.
+                        Group {
+                            if typeSize.isAccessibilitySize {
+                                eyesPicker.pickerStyle(.menu)
+                            } else {
+                                eyesPicker.pickerStyle(.segmented)
+                            }
                         }
-                        .pickerStyle(.segmented)
                         .disabled(progress.stage != nil)
                         Text("Mixed brighter, as an eye catches the light, or kept as the photo has them.")
                             .font(Theme.body(13)).foregroundStyle(Theme.muted)
@@ -85,6 +89,13 @@ struct NewMosaicView: View {
                 }
             }
             .interactiveDismissDisabled(progress.stage != nil)
+        }
+    }
+
+    private var eyesPicker: some View {
+        Picker("Eyes", selection: $eyes) {
+            Text("As they look").tag(MosaicEngine.Eyes.asTheyLook)
+            Text("The photo's colours").tag(MosaicEngine.Eyes.asInThePhoto)
         }
     }
 
