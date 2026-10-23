@@ -5,7 +5,8 @@ named and credited to mosaic artists, the animations could be different, it migh
 paint going down, maybe it would look like tiles being placed."
 
 This page has the research behind the show's cards and the storyboard. The prototype is
-`prototype/making_of.py`. Every claim here has a source that was fetched and read (October 2026).
+`prototype/making_of.py`, and its stills and clip are on the storyboard page
+(<https://claude.ai/artifact/2AWJhg62kn11pxj3hNctci>, private). Every claim here has a source that was fetched and read (October 2026).
 Confidence: **H** is a primary text, museum or peer-reviewed source read directly. **M** is a
 reputable secondary source. **L** is Wikipedia or a single unclear source, kept only as a pointer.
 Nothing marked "not verified" may go on a card.
