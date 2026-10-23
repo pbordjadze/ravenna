@@ -7,26 +7,42 @@ import Testing
 
 /// The same photo makes the same mosaic on every device: the engine and the template, run on a
 /// public-domain portrait (Tests/Fixtures/determinism, its README says where it comes from), hash to
-/// the values Linux gives. Run on a Mac (`swift test --filter Determinism`) it answers whether Apple
-/// silicon lays the same tiles. A hash is printed per part, so a difference says where it starts;
+/// the values Linux gives. A hash is printed per part, so a difference says where it starts;
 /// `byzantine.tiles` is the engine again with the Byzantine mouth, which repaints the photo first.
+/// CI's `determinism` job runs it on Apple silicon (`[determinism]` in a branch commit's message).
+///
+/// The engine is the same everywhere (October 23, 2026: Linux x86_64 with Swift 6.2 and macOS arm64
+/// with Swift 6.3.3 agree). The template's paints are not: PaintCore converts them to OKLab with the
+/// system's `pow` and `cbrtf`, whose last bits differ between glibc and Darwin, so their hashes (and
+/// the whole encoded template's) are kept per platform. Its geometry and its paints' sRGB agree.
 ///
 /// When the engine or the template changes on purpose, the hashes change: update them here (the
-/// failure prints the new ones) and remake the bundled mosaics (sketchbook/bundle.py).
+/// failure prints the new ones; the Mac's from the `determinism` job's log) and remake the bundled
+/// mosaics (sketchbook/bundle.py).
 @Suite("Determinism")
 struct DeterminismTests {
     static let folder = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent().deletingLastPathComponent()
         .appendingPathComponent("Fixtures/determinism")
 
-    /// The hashes on Linux (x86_64, Swift 6.2), debug and release alike.
-    static let expected: [String: String] = [
-        "engine.palette": "e1f851cbcb66817f",
-        "engine.tiles": "70eb976bdb0b7c6c",
-        "template.palette": "533d60fbe57da087",
-        "template": "4ab3f57257d625ab",
-        "byzantine.tiles": "724f4e7648be8bf7",
-    ]
+    /// The hashes, debug and release alike: the same on every platform but for the template's OKLab.
+    static let expected: [String: String] = {
+        var e = [
+            "engine.palette": "e1f851cbcb66817f",
+            "engine.tiles": "70eb976bdb0b7c6c",
+            "byzantine.tiles": "724f4e7648be8bf7",
+            "template.geometry": "2e5e8dcf51db369",
+            "template.palette.rgb": "c940257d3f3d6d3",
+        ]
+        #if canImport(Darwin)
+        e["template.palette"] = "960fc093c645c276"
+        e["template"] = "a78ac9dd88203c58"
+        #else
+        e["template.palette"] = "533d60fbe57da087"
+        e["template"] = "4ab3f57257d625ab"
+        #endif
+        return e
+    }()
 
     /// FNV-1a, 64 bits: the same everywhere, unlike `Hasher`, which is seeded per process.
     struct FNV {
@@ -90,7 +106,12 @@ struct DeterminismTests {
         for c in mosaic.palette { hashes["engine.palette", default: FNV()].add(c) }
         hashes["engine.tiles"] = Self.tiles(mosaic)
         for c in template.palette { hashes["template.palette", default: FNV()].add(c.oklab); hashes["template.palette"]!.add(c.rgb) }
+        for c in template.palette { hashes["template.palette.rgb", default: FNV()].add(c.rgb) }
         hashes["template", default: FNV()].add(template.encoded())
+        // The template without its paints' colours: its regions, edges, mesh, labels and map.
+        var plain = template
+        plain.palette = plain.palette.map { _ in PaletteColor(oklab: .zero, rgb: .zero) }
+        hashes["template.geometry", default: FNV()].add(plain.encoded())
         hashes["byzantine.tiles"] = Self.tiles(redrawn)
 
         let got = hashes.mapValues(\.hex)
