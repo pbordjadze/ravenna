@@ -14,6 +14,9 @@ import plistlib
 import subprocess
 import sys
 
+# The app's version is MARKETING.<build> (the ipa job's MARKETING_VERSION): SideStore compares the
+# source's version with the installed app's.
+MARKETING = "0.1"
 # Builds listed; the ipa job in .github/workflows/ci.yml keeps this many releases (its `tail -n +6`).
 KEEP = 5
 
@@ -31,7 +34,7 @@ for r in releases:
         continue
     build = tag.removeprefix("build-")
     versions.append({
-        "version": f"1.0.{build}",
+        "version": f"{MARKETING}.{build}",
         "buildVersion": build,
         "date": r["published_at"] or r["created_at"],
         "localizedDescription": (r["body"] or "").strip() or f"Build {build}",
