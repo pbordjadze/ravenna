@@ -1,4 +1,5 @@
 // mosaic <photo.ppm> <contours.pgm> <out prefix> [--features f.json]... [--long-side N] [--bed bed.ppm]
+//        [--eyes asTheyLook|asInThePhoto]
 //
 // Runs the engine on files, for comparison with the prototype: reads a binary PPM (P6) photo, its
 // contour map as a binary PGM (P5) and any faces' features (sketchbook/features.py's JSON), and
@@ -126,18 +127,20 @@ var positional: [String] = []
 var featureFiles: [String] = []
 var longSide: Int?
 var bedFile: String?
+var settings = MosaicEngine.Settings()
 var args = CommandLine.arguments.dropFirst()
 while let a = args.popFirst() {
     switch a {
     case "--features": guard let f = args.popFirst() else { fail("--features needs a file") }; featureFiles.append(f)
     case "--long-side": guard let v = args.popFirst(), let n = Int(v), n > 0 else { fail("--long-side needs a number") }; longSide = n
     case "--bed": guard let f = args.popFirst() else { fail("--bed needs a file") }; bedFile = f
+    case "--eyes": guard let v = args.popFirst(), let e = MosaicEngine.Eyes(rawValue: v) else { fail("--eyes is asTheyLook or asInThePhoto") }; settings.eyes = e
     case "-h", "--help":
-        print("mosaic <photo.ppm> <contours.pgm> <out prefix> [--features f.json]... [--long-side N] [--bed bed.ppm]"); exit(0)
+        print("mosaic <photo.ppm> <contours.pgm> <out prefix> [--features f.json]... [--long-side N] [--bed bed.ppm] [--eyes asTheyLook|asInThePhoto]"); exit(0)
     default: positional.append(a)
     }
 }
-guard positional.count == 3 else { fail("usage: mosaic <photo.ppm> <contours.pgm> <out prefix> [--features f.json]... [--long-side N] [--bed bed.ppm]") }
+guard positional.count == 3 else { fail("usage: mosaic <photo.ppm> <contours.pgm> <out prefix> [--features f.json]... [--long-side N] [--bed bed.ppm] [--eyes asTheyLook|asInThePhoto]") }
 
 let clock = ContinuousClock()
 let started = clock.now
@@ -173,7 +176,6 @@ for f in featureFiles {
 let photo = MosaicEngine.Photo(width: w, height: h, rgb: (0..<(w * h)).map { SIMD3(rgb[3 * $0], rgb[3 * $0 + 1], rgb[3 * $0 + 2]) })
 let read = clock.now - started
 
-let settings = MosaicEngine.Settings()
 var trace = MosaicEngine.Trace()
 let made = clock.now
 let mosaic = try MosaicEngine.make(photo: photo, contours: contours, faces: faces, settings: settings,

@@ -139,6 +139,21 @@ struct EngineTests {
         #expect(again == m)
     }
 
+    @Test func colorsAnIrisAsItLooksOrAsInThePhoto() throws {
+        let (photo, contours) = Self.picture(eye: true)
+        let painted = SIMD3<Float>(0.45, 0.55, 0.65)
+        func iris(_ eyes: MosaicEngine.Eyes) throws -> SIMD3<Float> {
+            var s = Self.settings()
+            s.eyes = eyes
+            let m = try MosaicEngine.make(photo: photo, contours: contours, faces: [Self.face], settings: s)
+            return m.palette[m.tiles[0].paint]
+        }
+        func off(_ c: SIMD3<Float>) -> Float { ((c - painted) * (c - painted)).sum().squareRoot() }
+        let looks = try iris(.asTheyLook), photo_ = try iris(.asInThePhoto)
+        #expect(off(photo_) < 0.02, "the photo's own grey-blue: \(photo_)")
+        #expect(off(looks) > off(photo_), "as it looks, stronger than the photo's")
+    }
+
     @Test func readsTheFeaturesJSON() throws {
         let json = #"{"box": [97, 263, 603, 802], "eyes": [[303.9, 442.2, 17.5, 7.0]], "lines": [{"kind": "dark", "pts": [[273.5, 436.3], [278.5, 434.3]]}]}"#
         let f = try JSONDecoder().decode(MosaicEngine.Face.self, from: Data(json.utf8))

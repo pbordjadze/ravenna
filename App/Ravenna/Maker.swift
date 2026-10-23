@@ -27,7 +27,9 @@ nonisolated enum Maker {
     /// standard count) to 1448 px (about twice), as the bundled mosaics' details.
     static func longSide(pieces: Double) -> Int { Int((724 + 724 * min(max(pieces, 0), 1)).rounded()) }
 
-    static func make(from data: Data, pieces: Double, stage: @Sendable (Stage) -> Void) throws -> Made {
+    /// `eyes`: how irises are coloured (issue #9's option).
+    static func make(from data: Data, pieces: Double, eyes: MosaicEngine.Eyes = .asTheyLook,
+                     stage: @Sendable (Stage) -> Void) throws -> Made {
         stage(.reading)
         let side = longSide(pieces: pieces)
         guard let image = oriented(data, longSide: side), case let (rgba, w, h)? = pixels(image) else { throw MakerError.unreadable }
@@ -53,8 +55,10 @@ nonisolated enum Maker {
         stage(.tiles)
         var rgb = [SIMD3<Float>](repeating: .zero, count: w * h)
         for i in 0..<(w * h) { rgb[i] = SIMD3(Float(rgba[i * 4]), Float(rgba[i * 4 + 1]), Float(rgba[i * 4 + 2])) / 255 }
+        var settings = MosaicEngine.Settings()
+        settings.eyes = eyes
         let mosaic = try MosaicEngine.make(photo: .init(width: w, height: h, rgb: rgb), contours: contours, faces: faces,
-                                           cancel: { Task.isCancelled })
+                                           settings: settings, cancel: { Task.isCancelled })
 
         stage(.bed)
         let bed = MosaicEngine.bed(of: mosaic, width: w, height: h)

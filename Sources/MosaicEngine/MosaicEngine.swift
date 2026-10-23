@@ -24,7 +24,16 @@ nonisolated public enum MosaicEngine {
         public var faceCut: Float = 0.45
         /// The joint between tiles, in working pixels: GROUT (the tight set).
         public var grout: Int = 2
+        /// How an iris is coloured (issue #9, an option until Paul narrows it).
+        public var eyes: Eyes = .asTheyLook
         public init() {}
+    }
+
+    /// An iris's colour: as the eye takes it beside the face (its lit tone, a little stronger: the
+    /// prototype's way, which gave the cat gold eyes) or as the photo has it (the ring's median:
+    /// the cat's olive-brown).
+    nonisolated public enum Eyes: String, Sendable, Equatable, CaseIterable {
+        case asTheyLook, asInThePhoto
     }
 
     /// A photo in sRGB 0...1, row-major, at its working size (the caller scales it, e.g. long side 1024).
@@ -132,6 +141,7 @@ nonisolated extension MosaicEngine {
         let boxes: [[Float]], eyes: [[Float]], lines: [Face.Line]
         /// The eyes' openings, in working pixels.
         let eyeRings: [[SIMD2<Double>]]
+        let irises: Eyes
         let photo: Photo, contours: [Float]
         /// The photo at the working size, by channel, and the drawing.
         var red: [Float] = [], green: [Float] = [], blue: [Float] = []
@@ -145,6 +155,7 @@ nonisolated extension MosaicEngine {
             fine = Swift.max(Double(settings.facePitch), Double(g) + 2)
             paints = Swift.max(settings.paints, 1)
             cut = settings.cut; faceCut = settings.faceCut
+            irises = settings.eyes
             w0 = photo.width; h0 = photo.height
             W = w0 * Self.scale; H = h0 * Self.scale
             boxes = faces.map(\.box).filter { $0.count >= 4 }
@@ -455,8 +466,13 @@ nonisolated extension MosaicEngine {
                         if d > 0.4 * rr && d < 0.85 * rr { ring.append(px[j]) }
                     }
                     if ring.count <= 10 { ring = px }
-                    c = Colour.lab(Stats.median(brightest(ring, 70, above: true)))
-                    c = SIMD3(c.x, c.y * 1.4, c.z * 1.4)
+                    switch irises {
+                    case .asTheyLook:
+                        c = Colour.lab(Stats.median(brightest(ring, 70, above: true)))
+                        c = SIMD3(c.x, c.y * 1.4, c.z * 1.4)
+                    case .asInThePhoto:
+                        c = Colour.lab(Stats.median(ring))
+                    }
                 }
                 if t.eye == .pupil { c = Colour.lab(Stats.percentile(px, 5)) }
                 if t.feature == "eye" {
