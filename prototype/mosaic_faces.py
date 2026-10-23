@@ -3,7 +3,8 @@ habits mosaicists keep for faces. Environment: FINE (the pitch inside detail box
 ("x0,y0,x1,y1;..." photo pixels: where a face is), CUT_FINE (a lower outline cut inside them),
 EYES ("cx,cy,r[,pupil];...": each eye one round piece, a slit pupil when given), GROUT (the joint, px at
 twice the photo's scale, default 4), TIGHT=1 (a tight set: rows cut to fit at their ends, the
-gaps filled with pieces cut to the space rather than loose squares). Hand-marked
+gaps filled with pieces cut to the space rather than loose squares), FEATURES (a features.py JSON: the
+face's features set as their own pieces before anything else, and its eyes; see sketchbook/features.py). Hand-marked
 here; in the app they would come from the face detection the coloring book already runs.
 From mosaic_look.py: The coloring book's own outlines (the contour model's map) give the cartoon:
 its strong lines, smoothed, laid as single rows of tiles in a dark smalti of the local hue. The
@@ -27,6 +28,9 @@ BOXES = [tuple(map(float, b.split(","))) for b in os.environ.get("BOXES", "").sp
 EYES = [tuple(map(float, e.split(","))) for e in os.environ.get("EYES", "").split(";") if e]
 G = int(os.environ.get("GROUT", "4"))
 TIGHT = os.environ.get("TIGHT") == "1"
+FEAT = json.load(open(os.environ["FEATURES"])) if os.environ.get("FEATURES") else None
+if FEAT and not EYES: EYES = [tuple(e) + (e[3],) for e in FEAT["eyes"]]
+if FEAT and not BOXES: BOXES = [tuple(map(float, FEAT["box"]))]
 T = S - G
 SCALE = 2
 src = cv2.cvtColor(cv2.imread(photo), cv2.COLOR_BGR2RGB).astype(np.float32) / 255
@@ -113,7 +117,7 @@ forbid = np.zeros((H, W), np.uint8)
 inside = np.zeros((H, W), np.uint8); inside[G:H - G, G:W - G] = 1
 kern = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * G + 1, 2 * G + 1))
 tiles = []
-def place(poly, strand, min_frac=0.45, eye=None):
+def place(poly, strand, min_frac=0.45, eye=None, feature=None):
     x0 = max(int(poly[:, 0].min()) - 2, 0); y0 = max(int(poly[:, 1].min()) - 2, 0)
     x1 = min(int(poly[:, 0].max()) + 3, W); y1 = min(int(poly[:, 1].max()) + 3, H)
     if x1 <= x0 or y1 <= y0: return False
@@ -135,7 +139,7 @@ def place(poly, strand, min_frac=0.45, eye=None):
     ya, xa = y0 - G - 1, x0 - G - 1
     sy0, sx0 = max(ya, 0), max(xa, 0); sy1, sx1 = min(ya + q.shape[0], H), min(xa + q.shape[1], W)
     np.maximum(forbid[sy0:sy1, sx0:sx1], q[sy0 - ya:sy1 - ya, sx0 - xa:sx1 - xa], out=forbid[sy0:sy1, sx0:sx1])
-    tiles.append({"poly": p, "strand": strand, "eye": eye}); return True
+    tiles.append({"poly": p, "strand": strand, "eye": eye, "feature": feature}); return True
 def square(c, t, grow=1.0):
     h = grow * (pitch(c) - G) / 2
     t = t / (np.hypot(*t) + 1e-9); n = np.array([-t[1], t[0]])
@@ -152,13 +156,37 @@ def resample(P, step=None, closed=False):
     at = np.array(at)
     return np.stack([np.interp(at, d, P[:, 0]), np.interp(at, d, P[:, 1])], 1), d[-1]
 pupils = []
+def lidded(poly):
+    """The part of an iris or pupil inside its eye's opening (all of it when there is none)."""
+    if not FEAT: return poly
+    from shapely.geometry import Polygon
+    c = poly.mean(0)
+    for ln in FEAT["lines"]:
+        ring = np.array(ln["pts"], float) * SCALE
+        if ln["kind"] == "eye" and cv2.pointPolygonTest(ring.astype(np.float32).reshape(-1, 1, 2), (float(c[0]), float(c[1])), False) >= 0:
+            g = Polygon(poly).intersection(Polygon(ring).buffer(0))
+            if g.geom_type == "MultiPolygon": g = max(g.geoms, key=lambda q: q.area)
+            if g.is_empty or g.geom_type != "Polygon": return poly
+            return np.array(g.exterior.coords)[:-1]
+    return poly
 for e in EYES:
     cx, cy, r = e[:3]
     ang = np.linspace(0, 2 * math.pi, 28, endpoint=False)
     c = np.array([cx, cy]) * SCALE; rr = r * SCALE
-    place(np.stack([c[0] + rr * np.cos(ang), c[1] + rr * np.sin(ang)], 1), False, 0.1, eye="iris")
+    place(lidded(np.stack([c[0] + rr * np.cos(ang), c[1] + rr * np.sin(ang)], 1)), False, 0.1, eye="iris")
     if len(e) > 3:
-        pupils.append({"poly": np.stack([c[0] + e[3] * SCALE * np.cos(ang), c[1] + 0.8 * rr * np.sin(ang)], 1), "strand": False, "eye": "pupil"})
+        pupils.append({"poly": lidded(np.stack([c[0] + e[3] * SCALE * np.cos(ang), c[1] + (e[4] * SCALE if len(e) > 4 else 0.8 * rr) * np.sin(ang)], 1)), "strand": False, "eye": "pupil"})
+# The features first, each a row of its own (a dark row, the feature's shadow, or the photo's tone).
+for ln in (FEAT["lines"] if FEAT else []):
+    if ln["kind"] in ("eye", "lips"): continue
+    P = np.array(ln["pts"], float) * SCALE
+    P = np.vstack([np.linspace(a, b, max(int(np.hypot(*(b - a))), 2), endpoint=False) for a, b in zip(P[:-1], P[1:])] + [P[-1:]])
+    P = np.stack([gaussian_filter1d(P[:, 0], FINE * 0.2, mode="nearest"), gaussian_filter1d(P[:, 1], FINE * 0.2, mode="nearest")], 1)
+    pts, _ = resample(P)
+    for i, p in enumerate(pts):
+        a = pts[max(i - 1, 0)]; b = pts[min(i + 1, len(pts) - 1)]
+        if len(pts) == 1: a, b = P[0], P[-1]
+        place(square(p, b - a), ln["kind"] == "dark", 0.3, feature=ln["kind"])
 for P in sorted(guides, key=lambda g: -len(g)):
     pts, length = resample(P, S)
     for i, p in enumerate(pts):
@@ -224,6 +252,13 @@ for _ in range(4):
     if not added: break
 stage("3-rows", fill=lambda i, t: INK + 0.08 if t["strand"] else None)
 tiles.extend(pupils)
+# A tile inside a feature's outline (an eye's opening, the lips) keeps its colour, like the features' own rows.
+for ln in (FEAT["lines"] if FEAT else []):
+    if ln["kind"] not in ("eye", "lips"): continue
+    ring = (np.array(ln["pts"], np.float32) * SCALE).reshape(-1, 1, 2)
+    for i, t in enumerate(tiles):
+        if not t.get("feature") and not t.get("eye") and cv2.pointPolygonTest(ring, tuple(map(float, t["poly"].mean(0))), False) >= 0:
+            t["feature"] = ln["kind"]
 # Colors: each tile's median; a strand tile, a dark smalti of the hue round it.
 med = []
 for t in tiles:
@@ -242,12 +277,21 @@ for t in tiles:
         c = oklab(np.median(ring[lum >= np.percentile(lum, 70)], 0)); c = np.array([c[0], c[1] * 1.4, c[2] * 1.4])
     if t.get("eye") == "pupil":
         c = oklab(np.percentile(px, 5, axis=0))
+    if t.get("feature") == "eye":
+        # An eye's white: the lit part of the stones under the tile, as the eye takes it.
+        lum = px @ [0.2126, 0.7152, 0.0722]
+        c = oklab(np.median(px[lum >= np.percentile(lum, 60)], 0))
+    if t.get("feature") == "mid":
+        # The feature's own shadow: the darker part of the stones under it.
+        lum = px @ [0.2126, 0.7152, 0.0722]
+        c = oklab(np.median(px[lum <= np.percentile(lum, 35)], 0)); c = np.array([c[0] * 0.86, c[1] * 1.15, c[2] * 1.15])
     if t["strand"]:
         c = np.array([min(c[0], 0.30), c[1] * 0.8, c[2] * 0.8])
     med.append(c)
 med = np.array(med)
 # Shade in zones, as a mosaicist grades it: a field tile's color leans on its neighbours'.
-C = np.array([t["poly"].mean(0) for t in tiles]); field = np.array([not t["strand"] and not t.get("eye") for t in tiles])
+C = np.array([t["poly"].mean(0) for t in tiles])
+field = np.array([not t["strand"] and not t.get("eye") and not t.get("feature") for t in tiles])
 idx = np.where(field)[0]; tree = cKDTree(C[idx]); calm = med.copy()
 for i in idx:
     nb = idx[tree.query_ball_point(C[i], 1.7 * pitch(C[i]))]
@@ -255,7 +299,8 @@ for i in idx:
 med = calm
 Xc = (med * [1, 1.5, 1.5]).astype(np.float32)
 fine = np.array([pitch(t["poly"].mean(0)) < S * 0.8 for t in tiles])
-Xw = np.vstack([Xc] + [Xc[fine]] * 2)
+feat = np.array([bool(t.get("feature")) for t in tiles])
+Xw = np.vstack([Xc] + [Xc[fine]] * 2 + [Xc[feat]] * 4)
 _, _, cen = cv2.kmeans(Xw, K, None, (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 200, 1e-5), 10, cv2.KMEANS_PP_CENTERS)
 a = cKDTree(cen).query(Xc)[1]
 palette = []
@@ -265,9 +310,9 @@ for j in range(K):
     if len(members) == 0: continue
     remap[j] = len(palette); palette.append(srgb(np.median(med[members], 0)))
 paint = np.array([remap[j] for j in a])
-# An eye keeps its own glass: its own paint unless one is already as near as can be seen.
+# An eye keeps its own glass (iris and pupil): its own paint unless one is already as near as can be seen.
 for i, t in enumerate(tiles):
-    if t.get("eye") == "iris":
+    if t.get("eye") in ("iris", "pupil"):
         pal = np.array([oklab(c) for c in palette])
         dist = np.hypot(*(pal - med[i]).T)
         if dist.min() < 0.015: paint[i] = int(dist.argmin())
@@ -275,7 +320,7 @@ for i, t in enumerate(tiles):
 grout = srgb(np.array([0.86, 0.004, 0.012]))
 design = {"size": [W, H], "scale": SCALE, "pitch": S, "grout": [round(float(v), 4) for v in grout],
           "palette": [[round(float(v), 4) for v in c] for c in palette],
-          "tiles": [{"corners": (t["poly"] / SCALE).round(3).tolist(), "paint": int(paint[i]), "strand": t["strand"]} for i, t in enumerate(tiles)]}
+          "tiles": [{"corners": (t["poly"] / SCALE).round(3).tolist(), "paint": int(paint[i]), "strand": t["strand"], **({"feature": t["feature"]} if t.get("feature") else {})} for i, t in enumerate(tiles)]}
 json.dump(design, open(out + ".json", "w"))
 pv = np.ones((H, W, 3), np.float32) * grout
 for i, t in enumerate(tiles):
