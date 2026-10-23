@@ -66,20 +66,24 @@ nonisolated extension MosaicEngine {
             let r = k.count / 2, n = w + 2 * r
             var out = [Float](repeating: 0, count: w * h)
             let index = (0..<n).map { reflectIndex($0 - r, w) }
-            var line = [Float](repeating: 0, count: n)
             src.withUnsafeBufferPointer { s in
                 out.withUnsafeMutableBufferPointer { o in
-                    line.withUnsafeMutableBufferPointer { l in
-                        index.withUnsafeBufferPointer { ix in
-                            k.withUnsafeBufferPointer { kk in
-                                for y in 0..<h {
-                                    let row = y * w
-                                    for i in 0..<n { l[i] = s[row + ix[i]] }
-                                    let dst = o.baseAddress! + row
-                                    for x in 0..<w { dst[x] = 0 }
-                                    for j in 0..<kk.count {
-                                        let wj = kk[j], src = l.baseAddress! + j
-                                        for x in 0..<w { dst[x] += wj * src[x] }
+                    index.withUnsafeBufferPointer { ix in
+                        k.withUnsafeBufferPointer { kk in
+                            let s = Parallel.Unchecked(s), o = Parallel.Unchecked(o)
+                            let ix = Parallel.Unchecked(ix), kk = Parallel.Unchecked(kk)
+                            Parallel.ranges(h, grain: 16) { rows in
+                                var line = [Float](repeating: 0, count: n)
+                                line.withUnsafeMutableBufferPointer { l in
+                                    for y in rows {
+                                        let row = y * w
+                                        for i in 0..<n { l[i] = s.value[row + ix.value[i]] }
+                                        let dst = o.value.baseAddress! + row
+                                        for x in 0..<w { dst[x] = 0 }
+                                        for j in 0..<kk.value.count {
+                                            let wj = kk.value[j], src = l.baseAddress! + j
+                                            for x in 0..<w { dst[x] += wj * src[x] }
+                                        }
                                     }
                                 }
                             }
@@ -96,11 +100,14 @@ nonisolated extension MosaicEngine {
             src.withUnsafeBufferPointer { s in
                 out.withUnsafeMutableBufferPointer { o in
                     k.withUnsafeBufferPointer { kk in
-                        for y in 0..<h {
-                            let dst = o.baseAddress! + y * w
-                            for j in 0..<kk.count {
-                                let wj = kk[j], row = s.baseAddress! + reflectIndex(y + j - r, h) * w
-                                for x in 0..<w { dst[x] += wj * row[x] }
+                        let s = Parallel.Unchecked(s), o = Parallel.Unchecked(o), kk = Parallel.Unchecked(kk)
+                        Parallel.ranges(h, grain: 16) { rows in
+                            for y in rows {
+                                let dst = o.value.baseAddress! + y * w
+                                for j in 0..<kk.value.count {
+                                    let wj = kk.value[j], row = s.value.baseAddress! + reflectIndex(y + j - r, h) * w
+                                    for x in 0..<w { dst[x] += wj * row[x] }
+                                }
                             }
                         }
                     }
@@ -136,21 +143,24 @@ nonisolated extension MosaicEngine {
             let n = w + 2 * r, inv = 1 / Double(2 * r + 1)
             var out = [Float](repeating: 0, count: w * h)
             let index = (0..<n).map { reflectIndex($0 - r, w) }
-            var line = [Double](repeating: 0, count: n)
             src.withUnsafeBufferPointer { s in
                 out.withUnsafeMutableBufferPointer { o in
-                    line.withUnsafeMutableBufferPointer { l in
-                        index.withUnsafeBufferPointer { ix in
-                            for y in 0..<h {
-                                let row = y * w
-                                for i in 0..<n { l[i] = Double(s[row + ix[i]]) }
-                                var sum = 0.0
-                                for i in 0...(2 * r) { sum += l[i] }
-                                o[row] = Float(sum * inv)
-                                if w > 1 {
-                                    for x in 1..<w {
-                                        sum += l[x + 2 * r] - l[x - 1]
-                                        o[row + x] = Float(sum * inv)
+                    index.withUnsafeBufferPointer { ix in
+                        let s = Parallel.Unchecked(s), o = Parallel.Unchecked(o), ix = Parallel.Unchecked(ix)
+                        Parallel.ranges(h, grain: 16) { rows in
+                            var line = [Double](repeating: 0, count: n)
+                            line.withUnsafeMutableBufferPointer { l in
+                                for y in rows {
+                                    let row = y * w
+                                    for i in 0..<n { l[i] = Double(s.value[row + ix.value[i]]) }
+                                    var sum = 0.0
+                                    for i in 0...(2 * r) { sum += l[i] }
+                                    o.value[row] = Float(sum * inv)
+                                    if w > 1 {
+                                        for x in 1..<w {
+                                            sum += l[x + 2 * r] - l[x - 1]
+                                            o.value[row + x] = Float(sum * inv)
+                                        }
                                     }
                                 }
                             }
@@ -164,22 +174,27 @@ nonisolated extension MosaicEngine {
         static func boxColumns(_ src: [Float], width w: Int, height h: Int, radius r: Int) -> [Float] {
             let inv = 1 / Double(2 * r + 1)
             var out = [Float](repeating: 0, count: w * h)
-            var acc = [Double](repeating: 0, count: w)
             src.withUnsafeBufferPointer { s in
                 out.withUnsafeMutableBufferPointer { o in
-                    acc.withUnsafeMutableBufferPointer { a in
-                        for j in -r...r {
-                            let row = s.baseAddress! + reflectIndex(j, h) * w
-                            for x in 0..<w { a[x] += Double(row[x]) }
-                        }
-                        for y in 0..<h {
-                            if y > 0 {
-                                let add = s.baseAddress! + reflectIndex(y + r, h) * w
-                                let sub = s.baseAddress! + reflectIndex(y - r - 1, h) * w
-                                for x in 0..<w { a[x] += Double(add[x]) - Double(sub[x]) }
+                    let s = Parallel.Unchecked(s), o = Parallel.Unchecked(o)
+                    // In strips of columns, each with its own running sums.
+                    Parallel.ranges(w, grain: 256) { cols in
+                        let x0 = cols.lowerBound, n = cols.count
+                        var acc = [Double](repeating: 0, count: n)
+                        acc.withUnsafeMutableBufferPointer { a in
+                            for j in -r...r {
+                                let row = s.value.baseAddress! + reflectIndex(j, h) * w + x0
+                                for x in 0..<n { a[x] += Double(row[x]) }
                             }
-                            let dst = o.baseAddress! + y * w
-                            for x in 0..<w { dst[x] = Float(a[x] * inv) }
+                            for y in 0..<h {
+                                if y > 0 {
+                                    let add = s.value.baseAddress! + reflectIndex(y + r, h) * w + x0
+                                    let sub = s.value.baseAddress! + reflectIndex(y - r - 1, h) * w + x0
+                                    for x in 0..<n { a[x] += Double(add[x]) - Double(sub[x]) }
+                                }
+                                let dst = o.value.baseAddress! + y * w + x0
+                                for x in 0..<n { dst[x] = Float(a[x] * inv) }
+                            }
                         }
                     }
                 }
@@ -228,13 +243,16 @@ nonisolated extension MosaicEngine {
             var mid = [Float](repeating: 0, count: W * h)
             src.withUnsafeBufferPointer { s in
                 mid.withUnsafeMutableBufferPointer { m in
-                    for y in 0..<h {
-                        let row = s.baseAddress! + y * w, dst = m.baseAddress! + y * W
-                        for i in 0..<w {
-                            let a = row[clampIndex(i - 2, w)], b = row[clampIndex(i - 1, w)], c = row[i]
-                            let d = row[clampIndex(i + 1, w)], e = row[clampIndex(i + 2, w)]
-                            dst[2 * i] = even.x * a + even.y * b + even.z * c + even.w * d
-                            dst[2 * i + 1] = odd.x * b + odd.y * c + odd.z * d + odd.w * e
+                    let s = Parallel.Unchecked(s), m = Parallel.Unchecked(m)
+                    Parallel.ranges(h, grain: 16) { rows in
+                        for y in rows {
+                            let row = s.value.baseAddress! + y * w, dst = m.value.baseAddress! + y * W
+                            for i in 0..<w {
+                                let a = row[clampIndex(i - 2, w)], b = row[clampIndex(i - 1, w)], c = row[i]
+                                let d = row[clampIndex(i + 1, w)], e = row[clampIndex(i + 2, w)]
+                                dst[2 * i] = even.x * a + even.y * b + even.z * c + even.w * d
+                                dst[2 * i + 1] = odd.x * b + odd.y * c + odd.z * d + odd.w * e
+                            }
                         }
                     }
                 }
@@ -243,14 +261,17 @@ nonisolated extension MosaicEngine {
             var out = [Float](repeating: 0, count: W * H)
             mid.withUnsafeBufferPointer { m in
                 out.withUnsafeMutableBufferPointer { o in
-                    for i in 0..<h {
-                        let a = m.baseAddress! + clampIndex(i - 2, h) * W, b = m.baseAddress! + clampIndex(i - 1, h) * W
-                        let c = m.baseAddress! + i * W
-                        let d = m.baseAddress! + clampIndex(i + 1, h) * W, e = m.baseAddress! + clampIndex(i + 2, h) * W
-                        let r0 = o.baseAddress! + 2 * i * W, r1 = r0 + W
-                        for x in 0..<W {
-                            r0[x] = even.x * a[x] + even.y * b[x] + even.z * c[x] + even.w * d[x]
-                            r1[x] = odd.x * b[x] + odd.y * c[x] + odd.z * d[x] + odd.w * e[x]
+                    let m = Parallel.Unchecked(m.baseAddress!), o = Parallel.Unchecked(o)
+                    Parallel.ranges(h, grain: 8) { rows in
+                        for i in rows {
+                            let a = m.value + clampIndex(i - 2, h) * W, b = m.value + clampIndex(i - 1, h) * W
+                            let c = m.value + i * W
+                            let d = m.value + clampIndex(i + 1, h) * W, e = m.value + clampIndex(i + 2, h) * W
+                            let r0 = o.value.baseAddress! + 2 * i * W, r1 = r0 + W
+                            for x in 0..<W {
+                                r0[x] = even.x * a[x] + even.y * b[x] + even.z * c[x] + even.w * d[x]
+                                r1[x] = odd.x * b[x] + odd.y * c[x] + odd.z * d[x] + odd.w * e[x]
+                            }
                         }
                     }
                 }
@@ -274,13 +295,18 @@ nonisolated extension MosaicEngine {
             let xs = taps(w, W), ys = taps(h, H)
             var out = [Float](repeating: 0, count: W * H)
             src.withUnsafeBufferPointer { s in
-                for y in 0..<H {
-                    let (y0, y1, ty) = ys[y]
-                    for x in 0..<W {
-                        let (x0, x1, tx) = xs[x]
-                        let top = s[y0 * w + x0] * (1 - tx) + s[y0 * w + x1] * tx
-                        let bottom = s[y1 * w + x0] * (1 - tx) + s[y1 * w + x1] * tx
-                        out[y * W + x] = top * (1 - ty) + bottom * ty
+                out.withUnsafeMutableBufferPointer { o in
+                    let s = Parallel.Unchecked(s), o = Parallel.Unchecked(o)
+                    Parallel.ranges(H, grain: 16) { rows in
+                        for y in rows {
+                            let (y0, y1, ty) = ys[y]
+                            for x in 0..<W {
+                                let (x0, x1, tx) = xs[x]
+                                let top = s.value[y0 * w + x0] * (1 - tx) + s.value[y0 * w + x1] * tx
+                                let bottom = s.value[y1 * w + x0] * (1 - tx) + s.value[y1 * w + x1] * tx
+                                o.value[y * W + x] = top * (1 - ty) + bottom * ty
+                            }
+                        }
                     }
                 }
             }
@@ -296,27 +322,33 @@ nonisolated extension MosaicEngine {
             let hit: UInt8 = dilate ? 1 : 0
             m.withUnsafeBufferPointer { s in
                 tmp.withUnsafeMutableBufferPointer { t in
-                    for y in 0..<h {
-                        let row = y * w
-                        for x in 0..<w {
-                            var v: UInt8 = dilate ? 0 : 1
-                            for k in Swift.max(x - r, 0)...Swift.min(x + r, w - 1) where (s[row + k] != 0) == dilate {
-                                v = hit; break
+                    let s = Parallel.Unchecked(s), t = Parallel.Unchecked(t)
+                    Parallel.ranges(h, grain: 16) { rows in
+                        for y in rows {
+                            let row = y * w
+                            for x in 0..<w {
+                                var v: UInt8 = dilate ? 0 : 1
+                                for k in Swift.max(x - r, 0)...Swift.min(x + r, w - 1) where (s.value[row + k] != 0) == dilate {
+                                    v = hit; break
+                                }
+                                t.value[row + x] = v
                             }
-                            t[row + x] = v
                         }
                     }
                 }
             }
             tmp.withUnsafeBufferPointer { t in
                 out.withUnsafeMutableBufferPointer { o in
-                    for y in 0..<h {
-                        for x in 0..<w {
-                            var v: UInt8 = dilate ? 0 : 1
-                            for k in Swift.max(y - r, 0)...Swift.min(y + r, h - 1) where (t[k * w + x] != 0) == dilate {
-                                v = hit; break
+                    let t = Parallel.Unchecked(t), o = Parallel.Unchecked(o)
+                    Parallel.ranges(h, grain: 16) { rows in
+                        for y in rows {
+                            for x in 0..<w {
+                                var v: UInt8 = dilate ? 0 : 1
+                                for k in Swift.max(y - r, 0)...Swift.min(y + r, h - 1) where (t.value[k * w + x] != 0) == dilate {
+                                    v = hit; break
+                                }
+                                o.value[y * w + x] = v
                             }
-                            o[y * w + x] = v
                         }
                     }
                 }
@@ -344,16 +376,19 @@ nonisolated extension MosaicEngine {
             var out = [UInt8](repeating: 0, count: w * h)
             labels.withUnsafeBufferPointer { l in
                 out.withUnsafeMutableBufferPointer { o in
-                    for y in 0..<h {
-                        let y0 = Swift.max(y - 1, 0), y1 = Swift.min(y + 1, h - 1)
-                        for x in 0..<w {
-                            let v = l[y * w + x]
-                            let x0 = Swift.max(x - 1, 0), x1 = Swift.min(x + 1, w - 1)
-                            var edge: UInt8 = 0
-                            outer: for yy in y0...y1 {
-                                for xx in x0...x1 where l[yy * w + xx] != v { edge = 1; break outer }
+                    let l = Parallel.Unchecked(l), o = Parallel.Unchecked(o)
+                    Parallel.ranges(h, grain: 16) { rows in
+                        for y in rows {
+                            let y0 = Swift.max(y - 1, 0), y1 = Swift.min(y + 1, h - 1)
+                            for x in 0..<w {
+                                let v = l.value[y * w + x]
+                                let x0 = Swift.max(x - 1, 0), x1 = Swift.min(x + 1, w - 1)
+                                var edge: UInt8 = 0
+                                outer: for yy in y0...y1 {
+                                    for xx in x0...x1 where l.value[yy * w + xx] != v { edge = 1; break outer }
+                                }
+                                o.value[y * w + x] = edge
                             }
-                            o[y * w + x] = edge
                         }
                     }
                 }
@@ -366,26 +401,29 @@ nonisolated extension MosaicEngine {
         static func median(_ labels: [UInt8], width w: Int, height h: Int, size k: Int, levels: Int) -> [UInt8] {
             let r = k / 2, half = (k * k) / 2
             var out = [UInt8](repeating: 0, count: w * h)
-            var hist = [Int](repeating: 0, count: Swift.max(levels, 1))
-            let bins = hist.count
+            let bins = Swift.max(levels, 1)
             labels.withUnsafeBufferPointer { l in
                 out.withUnsafeMutableBufferPointer { o in
-                    hist.withUnsafeMutableBufferPointer { hs in
-                        for y in 0..<h {
-                            for b in 0..<bins { hs[b] = 0 }
-                            let rows = (-r...r).map { clampIndex(y + $0, h) * w }
-                            for dx in -r...r {
-                                let xx = clampIndex(dx, w)
-                                for row in rows { hs[Int(l[row + xx])] += 1 }
-                            }
-                            for x in 0..<w {
-                                if x > 0 {
-                                    let add = clampIndex(x + r, w), sub = clampIndex(x - r - 1, w)
-                                    for row in rows { hs[Int(l[row + add])] += 1; hs[Int(l[row + sub])] -= 1 }
+                    let l = Parallel.Unchecked(l), o = Parallel.Unchecked(o)
+                    Parallel.ranges(h, grain: 16) { band in
+                        var hist = [Int](repeating: 0, count: bins), rows = [Int](repeating: 0, count: 2 * r + 1)
+                        hist.withUnsafeMutableBufferPointer { hs in
+                            for y in band {
+                                for b in 0..<bins { hs[b] = 0 }
+                                for j in 0...(2 * r) { rows[j] = clampIndex(y + j - r, h) * w }
+                                for dx in -r...r {
+                                    let xx = clampIndex(dx, w)
+                                    for row in rows { hs[Int(l.value[row + xx])] += 1 }
                                 }
-                                var c = 0, v = 0
-                                while v < bins { c += hs[v]; if c > half { break }; v += 1 }
-                                o[y * w + x] = UInt8(Swift.min(v, bins - 1))
+                                for x in 0..<w {
+                                    if x > 0 {
+                                        let add = clampIndex(x + r, w), sub = clampIndex(x - r - 1, w)
+                                        for row in rows { hs[Int(l.value[row + add])] += 1; hs[Int(l.value[row + sub])] -= 1 }
+                                    }
+                                    var c = 0, v = 0
+                                    while v < bins { c += hs[v]; if c > half { break }; v += 1 }
+                                    o.value[y * w + x] = UInt8(Swift.min(v, bins - 1))
+                                }
                             }
                         }
                     }
@@ -421,70 +459,74 @@ nonisolated extension MosaicEngine {
         static func maxFilter(_ p: Plane, before: Int, after: Int) -> Plane {
             let w = p.width, h = p.height
             let rows = slidingMaxRows(p.pixels, width: w, height: h, before: before, after: after)
-            return Plane(width: w, height: h, pixels: slidingMaxColumns(rows, width: w, height: h, before: before, after: after))
+            return Plane(width: w, height: h, pixels: slidingMaxColumns(consume rows, width: w, height: h, before: before, after: after))
         }
 
         /// The column pass of `maxFilter`, row by row (van Herk and Gil-Werman): blocks of the window's
         /// height, each with its running maxima down from its top and up from its bottom; a window
         /// spans at most two blocks, so its maximum is the first's from below and the second's from above.
-        static func slidingMaxColumns(_ src: [Float], width w: Int, height h: Int, before: Int, after: Int) -> [Float] {
+        /// The maxima go into the running maxima from above as they're made (a row's window ends at
+        /// or below it, and that row isn't overwritten yet), so it takes two planes, `src` among them.
+        static func slidingMaxColumns(_ src: consuming [Float], width w: Int, height h: Int, before: Int, after: Int) -> [Float] {
             let k = before + after + 1
             guard k > 1, h > 1 else { return src }
-            var down = src, up = src
+            var up = src
+            var down = up
             down.withUnsafeMutableBufferPointer { dn in
                 up.withUnsafeMutableBufferPointer { u in
-                    for y in 0..<h where y % k != 0 {
-                        let cur = dn.baseAddress! + y * w, prev = dn.baseAddress! + (y - 1) * w
-                        for x in 0..<w { cur[x] = Swift.max(cur[x], prev[x]) }
-                    }
-                    for y in stride(from: h - 2, through: 0, by: -1) where (y + 1) % k != 0 {
-                        let cur = u.baseAddress! + y * w, next = u.baseAddress! + (y + 1) * w
-                        for x in 0..<w { cur[x] = Swift.max(cur[x], next[x]) }
-                    }
-                }
-            }
-            var out = [Float](repeating: 0, count: w * h)
-            down.withUnsafeBufferPointer { dn in
-                up.withUnsafeBufferPointer { u in
-                    out.withUnsafeMutableBufferPointer { o in
+                    let dn = Parallel.Unchecked(dn.baseAddress!), u = Parallel.Unchecked(u.baseAddress!)
+                    // In strips of columns, each strip's rows in order.
+                    Parallel.ranges(w, grain: 256) { cols in
+                        let x0 = cols.lowerBound, n = cols.count
+                        for y in 0..<h where y % k != 0 {
+                            let cur = dn.value + y * w + x0, prev = dn.value + (y - 1) * w + x0
+                            for x in 0..<n { cur[x] = Swift.max(cur[x], prev[x]) }
+                        }
+                        for y in stride(from: h - 2, through: 0, by: -1) where (y + 1) % k != 0 {
+                            let cur = u.value + y * w + x0, next = u.value + (y + 1) * w + x0
+                            for x in 0..<n { cur[x] = Swift.max(cur[x], next[x]) }
+                        }
                         for y in 0..<h {
                             let a = Swift.max(y - before, 0), b = Swift.min(y + after, h - 1)
-                            let dst = o.baseAddress! + y * w
-                            let fromA = u.baseAddress! + a * w, toB = dn.baseAddress! + b * w
+                            let dst = dn.value + y * w + x0
+                            let fromA = UnsafePointer(u.value + a * w + x0), toB = UnsafePointer(dn.value + b * w + x0)
                             if a / k != b / k {
-                                for x in 0..<w { dst[x] = Swift.max(fromA[x], toB[x]) }
+                                for x in 0..<n { dst[x] = Swift.max(fromA[x], toB[x]) }
                             } else if b == h - 1 || (b + 1) % k == 0 {
                                 // One block, the window reaching its end (clipped at the image's bottom).
-                                for x in 0..<w { dst[x] = fromA[x] }
+                                for x in 0..<n { dst[x] = fromA[x] }
                             } else {
                                 // One block, the window from its start (clipped at the image's top).
-                                for x in 0..<w { dst[x] = toB[x] }
+                                for x in 0..<n { dst[x] = toB[x] }
                             }
                         }
                     }
                 }
             }
-            return out
+            return down
         }
 
         static func slidingMaxRows(_ src: [Float], width w: Int, height h: Int, before: Int, after: Int) -> [Float] {
             var out = [Float](repeating: 0, count: w * h)
-            var dq = [Int](repeating: 0, count: w)
             src.withUnsafeBufferPointer { s in
                 out.withUnsafeMutableBufferPointer { o in
-                    dq.withUnsafeMutableBufferPointer { q in
-                        for y in 0..<h {
-                            let row = s.baseAddress! + y * w, dst = o.baseAddress! + y * w
-                            var head = 0, tail = 0, j = 0
-                            for i in 0..<w {
-                                let right = Swift.min(i + after, w - 1)
-                                while j <= right {
-                                    let v = row[j]
-                                    while tail > head && row[q[tail - 1]] <= v { tail -= 1 }
-                                    q[tail] = j; tail += 1; j += 1
+                    let s = Parallel.Unchecked(s), o = Parallel.Unchecked(o)
+                    Parallel.ranges(h, grain: 16) { band in
+                        var dq = [Int](repeating: 0, count: w)
+                        dq.withUnsafeMutableBufferPointer { q in
+                            for y in band {
+                                let row = s.value.baseAddress! + y * w, dst = o.value.baseAddress! + y * w
+                                var head = 0, tail = 0, j = 0
+                                for i in 0..<w {
+                                    let right = Swift.min(i + after, w - 1)
+                                    while j <= right {
+                                        let v = row[j]
+                                        while tail > head && row[q[tail - 1]] <= v { tail -= 1 }
+                                        q[tail] = j; tail += 1; j += 1
+                                    }
+                                    while q[head] < i - before { head += 1 }
+                                    dst[i] = row[q[head]]
                                 }
-                                while q[head] < i - before { head += 1 }
-                                dst[i] = row[q[head]]
                             }
                         }
                     }
@@ -499,47 +541,56 @@ nonisolated extension MosaicEngine {
         /// (Felzenszwalb and Huttenlocher, 2012): `distance_transform_edt(~seed)`. Without any seed
         /// every distance is `far`.
         static func edt(seed: [UInt8], width w: Int, height h: Int, far: Float = 1e9) -> Plane {
+            precondition(seed.count == w * h, "a seed mask is width × height")
             let inf: Float = 1e20
-            // Down each column (a row of the transposed mask): the 1D distance to the nearest seed, squared.
-            let st = Morph.transpose(seed, width: w, height: h, zero: 0)
-            var gt = [Float](repeating: inf, count: w * h)
-            st.withUnsafeBufferPointer { s in
-                gt.withUnsafeMutableBufferPointer { g in
-                    for x in 0..<w {
-                        let col = x * h
-                        var last = -1
-                        for y in 0..<h {
-                            if s[col + y] != 0 { last = y }
-                            if last >= 0 { let d = Float(y - last); g[col + y] = d * d }
-                        }
-                        last = -1
-                        for y in stride(from: h - 1, through: 0, by: -1) {
-                            if s[col + y] != 0 { last = y }
-                            if last >= 0 { let d = Float(last - y); g[col + y] = Swift.min(g[col + y], d * d) }
+            // Down each column: the 1D distance to the nearest seed, squared. In strips of columns, row
+            // by row, each column remembering its last seed, so the passes run along memory.
+            var g = [Float](repeating: inf, count: w * h)
+            seed.withUnsafeBufferPointer { s in
+                g.withUnsafeMutableBufferPointer { gg in
+                    let s = Parallel.Unchecked(s), gg = Parallel.Unchecked(gg)
+                    Parallel.ranges(w, grain: 256) { cols in
+                        let x0 = cols.lowerBound, n = cols.count
+                        var last = [Int](repeating: -1, count: n)
+                        last.withUnsafeMutableBufferPointer { l in
+                            for y in 0..<h {
+                                let row = y * w + x0
+                                for x in 0..<n {
+                                    if s.value[row + x] != 0 { l[x] = y }
+                                    if l[x] >= 0 { let d = Float(y - l[x]); gg.value[row + x] = d * d }
+                                }
+                            }
+                            for x in 0..<n { l[x] = -1 }
+                            for y in stride(from: h - 1, through: 0, by: -1) {
+                                let row = y * w + x0
+                                for x in 0..<n {
+                                    if s.value[row + x] != 0 { l[x] = y }
+                                    if l[x] >= 0 { let d = Float(l[x] - y); gg.value[row + x] = Swift.min(gg.value[row + x], d * d) }
+                                }
+                            }
                         }
                     }
                 }
             }
-            // Along rows: the lower envelope of parabolas.
-            let g = Morph.transpose(gt, width: h, height: w, zero: 0)
-            var out = [Float](repeating: 0, count: w * h)
-            var f = [Double](repeating: 0, count: w), d = f
-            var v = [Int](repeating: 0, count: w), z = [Double](repeating: 0, count: w + 1)
-            g.withUnsafeBufferPointer { gg in
-                out.withUnsafeMutableBufferPointer { o in
-                    for y in 0..<h {
+            // Along rows: the lower envelope of parabolas, each row's distances written over its own.
+            g.withUnsafeMutableBufferPointer { o in
+                let o = Parallel.Unchecked(o)
+                Parallel.ranges(h, grain: 16) { rows in
+                    var f = [Double](repeating: 0, count: w), d = f
+                    var v = [Int](repeating: 0, count: w), z = [Double](repeating: 0, count: w + 1)
+                    for y in rows {
                         let row = y * w
-                        for x in 0..<w { f[x] = Double(gg[row + x]) }
+                        for x in 0..<w { f[x] = Double(o.value[row + x]) }
                         f.withUnsafeBufferPointer { ff in
                             d.withUnsafeMutableBufferPointer { dd in
                                 lowerEnvelope(ff.baseAddress!, count: w, out: dd.baseAddress!, v: &v, z: &z)
                             }
                         }
-                        for x in 0..<w { o[row + x] = d[x] >= 1e19 ? far : Float(d[x].squareRoot()) }
+                        for x in 0..<w { o.value[row + x] = d[x] >= 1e19 ? far : Float(d[x].squareRoot()) }
                     }
                 }
             }
-            return Plane(width: w, height: h, pixels: out)
+            return Plane(width: w, height: h, pixels: g)
         }
 
         static func lowerEnvelope(_ f: UnsafePointer<Double>, count n: Int, out: UnsafeMutablePointer<Double>,
@@ -571,17 +622,21 @@ nonisolated extension MosaicEngine {
         static func gradient(_ p: Plane) -> (gy: Plane, gx: Plane) {
             let w = p.width, h = p.height
             var gx = Plane(width: w, height: h), gy = Plane(width: w, height: h)
-            guard w > 1 || h > 1 else { return (gy, gx) }
-            for y in 0..<h {
-                for x in 0..<w {
-                    if w > 1 {
-                        gx[x, y] = x == 0 ? p[1, y] - p[0, y] : x == w - 1 ? p[w - 1, y] - p[w - 2, y] : (p[x + 1, y] - p[x - 1, y]) / 2
-                    }
-                    if h > 1 {
-                        gy[x, y] = y == 0 ? p[x, 1] - p[x, 0] : y == h - 1 ? p[x, h - 1] - p[x, h - 2] : (p[x, y + 1] - p[x, y - 1]) / 2
-                    }
+            p.pixels.withUnsafeBufferPointer { px in
+                for y in 0..<h {
+                    for x in 0..<w { (gy[x, y], gx[x, y]) = gradient(px, width: w, height: h, x, y) }
                 }
             }
+            return (gy, gx)
+        }
+
+        /// `gradient` at one pixel.
+        @inline(__always)
+        static func gradient(_ p: UnsafeBufferPointer<Float>, width w: Int, height h: Int, _ x: Int, _ y: Int) -> (gy: Float, gx: Float) {
+            let i = y * w + x
+            var gx: Float = 0, gy: Float = 0
+            if w > 1 { gx = x == 0 ? p[i + 1] - p[i] : x == w - 1 ? p[i] - p[i - 1] : (p[i + 1] - p[i - 1]) / 2 }
+            if h > 1 { gy = y == 0 ? p[i + w] - p[i] : y == h - 1 ? p[i] - p[i - w] : (p[i + w] - p[i - w]) / 2 }
             return (gy, gx)
         }
     }

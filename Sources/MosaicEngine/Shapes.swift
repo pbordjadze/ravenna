@@ -205,9 +205,14 @@ nonisolated extension MosaicEngine {
         init(_ mask: UnsafeBufferPointer<UInt8>, width w: Int, height h: Int) {
             width = w; height = h; stride = w + 2
             var img = [Int32](repeating: 0, count: (w + 2) * (h + 2))
-            for y in 0..<h {
-                let row = (y + 1) * (w + 2) + 1
-                for x in 0..<w where mask[y * w + x] != 0 { img[row + x] = 1 }
+            img.withUnsafeMutableBufferPointer { im in
+                let im = Parallel.Unchecked(im), mask = Parallel.Unchecked(mask)
+                Parallel.ranges(h, grain: 64) { rows in
+                    for y in rows {
+                        let row = (y + 1) * (w + 2) + 1
+                        for x in 0..<w where mask.value[y * w + x] != 0 { im.value[row + x] = 1 }
+                    }
+                }
             }
             self.img = img
             let s = w + 2

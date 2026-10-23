@@ -16,6 +16,10 @@ nonisolated extension MosaicEngine {
             var term = 1.0, sum = 1.0
             for n in 1...17 {
                 term *= r / Double(n)
+                // The terms shrink from here on, so once one is under a quarter of the sum's ulp
+                // (the gap below the sum is at least half its ulp) none of them can change it: the
+                // same bits as all seventeen.
+                if abs(term) < sum.ulp / 4 { break }
                 sum += term
             }
             return scale(sum, Int(k))
@@ -40,7 +44,10 @@ nonisolated extension MosaicEngine {
             var term = s, sum = 0.0
             var n = 1.0
             while n < 60 {
-                sum += term / n
+                let t = term / n
+                // As in exp: later terms are smaller still, so none can change the sum.
+                if abs(t) < sum.ulp / 4 { break }
+                sum += t
                 term *= s2
                 n += 2
             }
