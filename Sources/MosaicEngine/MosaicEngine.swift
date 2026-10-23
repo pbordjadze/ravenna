@@ -543,11 +543,15 @@ nonisolated extension MosaicEngine {
                     let k = Double(Self.scale)
                     var ring: [SIMD3<Float>] = []
                     let cx = centre.x / k, cy = centre.y / k, r0 = rr / k
-                    let ys = Swift.max(Int((cy - r0).rounded(.down)), 0)...Swift.min(Int((cy + r0).rounded(.up)), h0 - 1)
-                    let xs = Swift.max(Int((cx - r0).rounded(.down)), 0)...Swift.min(Int((cx + r0).rounded(.up)), w0 - 1)
-                    if !ys.isEmpty && !xs.isEmpty {
-                        for y in ys {
-                            for x in xs {
+                    // Bounds clamped before forming ranges (an eye off the photo's edge would invert them).
+                    func span(_ c: Double, _ n: Int) -> (Int, Int)? {
+                        guard c.isFinite, r0.isFinite, abs(c) < 1e7, r0 < 1e7 else { return nil }
+                        let lo = Swift.max(Int((c - r0).rounded(.down)), 0), hi = Swift.min(Int((c + r0).rounded(.up)), n - 1)
+                        return lo <= hi ? (lo, hi) : nil
+                    }
+                    if let (ya, yb) = span(cy, h0), let (xa, xb) = span(cx, w0) {
+                        for y in ya...yb {
+                            for x in xa...xb {
                                 let q = SIMD2(Double(x) + 0.5, Double(y) + 0.5), d = length(q - SIMD2(cx, cy))
                                 if d > 0.5 * r0 && d < 0.85 * r0 && Polygon.contains(p, q * k) { ring.append(photo.rgb[y * w0 + x]) }
                             }

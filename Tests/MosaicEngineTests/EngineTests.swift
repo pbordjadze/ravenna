@@ -154,6 +154,14 @@ struct EngineTests {
         #expect(off(looks) > off(photo_), "as it looks, stronger than the photo's")
     }
 
+    @Test func takesAnEyeOffThePhotoInItsStride() throws {
+        // Vision can place a face, and an eye, partly beyond the photo's edge.
+        let (photo, contours) = Self.picture(eye: true)
+        let off = MosaicEngine.Face(box: [60, 30, 120, 90], eyes: [[200, 150, 6, 2], [-40, -30, 6, 2]])
+        let m = try MosaicEngine.make(photo: photo, contours: contours, faces: [off], settings: Self.settings())
+        #expect(!m.tiles.isEmpty)
+    }
+
     @Test func reportsItsProgressUpToTheEnd() throws {
         let (photo, contours) = Self.picture()
         var heard: [Double] = []
