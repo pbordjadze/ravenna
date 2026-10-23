@@ -34,11 +34,11 @@ let package = Package(
         .executableTarget(name: "mosaic", dependencies: ["MosaicEngine", "MosaicKit"]),
         .target(
             name: "MosaicCore",
-            dependencies: [.product(name: "PaintCore", package: "paint-by-number")]
+            dependencies: ["MosaicKit", .product(name: "PaintCore", package: "paint-by-number")]
         ),
         .testTarget(
             name: "MosaicCoreTests",
-            dependencies: ["MosaicCore", .product(name: "PaintCore", package: "paint-by-number")]
+            dependencies: ["MosaicCore", "MosaicKit", .product(name: "PaintCore", package: "paint-by-number")]
         ),
     ],
     swiftLanguageModes: [.v6]
