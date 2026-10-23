@@ -211,6 +211,21 @@ jobs:
             swift test -c $c --filter Determinism 2>&1 | grep -vE '^\[[0-9]+/[0-9]+\]' || status=1
           done
           exit $status
+      - name: Time and memory at the top of the Pieces slider
+        if: ${{ !cancelled() }}
+        # The engine on Apple silicon at 1448 px (the old top) and 1774 px (the slider's top), the
+        # fixture portrait scaled up: wall time and peak memory, a stand-in for a phone's.
+        shell: bash
+        run: |
+          set -euo pipefail
+          swift build -c release --product mosaic 2>&1 | tail -1
+          F=Tests/Fixtures/determinism
+          for side in 1448 1774; do
+            echo "== $side px"
+            /usr/bin/time -l .build/release/mosaic $F/photo.ppm $F/contours.pgm "$RUNNER_TEMP/bench-$side" \
+              --features $F/features.json --long-side $side > "$RUNNER_TEMP/bench-$side.log" 2>&1
+            grep -E 'tiles|real|maximum resident' "$RUNNER_TEMP/bench-$side.log"
+          done
 
   core:
     name: MosaicKit and MosaicCore build and tests (Linux)

@@ -20,8 +20,9 @@ nonisolated public enum MosaicEngine {
         public var paints: Int = 18
         /// The contour map's level for a strong line: CUT.
         public var cut: Float = 0.72
-        /// The same in a face: CUT_FINE.
-        public var faceCut: Float = 0.45
+        /// The same in a face: CUT_FINE, raised from the script's 0.45 since the features come from
+        /// landmarks (sketchbook round 6): lower, an old face's wrinkles became dark rows across it.
+        public var faceCut: Float = 0.6
         /// The joint between tiles, in working pixels: GROUT (the tight set).
         public var grout: Int = 2
         /// How an iris is coloured (issue #9, an option until Paul narrows it).
@@ -149,6 +150,8 @@ nonisolated extension MosaicEngine {
         static let scale = 2
 
         let s: Double, fine: Double, g: Int, paints: Int
+        /// Each face box's own pitch, by `boxes`.
+        let boxFine: [Double]
         let cut: Float, faceCut: Float
         let w0: Int, h0: Int, W: Int, H: Int
         let boxes: [[Float]], eyes: [[Float]], lines: [Face.Line]
@@ -165,19 +168,65 @@ nonisolated extension MosaicEngine {
         init(photo: Photo, contours: [Float], faces: [Face], settings: Settings) {
             g = Swift.max(settings.grout, 0)
             s = Swift.max(Double(settings.pitch), Double(g) + 2)
-            fine = Swift.max(Double(settings.facePitch), Double(g) + 2)
+            let faces = faces.map(Run.inProfile)
+            // A small face gets smaller pieces, as mosaicists kept their smallest for faces: at least
+            // 24 across its box (a face under about 200 px of the photo), but never under 8 px. Each
+            // face its own, so a stray small face doesn't shrink the others'.
+            let least = Double(g) + 2, facePitch = Swift.max(Double(settings.facePitch), least)
+            boxFine = faces.map(\.box).filter { $0.count >= 4 }.map { b in
+                let across = Double(b[2] - b[0]) * Double(Self.scale) / 24
+                guard across.isFinite, across > 0 else { return facePitch }
+                return Swift.max(Swift.min(facePitch, across), Swift.min(facePitch, 8), least)
+            }
+            fine = boxFine.min() ?? facePitch
             paints = Swift.max(settings.paints, 1)
             cut = settings.cut; faceCut = settings.faceCut
             irises = settings.eyes
             w0 = photo.width; h0 = photo.height
             W = w0 * Self.scale; H = h0 * Self.scale
             boxes = faces.map(\.box).filter { $0.count >= 4 }
-            eyes = faces.flatMap(\.eyes).filter { $0.count >= 3 }
+            eyes = faces.flatMap(\.eyes).filter { $0.count >= 3 && $0.allSatisfy(\.isFinite) && $0[2] > 0 && $0[2] < 1e6 }
             lines = faces.flatMap(\.lines)
             eyeRings = lines.filter { $0.kind == "eye" }.map { Run.points($0.pts) }
             self.photo = photo; self.contours = contours
             pitchMap = Plane(width: W, height: H, value: Float(s))
             layout = Layout(width: W, height: H, grout: g, pitchMap: [])
+        }
+
+        /// A face in profile without the eye it hides: when its eyes are closer together than a
+        /// fifth of its box's width (a turned head's are a third or more; Duckworth's profile in
+        /// Cameron's print, 0.17), the far one, the eye nearer the box's edge, is behind the nose,
+        /// and the landmarks only guess it. It goes, with its lids and opening and the brow above it.
+        static func inProfile(_ face: Face) -> Face {
+            guard face.box.count >= 4, face.eyes.count == 2, face.eyes.allSatisfy({ $0.count >= 3 }) else { return face }
+            let a = face.eyes[0], b = face.eyes[1]
+            let width = face.box[2] - face.box[0], mid = (face.box[0] + face.box[2]) / 2
+            let apart = ((a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1])).squareRoot()
+            guard width > 0, apart > 0, apart < 0.2 * width else { return face }
+            let farFirst = abs(a[0] - mid) > abs(b[0] - mid)
+            let far = farFirst ? a : b, near = farFirst ? b : a
+            func centre(_ l: Face.Line) -> SIMD2<Float>? {
+                let p = l.pts.filter { $0.count >= 2 }
+                return p.isEmpty ? nil : p.reduce(SIMD2<Float>.zero) { $0 + SIMD2($1[0], $1[1]) } / Float(p.count)
+            }
+            func d2(_ c: SIMD2<Float>, _ e: [Float]) -> Float { (c.x - e[0]) * (c.x - e[0]) + (c.y - e[1]) * (c.y - e[1]) }
+            var out = face
+            out.eyes = farFirst ? [b] : [a]
+            // Each eye's lines (its opening and lids) and its brow (a row above the eyes) go with the
+            // eye they lie nearer; the far eye's go. The nose's and mouth's lie below both eyes.
+            out.lines = face.lines.filter { l in
+                guard let c = centre(l) else { return true }
+                switch l.kind {
+                case "eye", "dark", "tone":
+                    // At the eye's own height: the mouth's dark and tone rows lie well below.
+                    return !(d2(c, far) < d2(c, near) && abs(c.y - far[1]) < Swift.max(apart, 2 * far[2]))
+                case "mid":
+                    let above = c.y < Swift.min(far[1], near[1])
+                    return !(above && abs(c.x - far[0]) < abs(c.x - near[0]))
+                default: return true
+                }
+            }
+            return out
         }
 
         /// Feature points in working pixels.
@@ -188,16 +237,19 @@ nonisolated extension MosaicEngine {
         /// The face boxes in working pixels, as the script slices them.
         func boxMask() -> [UInt8] {
             var m = [UInt8](repeating: 0, count: W * H)
-            for b in boxes {
-                func cell(_ v: Float, _ n: Int) -> Int {
-                    guard v.isFinite else { return 0 }
-                    return Swift.min(Swift.max(Int(Swift.max(Swift.min(v * Float(Self.scale), 1e9), -1e9)), 0), n)
-                }
-                let x0 = cell(b[0], W), y0 = cell(b[1], H), x1 = cell(b[2], W), y1 = cell(b[3], H)
-                guard x1 > x0, y1 > y0 else { continue }
-                for y in y0..<y1 { for x in x0..<x1 { m[y * W + x] = 1 } }
-            }
+            for b in boxes { for i in boxCells(b) { m[i] = 1 } }
             return m
+        }
+
+        /// A face box's cells in working pixels (none for a box that is empty or off the image).
+        func boxCells(_ b: [Float]) -> [Int] {
+            func cell(_ v: Float, _ n: Int) -> Int {
+                guard v.isFinite else { return 0 }
+                return Swift.min(Swift.max(Int(Swift.max(Swift.min(v * Float(Self.scale), 1e9), -1e9)), 0), n)
+            }
+            let x0 = cell(b[0], W), y0 = cell(b[1], H), x1 = cell(b[2], W), y1 = cell(b[3], H)
+            guard x1 > x0, y1 > y0 else { return [] }
+            return (y0..<y1).flatMap { y in (x0..<x1).map { y * W + $0 } }
         }
 
         func make(cancel: () -> Bool, progress: (Double) -> Void, trace: inout Trace) throws -> Mosaic {
@@ -222,8 +274,18 @@ nonisolated extension MosaicEngine {
             // The pitch: finer in the faces.
             let inbox = boxes.isEmpty ? [UInt8](repeating: 0, count: W * H) : boxMask()
             if !boxes.isEmpty {
+                // Each face's own pitch, blended as its box's edge is: the mask and the mask times the
+                // pitch blurred alike, their ratio the pitch near a face.
+                var own = [Float](repeating: 0, count: W * H)
+                for (b, f) in zip(boxes, boxFine) {
+                    for i in boxCells(b) where own[i] == 0 || Float(f) < own[i] { own[i] = Float(f) }
+                }
                 let m = Blur.gaussian(Plane(width: W, height: H, pixels: inbox.map { Float($0) }), sigma: s * 1.2)
-                pitchMap.pixels = m.pixels.map { Float(s + (fine - s) * Double(Swift.min(Swift.max($0 * 1.4, 0), 1))) }
+                let a = Blur.gaussian(Plane(width: W, height: H, pixels: own), sigma: s * 1.2)
+                pitchMap.pixels = m.pixels.indices.map { i in
+                    let w = m.pixels[i], near = w > 1e-6 ? Double(a.pixels[i] / w) : fine
+                    return Float(s + (near - s) * Double(Swift.min(Swift.max(w * 1.4, 0), 1)))
+                }
             }
             layout = Layout(width: W, height: H, grout: g, pitchMap: pitchMap.pixels)
             try lap("upscale")
@@ -450,6 +512,19 @@ nonisolated extension MosaicEngine {
             var med: [SIMD3<Float>] = []
             med.reserveCapacity(pieces.count)
             let luma = SIMD3<Float>(0.2126, 0.7152, 0.0722)
+            // A toned photo's cast (a sepia print's warmth): an iris is made stronger away from it, so
+            // its eyes don't turn orange. The cast is the median colour of every 7th pixel, in OKLab;
+            // it counts when nine pixels in ten lie within 0.04 of it (Cameron's prints: 0.02 to
+            // 0.036), fading out by 0.06, since a colour photo's median is its subject (a face's
+            // warmth, from 0.054 up in the Kodak portraits), not a cast.
+            var cast = SIMD3<Float>.zero
+            if irises == .asTheyLook && !eyes.isEmpty {
+                let sample = stride(from: 0, to: W * H, by: 7).map { Colour.lab(SIMD3(red[$0], green[$0], blue[$0])) }
+                let median = Stats.median(sample)
+                var spread = sample.map { ((SIMD2($0.y, $0.z) - SIMD2(median.y, median.z)) * (SIMD2($0.y, $0.z) - SIMD2(median.y, median.z))).sum().squareRoot() }
+                let toned = Swift.min(Swift.max((0.06 - Stats.percentile(&spread, 90)) / 0.02, 0), 1)
+                cast = SIMD3(0, median.y * toned, median.z * toned)
+            }
             func brightest(_ px: [SIMD3<Float>], _ q: Double, above: Bool) -> [SIMD3<Float>] {
                 var lum = px.map { ($0 * luma).sum() }
                 let cutoff = Stats.percentile(&lum, q)
@@ -482,19 +557,42 @@ nonisolated extension MosaicEngine {
                 var c = Colour.lab(Stats.median(px))
                 if t.eye == .iris {
                     // The iris's own glass: its ring, outside the pupil and inside the lids' shadow,
-                    // its lit tone and its colour a little stronger, as the eye takes it.
-                    let centre = Polygon.mean(p), rr = length(p[0] - centre)
-                    let cc = centre - SIMD2(Double(x0), Double(y0))
+                    // its lit tone and its colour a little stronger, as the eye takes it. The ring is
+                    // measured from the eye's own centre and radius: the piece is cut by the lids,
+                    // so its own middle and corners would put the ring on the lids and the white.
+                    let mean = Polygon.mean(p)
+                    let eye = eyes.min { length(SIMD2(Double($0[0]), Double($0[1])) * Double(Self.scale) - mean)
+                        < length(SIMD2(Double($1[0]), Double($1[1])) * Double(Self.scale) - mean) }
+                    let centre = eye.map { SIMD2(Double($0[0]), Double($0[1])) * Double(Self.scale) } ?? mean
+                    let rr = eye.map { Double($0[2]) * Double(Self.scale) } ?? length(p[0] - mean)
+                    // From the photo's own pixels, not the working image: the upscale's overshoot at
+                    // an iris's edges (a few pixels across) would tint the ring.
+                    let k = Double(Self.scale)
                     var ring: [SIMD3<Float>] = []
-                    for (j, q) in at.enumerated() {
-                        let d = length(SIMD2(Double(q.x), Double(q.y)) - cc)
-                        if d > 0.4 * rr && d < 0.85 * rr { ring.append(px[j]) }
+                    let cx = centre.x / k, cy = centre.y / k, r0 = rr / k
+                    // Bounds clamped before forming ranges (an eye off the photo's edge would invert them).
+                    func span(_ c: Double, _ n: Int) -> (Int, Int)? {
+                        guard c.isFinite, r0.isFinite, abs(c) < 1e7, r0 < 1e7 else { return nil }
+                        let lo = Swift.max(Int((c - r0).rounded(.down)), 0), hi = Swift.min(Int((c + r0).rounded(.up)), n - 1)
+                        return lo <= hi ? (lo, hi) : nil
                     }
-                    if ring.count <= 10 { ring = px }
+                    if let (ya, yb) = span(cy, h0), let (xa, xb) = span(cx, w0) {
+                        for y in ya...yb {
+                            for x in xa...xb {
+                                let q = SIMD2(Double(x) + 0.5, Double(y) + 0.5), d = length(q - SIMD2(cx, cy))
+                                if d > 0.5 * r0 && d < 0.85 * r0 && Polygon.contains(p, q * k) { ring.append(photo.rgb[y * w0 + x]) }
+                            }
+                        }
+                    }
+                    if ring.count < 4 { ring = px }
                     switch irises {
                     case .asTheyLook:
-                        c = Colour.lab(Stats.median(brightest(ring, 70, above: true)))
-                        c = SIMD3(c.x, c.y * 1.4, c.z * 1.4)
+                        // Its lit tone, but no more than a little above its own: an iris in a shadowed
+                        // socket doesn't glow.
+                        let lit = Colour.lab(Stats.median(brightest(ring, 70, above: true)))
+                        let own = Colour.lab(Stats.median(ring))
+                        c = SIMD3(Swift.min(lit.x, own.x + 0.06),
+                                  cast.y + (lit.y - cast.y) * 1.4, cast.z + (lit.z - cast.z) * 1.4)
                     case .asInThePhoto:
                         c = Colour.lab(Stats.median(ring))
                     }
@@ -560,6 +658,22 @@ nonisolated extension MosaicEngine {
                 palette.append(Colour.rgb(Stats.median(members.map { med[$0] })))
             }
             var paint = a.map { remap[$0] }
+            // A face's tiles take the paint nearest in colour as well as tone: a pale cheek otherwise
+            // joins whatever cluster is nearest in lightness, and on the astronaut that was her
+            // suit's grey, a grey tile in the skin (sketchbook round 6).
+            let inFace = boxes.isEmpty ? [Bool](repeating: false, count: pieces.count) : centres.map { c in
+                boxes.contains { b in c.x >= Double(b[0]) * Double(Self.scale) && c.x <= Double(b[2]) * Double(Self.scale)
+                    && c.y >= Double(b[1]) * Double(Self.scale) && c.y <= Double(b[3]) * Double(Self.scale) } }
+            let skin = SIMD3<Float>(1, 2.5, 2.5), labs = palette.map { Colour.lab($0) * skin }
+            for i in pieces.indices where inFace[i] && pieces[i].eye == nil {
+                let x = med[i] * skin
+                var best = paint[i], bd = Float.infinity
+                for (j, c) in labs.enumerated() {
+                    let d = ((c - x) * (c - x)).sum()
+                    if d < bd { bd = d; best = j }
+                }
+                paint[i] = best
+            }
             // An eye keeps its own glass (iris and pupil): its own paint unless one is already as
             // near as can be seen.
             for (i, t) in pieces.enumerated() where t.eye != nil {
@@ -573,6 +687,15 @@ nonisolated extension MosaicEngine {
                 } else {
                     paint[i] = palette.count; palette.append(Colour.rgb(med[i]))
                 }
+            }
+            // A paint the face's tiles all left: gone, the rest in their order.
+            var used = [Bool](repeating: false, count: palette.count)
+            for p in paint { used[p] = true }
+            if used.contains(false) {
+                var index = [Int](repeating: -1, count: palette.count), kept: [SIMD3<Float>] = []
+                for j in palette.indices where used[j] { index[j] = kept.count; kept.append(palette[j]) }
+                palette = kept
+                paint = paint.map { index[$0] }
             }
             let grout = Colour.rgb(SIMD3(0.86, 0.004, 0.012))
             let half = 1 / Double(Self.scale)
