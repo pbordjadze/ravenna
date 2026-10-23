@@ -1,5 +1,5 @@
 // mosaic <photo.ppm> <contours.pgm> <out prefix> [--features f.json]... [--long-side N] [--bed bed.ppm]
-//        [--eyes asTheyLook|asInThePhoto]
+//        [--eyes asTheyLook|asInThePhoto] [--mouth asInThePhoto|byzantine]
 //
 // Runs the engine on files, for comparison with the prototype: reads a binary PPM (P6) photo, its
 // contour map as a binary PGM (P5) and any faces' features (sketchbook/features.py's JSON), and
@@ -134,13 +134,14 @@ while let a = args.popFirst() {
     case "--features": guard let f = args.popFirst() else { fail("--features needs a file") }; featureFiles.append(f)
     case "--long-side": guard let v = args.popFirst(), let n = Int(v), n > 0 else { fail("--long-side needs a number") }; longSide = n
     case "--bed": guard let f = args.popFirst() else { fail("--bed needs a file") }; bedFile = f
+    case "--mouth": guard let v = args.popFirst(), let m = MosaicEngine.Mouth(rawValue: v) else { fail("--mouth is asInThePhoto or byzantine") }; settings.mouth = m
     case "--eyes": guard let v = args.popFirst(), let e = MosaicEngine.Eyes(rawValue: v) else { fail("--eyes is asTheyLook or asInThePhoto") }; settings.eyes = e
     case "-h", "--help":
-        print("mosaic <photo.ppm> <contours.pgm> <out prefix> [--features f.json]... [--long-side N] [--bed bed.ppm] [--eyes asTheyLook|asInThePhoto]"); exit(0)
+        print("mosaic <photo.ppm> <contours.pgm> <out prefix> [--features f.json]... [--long-side N] [--bed bed.ppm] [--eyes asTheyLook|asInThePhoto] [--mouth asInThePhoto|byzantine]"); exit(0)
     default: positional.append(a)
     }
 }
-guard positional.count == 3 else { fail("usage: mosaic <photo.ppm> <contours.pgm> <out prefix> [--features f.json]... [--long-side N] [--bed bed.ppm] [--eyes asTheyLook|asInThePhoto]") }
+guard positional.count == 3 else { fail("usage: mosaic <photo.ppm> <contours.pgm> <out prefix> [--features f.json]... [--long-side N] [--bed bed.ppm] [--eyes asTheyLook|asInThePhoto] [--mouth asInThePhoto|byzantine]") }
 
 let clock = ContinuousClock()
 let started = clock.now

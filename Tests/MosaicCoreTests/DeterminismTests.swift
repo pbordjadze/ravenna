@@ -8,7 +8,8 @@ import Testing
 /// The same photo makes the same mosaic on every device: the engine and the template, run on a
 /// public-domain portrait (Tests/Fixtures/determinism, its README says where it comes from), hash to
 /// the values Linux gives. Run on a Mac (`swift test --filter Determinism`) it answers whether Apple
-/// silicon lays the same tiles. A hash is printed per part, so a difference says where it starts.
+/// silicon lays the same tiles. A hash is printed per part, so a difference says where it starts;
+/// `byzantine.tiles` is the engine again with the Byzantine mouth, which repaints the photo first.
 ///
 /// When the engine or the template changes on purpose, the hashes change: update them here (the
 /// failure prints the new ones) and remake the bundled mosaics (sketchbook/bundle.py).
@@ -21,9 +22,10 @@ struct DeterminismTests {
     /// The hashes on Linux (x86_64, Swift 6.2), debug and release alike.
     static let expected: [String: String] = [
         "engine.palette": "e1f851cbcb66817f",
-        "engine.tiles": "d0cc4fda6490412",
+        "engine.tiles": "70eb976bdb0b7c6c",
         "template.palette": "533d60fbe57da087",
         "template": "4ab3f57257d625ab",
+        "byzantine.tiles": "724f4e7648be8bf7",
     ]
 
     /// FNV-1a, 64 bits: the same everywhere, unlike `Hasher`, which is seeded per process.
@@ -55,6 +57,19 @@ struct DeterminismTests {
         return (w, h, bytes[i...].map { Float($0) / 255 })
     }
 
+    static func tiles(_ mosaic: Mosaic) -> FNV {
+        var h = FNV()
+        h.add(mosaic.width); h.add(mosaic.height); h.add(mosaic.tiles.count)
+        for c in mosaic.palette { h.add(c) }
+        for t in mosaic.tiles {
+            h.add(t.corners.count)
+            for c in t.corners { h.add(c) }
+            h.add(t.paint); h.add(t.stone ? 1 as UInt8 : 0)
+            h.add(Data((t.stage?.rawValue ?? "").utf8))
+        }
+        return h
+    }
+
     @Test func aPortraitHashesAsOnLinux() throws {
         let photo = try Self.netpbm("photo.ppm"), contours = try Self.netpbm("contours.pgm")
         #expect(contours.width == photo.width && contours.height == photo.height)
@@ -64,21 +79,19 @@ struct DeterminismTests {
         let mosaic = try MosaicEngine.make(photo: .init(width: photo.width, height: photo.height, rgb: rgb),
                                            contours: contours.samples, faces: [face])
         let template = try MosaicCore.template(of: mosaic)
+        // The Byzantine mouth repaints the photo before the run (Mouth.swift): its own path.
+        var byzantine = MosaicEngine.Settings()
+        byzantine.mouth = .byzantine
+        let redrawn = try MosaicEngine.make(photo: .init(width: photo.width, height: photo.height, rgb: rgb),
+                                            contours: contours.samples, faces: [face], settings: byzantine)
 
         var hashes: [String: FNV] = [:]
         hashes["engine.palette", default: FNV()].add(mosaic.grout)
         for c in mosaic.palette { hashes["engine.palette", default: FNV()].add(c) }
-        var tiles = FNV()
-        tiles.add(mosaic.width); tiles.add(mosaic.height); tiles.add(mosaic.tiles.count)
-        for t in mosaic.tiles {
-            tiles.add(t.corners.count)
-            for c in t.corners { tiles.add(c) }
-            tiles.add(t.paint); tiles.add(t.stone ? 1 as UInt8 : 0)
-            tiles.add(Data((t.stage?.rawValue ?? "").utf8))
-        }
-        hashes["engine.tiles"] = tiles
+        hashes["engine.tiles"] = Self.tiles(mosaic)
         for c in template.palette { hashes["template.palette", default: FNV()].add(c.oklab); hashes["template.palette"]!.add(c.rgb) }
         hashes["template", default: FNV()].add(template.encoded())
+        hashes["byzantine.tiles"] = Self.tiles(redrawn)
 
         let got = hashes.mapValues(\.hex)
         print("Determinism: \(mosaic.tiles.count) tiles, \(template.width) × \(template.height); "

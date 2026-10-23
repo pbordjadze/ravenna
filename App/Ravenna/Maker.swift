@@ -32,12 +32,12 @@ nonisolated enum Maker {
         .reading: 0...0.03, .contours: 0.03...0.3, .faces: 0.3...0.35, .tiles: 0.35...0.95, .bed: 0.95...1,
     ]
 
-    /// `eyes`: how irises are coloured (issue #9's option). `progress` hears the stage and how much
+    /// `eyes`: how irises are coloured (issue #9's option); `mouth`: how a mouth is set (#1's). `progress` hears the stage and how much
     /// of the whole job is done (0...1), from whatever thread the work runs on. Only the working
     /// copies a stage needs stay alive through it: the photo is encoded as soon as it is read, and
     /// its pixels are let go before the tiles are laid (the heaviest stage).
     static func make(from data: Data, pieces: Double, eyes: MosaicEngine.Eyes = .asTheyLook,
-                     progress: @Sendable (Stage, Double) -> Void) throws -> Made {
+                     mouth: MosaicEngine.Mouth = .asInThePhoto, progress: @Sendable (Stage, Double) -> Void) throws -> Made {
         func enter(_ s: Stage) { progress(s, span[s]!.lowerBound) }
         enter(.reading)
         let side = longSide(pieces: pieces)
@@ -73,6 +73,7 @@ nonisolated enum Maker {
         enter(.tiles)
         var settings = MosaicEngine.Settings()
         settings.eyes = eyes
+        settings.mouth = mouth
         let tiles = span[.tiles]!
         let mosaic = try MosaicEngine.make(photo: .init(width: w, height: h, rgb: rgb), contours: contours, faces: faces,
                                            settings: settings, cancel: { Task.isCancelled },

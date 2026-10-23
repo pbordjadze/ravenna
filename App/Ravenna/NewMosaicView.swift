@@ -1,8 +1,9 @@
 import SwiftUI
 import UIKit
 
-/// A mosaic from the painter's photo: how many pieces (the detail slider, issue #11) and how the
-/// eyes are coloured (issue #9), then the tiles are laid on the device. The photo never leaves it.
+/// A mosaic from the painter's photo: how many pieces (the detail slider, issue #11), how the
+/// eyes are coloured (issue #9) and how the mouth is set (issue #1), then the tiles are laid on the
+/// device. The photo never leaves it.
 struct NewMosaicView: View {
     @Environment(Library.self) private var library
     @Environment(\.dismiss) private var dismiss
@@ -12,6 +13,7 @@ struct NewMosaicView: View {
 
     @State private var pieces = 0.4
     @State private var eyes = MosaicEngine.Eyes.asTheyLook
+    @State private var mouth = MosaicEngine.Mouth.asInThePhoto
     @State private var progress = MakeProgress()
     @State private var job: Task<Void, Never>?
     @State private var failure: String?
@@ -53,6 +55,19 @@ struct NewMosaicView: View {
                         }
                         .disabled(progress.stage != nil)
                         Text("Mixed brighter, as an eye catches the light, or kept as the photo has them.")
+                            .font(Theme.body(13)).foregroundStyle(Theme.muted)
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Mouth").font(Theme.title(18)).foregroundStyle(Theme.plaster)
+                        Group {
+                            if typeSize.isAccessibilitySize {
+                                mouthPicker.pickerStyle(.menu)
+                            } else {
+                                mouthPicker.pickerStyle(.segmented)
+                            }
+                        }
+                        .disabled(progress.stage != nil)
+                        Text("Kept as the photo has it, or set small and closed, as Byzantine faces were.")
                             .font(Theme.body(13)).foregroundStyle(Theme.muted)
                     }
                     if let stage = progress.stage {
@@ -99,16 +114,23 @@ struct NewMosaicView: View {
         }
     }
 
+    private var mouthPicker: some View {
+        Picker("Mouth", selection: $mouth) {
+            Text("As in the photo").tag(MosaicEngine.Mouth.asInThePhoto)
+            Text("Byzantine").tag(MosaicEngine.Mouth.byzantine)
+        }
+    }
+
     private func lay() {
         failure = nil
         progress.stage = .reading
         progress.done = 0
-        let data = data, pieces = pieces, eyes = eyes, progress = progress
+        let data = data, pieces = pieces, eyes = eyes, mouth = mouth, progress = progress
         job = Task {
             do {
                 // Detached, so cancelling this task (Cancel) must be passed on to it.
                 let worker = Task.detached(priority: .userInitiated) {
-                    try Maker.make(from: data, pieces: pieces, eyes: eyes) { s, done in
+                    try Maker.make(from: data, pieces: pieces, eyes: eyes, mouth: mouth) { s, done in
                         Task { @MainActor in
                             // A hop that lands after the job has ended (cancelled, failed) changes nothing.
                             guard progress.stage != nil, done >= progress.done else { return }
