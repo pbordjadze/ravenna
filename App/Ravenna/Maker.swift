@@ -27,42 +27,62 @@ nonisolated enum Maker {
     /// standard count) to 1448 px (about twice), as the bundled mosaics' details.
     static func longSide(pieces: Double) -> Int { Int((724 + 724 * min(max(pieces, 0), 1)).rounded()) }
 
-    /// `eyes`: how irises are coloured (issue #9's option).
+    /// Each stage's start and end in the whole job, for the progress bar: the tiles take most of it.
+    static let span: [Stage: ClosedRange<Double>] = [
+        .reading: 0...0.03, .contours: 0.03...0.3, .faces: 0.3...0.35, .tiles: 0.35...0.95, .bed: 0.95...1,
+    ]
+
+    /// `eyes`: how irises are coloured (issue #9's option). `progress` hears the stage and how much
+    /// of the whole job is done (0...1), from whatever thread the work runs on. Only the working
+    /// copies a stage needs stay alive through it: the photo is encoded as soon as it is read, and
+    /// its pixels are let go before the tiles are laid (the heaviest stage).
     static func make(from data: Data, pieces: Double, eyes: MosaicEngine.Eyes = .asTheyLook,
-                     stage: @Sendable (Stage) -> Void) throws -> Made {
-        stage(.reading)
+                     progress: @Sendable (Stage, Double) -> Void) throws -> Made {
+        func enter(_ s: Stage) { progress(s, span[s]!.lowerBound) }
+        enter(.reading)
         let side = longSide(pieces: pieces)
-        guard let image = oriented(data, longSide: side), case let (rgba, w, h)? = pixels(image) else { throw MakerError.unreadable }
-        try Task.checkCancellation()
+        // The image and its pixels live only in this block.
+        let photo: Data, rgb: [SIMD3<Float>], contours: [Float], faces: [MosaicEngine.Face], w: Int, h: Int
+        do {
+            guard let image = oriented(data, longSide: side), case let (rgba, width, height)? = pixels(image),
+                  let encoded = jpeg(image) else { throw MakerError.unreadable }
+            photo = encoded; w = width; h = height
+            try Task.checkCancellation()
 
-        stage(.contours)
-        let hedSide = min(max(w, h), Contours.maximumLongSide)
-        let contours: [Float]
-        if hedSide == max(w, h) {
-            contours = try Contours.map(rgba: rgba, width: w, height: h)
-        } else {
-            let k = Double(hedSide) / Double(max(w, h))
-            let sw = max(1, Int((Double(w) * k).rounded())), sh = max(1, Int((Double(h) * k).rounded()))
-            guard let small = scaled(image, width: sw, height: sh), case let (srgba, _, _)? = pixels(small) else { throw MakerError.unreadable }
-            contours = bilinear(try Contours.map(rgba: srgba, width: sw, height: sh), sw, sh, to: w, h)
+            enter(.contours)
+            let hedSide = min(max(w, h), Contours.maximumLongSide)
+            if hedSide == max(w, h) {
+                contours = try Contours.map(rgba: rgba, width: w, height: h)
+            } else {
+                let k = Double(hedSide) / Double(max(w, h))
+                let sw = max(1, Int((Double(w) * k).rounded())), sh = max(1, Int((Double(h) * k).rounded()))
+                guard let small = scaled(image, width: sw, height: sh), case let (srgba, _, _)? = pixels(small) else { throw MakerError.unreadable }
+                contours = bilinear(try Contours.map(rgba: srgba, width: sw, height: sh), sw, sh, to: w, h)
+            }
+            try Task.checkCancellation()
+
+            enter(.faces)
+            faces = (try? Faces.find(in: image, rgba: rgba)) ?? []
+            try Task.checkCancellation()
+
+            var colours = [SIMD3<Float>](repeating: .zero, count: w * h)
+            for i in 0..<(w * h) { colours[i] = SIMD3(Float(rgba[i * 4]), Float(rgba[i * 4 + 1]), Float(rgba[i * 4 + 2])) / 255 }
+            rgb = colours
         }
-        try Task.checkCancellation()
 
-        stage(.faces)
-        let faces = (try? Faces.find(in: image, rgba: rgba)) ?? []
-        try Task.checkCancellation()
-
-        stage(.tiles)
-        var rgb = [SIMD3<Float>](repeating: .zero, count: w * h)
-        for i in 0..<(w * h) { rgb[i] = SIMD3(Float(rgba[i * 4]), Float(rgba[i * 4 + 1]), Float(rgba[i * 4 + 2])) / 255 }
+        enter(.tiles)
         var settings = MosaicEngine.Settings()
         settings.eyes = eyes
+        let tiles = span[.tiles]!
         let mosaic = try MosaicEngine.make(photo: .init(width: w, height: h, rgb: rgb), contours: contours, faces: faces,
-                                           settings: settings, cancel: { Task.isCancelled })
+                                           settings: settings, cancel: { Task.isCancelled },
+                                           progress: { progress(.tiles, tiles.lowerBound + (tiles.upperBound - tiles.lowerBound) * $0) })
+        try Task.checkCancellation()
 
-        stage(.bed)
+        enter(.bed)
         let bed = MosaicEngine.bed(of: mosaic, width: w, height: h)
-        guard let photo = jpeg(image), let bedImage = cgImage(bed, w, h), let bedData = jpeg(bedImage) else { throw MakerError.unreadable }
+        guard let bedImage = cgImage(bed, w, h), let bedData = jpeg(bedImage) else { throw MakerError.unreadable }
+        progress(.bed, 1)
         return Made(mosaic: mosaic, photo: photo, bed: bedData)
     }
 
