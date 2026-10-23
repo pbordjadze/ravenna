@@ -4,7 +4,7 @@ name: CI
 # macOS, only when asked or when the app changed on main: the five macOS runners are shared with
 # Paint by Moonlight, which always goes first (CLAUDE.md). Ask its setup session for a slot first.
 #   compile  `[compile]` in a branch's pushed commit message: an unsigned Debug build of the app.
-#   shots    `[shots]` in a branch's pushed commit message: a Debug simulator build, and each screen
+#   shots    `[shots]` in a branch's pushed commit message, or a manual run with `shots` ticked: a Debug simulator build, and each screen
 #            screenshotted (iPhone at the default and the largest text size, iPad at the default),
 #            as the `shots` artifact. The app opens each screen from RAVENNA_SHOT (Debug only).
 #   determinism  `[determinism]` in a branch's pushed commit message: the Determinism tests on
@@ -17,6 +17,11 @@ on:
   push:
     branches-ignore: ['sidestore']
   workflow_dispatch:
+    inputs:
+      shots:
+        description: Screenshot every screen (the shots job)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -73,7 +78,7 @@ jobs:
 
   shots:
     name: Screenshots (macOS, simulator)
-    if: github.ref_name != 'main' && contains(github.event.head_commit.message, '[shots]')
+    if: github.ref_name != 'main' && (contains(github.event.head_commit.message, '[shots]') || inputs.shots)
     runs-on: macos-26
     timeout-minutes: 45
     steps:
