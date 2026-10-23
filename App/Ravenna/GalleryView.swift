@@ -26,7 +26,7 @@ struct GalleryView: View {
                                 Image(systemName: "square.grid.3x3.square").font(.system(size: 34))
                                 Text("New from a photo").font(Theme.body(15))
                             }
-                            .foregroundStyle(Theme.gold)
+                            .foregroundStyle(Theme.tint)
                             .frame(maxWidth: .infinity, minHeight: 210)
                             .background(Theme.panel)
                         }

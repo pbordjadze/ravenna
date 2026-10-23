@@ -36,7 +36,7 @@ struct NewMosaicView: View {
                 }
                 if let stage = progress.stage {
                     HStack(spacing: 10) {
-                        ProgressView().tint(Theme.gold)
+                        ProgressView().tint(Theme.tint)
                         Text(stage.rawValue).font(Theme.body(15)).foregroundStyle(Theme.plaster)
                     }
                 } else if let failure {
