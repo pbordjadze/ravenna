@@ -154,10 +154,28 @@ struct EngineTests {
         #expect(off(looks) > off(photo_), "as it looks, stronger than the photo's")
     }
 
+    @Test func leavesOutTheEyeAProfileHides() {
+        // A head turned right, as Cameron's Mrs. Duckworth: both eyes toward the face's front, the
+        // hidden one guessed nearest the box's edge, by the nose.
+        let face = MosaicEngine.Face(box: [10, 10, 90, 90], eyes: [[60, 40, 4, 1.6], [72, 41, 3, 1.2]], lines: [
+            .init(kind: "dark", pts: [[55, 38], [65, 38]]), .init(kind: "dark", pts: [[70, 39], [75, 39]]),
+            .init(kind: "mid", pts: [[54, 33], [66, 33]]), .init(kind: "mid", pts: [[70, 34], [76, 34]]),
+            .init(kind: "mid", pts: [[74, 45], [76, 58]]), .init(kind: "dark", pts: [[66, 70], [76, 70]]),
+        ])
+        let seen = MosaicEngine.Run.inProfile(face)
+        #expect(seen.eyes == [[60, 40, 4, 1.6]])
+        #expect(seen.lines.map(\.pts.first!) == [[55, 38], [54, 33], [74, 45], [66, 70]], "its lid, its brow, the nose, the mouth")
+        let frontal = MosaicEngine.Face(box: [10, 10, 90, 90], eyes: [[35, 40, 4], [65, 40, 4]])
+        #expect(MosaicEngine.Run.inProfile(frontal) == frontal)
+    }
+
     @Test func takesAnEyeOffThePhotoInItsStride() throws {
         // Vision can place a face, and an eye, partly beyond the photo's edge.
         let (photo, contours) = Self.picture(eye: true)
         let off = MosaicEngine.Face(box: [60, 30, 120, 90], eyes: [[200, 150, 6, 2], [-40, -30, 6, 2]])
+        // And eyes no detector gives: a negative radius (an iris piece all the same), a NaN one.
+        let odd = MosaicEngine.Face(box: [14, 10, 56, 48], eyes: [[34, 28, -5, 2], [34, 28, .nan, 2], [40, 30, .infinity]])
+        #expect(try !MosaicEngine.make(photo: photo, contours: contours, faces: [odd], settings: Self.settings()).tiles.isEmpty)
         let m = try MosaicEngine.make(photo: photo, contours: contours, faces: [off], settings: Self.settings())
         #expect(!m.tiles.isEmpty)
     }

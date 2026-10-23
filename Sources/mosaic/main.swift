@@ -134,7 +134,7 @@ while let a = args.popFirst() {
     case "--features": guard let f = args.popFirst() else { fail("--features needs a file") }; featureFiles.append(f)
     case "--long-side": guard let v = args.popFirst(), let n = Int(v), n > 0 else { fail("--long-side needs a number") }; longSide = n
     case "--bed": guard let f = args.popFirst() else { fail("--bed needs a file") }; bedFile = f
-    case "--face-cut": guard let v = args.popFirst(), let c = Float(v), c > 0 else { fail("--face-cut needs a level, 0...1") }; settings.faceCut = c
+    case "--face-cut": guard let v = args.popFirst(), let c = Float(v), c > 0, c <= 1 else { fail("--face-cut needs a level in (0, 1]") }; settings.faceCut = c
     case "--mouth": guard let v = args.popFirst(), let m = MosaicEngine.Mouth(rawValue: v) else { fail("--mouth is asInThePhoto or byzantine") }; settings.mouth = m
     case "--eyes": guard let v = args.popFirst(), let e = MosaicEngine.Eyes(rawValue: v) else { fail("--eyes is asTheyLook or asInThePhoto") }; settings.eyes = e
     case "-h", "--help":

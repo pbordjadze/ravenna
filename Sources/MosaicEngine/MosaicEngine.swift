@@ -150,6 +150,8 @@ nonisolated extension MosaicEngine {
         static let scale = 2
 
         let s: Double, fine: Double, g: Int, paints: Int
+        /// Each face box's own pitch, by `boxes`.
+        let boxFine: [Double]
         let cut: Float, faceCut: Float
         let w0: Int, h0: Int, W: Int, H: Int
         let boxes: [[Float]], eyes: [[Float]], lines: [Face.Line]
@@ -168,17 +170,22 @@ nonisolated extension MosaicEngine {
             s = Swift.max(Double(settings.pitch), Double(g) + 2)
             let faces = faces.map(Run.inProfile)
             // A small face gets smaller pieces, as mosaicists kept their smallest for faces: at least
-            // 24 across its box (a face under about 200 px of the photo), but never under 8 px.
-            let across = faces.filter { $0.box.count >= 4 }.map { Double($0.box[2] - $0.box[0]) * Double(Self.scale) / 24 }.min()
-            fine = Swift.max(Swift.min(Double(settings.facePitch), across ?? .infinity),
-                             Swift.min(Double(settings.facePitch), 8), Double(g) + 2)
+            // 24 across its box (a face under about 200 px of the photo), but never under 8 px. Each
+            // face its own, so a stray small face doesn't shrink the others'.
+            let least = Double(g) + 2, facePitch = Swift.max(Double(settings.facePitch), least)
+            boxFine = faces.map(\.box).filter { $0.count >= 4 }.map { b in
+                let across = Double(b[2] - b[0]) * Double(Self.scale) / 24
+                guard across.isFinite, across > 0 else { return facePitch }
+                return Swift.max(Swift.min(facePitch, across), Swift.min(facePitch, 8), least)
+            }
+            fine = boxFine.min() ?? facePitch
             paints = Swift.max(settings.paints, 1)
             cut = settings.cut; faceCut = settings.faceCut
             irises = settings.eyes
             w0 = photo.width; h0 = photo.height
             W = w0 * Self.scale; H = h0 * Self.scale
             boxes = faces.map(\.box).filter { $0.count >= 4 }
-            eyes = faces.flatMap(\.eyes).filter { $0.count >= 3 }
+            eyes = faces.flatMap(\.eyes).filter { $0.count >= 3 && $0.allSatisfy(\.isFinite) && $0[2] > 0 && $0[2] < 1e6 }
             lines = faces.flatMap(\.lines)
             eyeRings = lines.filter { $0.kind == "eye" }.map { Run.points($0.pts) }
             self.photo = photo; self.contours = contours
@@ -195,20 +202,27 @@ nonisolated extension MosaicEngine {
             let a = face.eyes[0], b = face.eyes[1]
             let width = face.box[2] - face.box[0], mid = (face.box[0] + face.box[2]) / 2
             let apart = ((a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1])).squareRoot()
-            guard width > 0, apart < 0.2 * width else { return face }
-            let far = abs(a[0] - mid) > abs(b[0] - mid) ? a : b
-            let reach = Swift.max(apart, 4 * far[2])
-            func centre(_ l: Face.Line) -> SIMD2<Float> {
+            guard width > 0, apart > 0, apart < 0.2 * width else { return face }
+            let farFirst = abs(a[0] - mid) > abs(b[0] - mid)
+            let far = farFirst ? a : b, near = farFirst ? b : a
+            func centre(_ l: Face.Line) -> SIMD2<Float>? {
                 let p = l.pts.filter { $0.count >= 2 }
-                return p.isEmpty ? SIMD2<Float>(.infinity, .infinity) : p.reduce(SIMD2<Float>.zero) { $0 + SIMD2($1[0], $1[1]) } / Float(p.count)
+                return p.isEmpty ? nil : p.reduce(SIMD2<Float>.zero) { $0 + SIMD2($1[0], $1[1]) } / Float(p.count)
             }
+            func d2(_ c: SIMD2<Float>, _ e: [Float]) -> Float { (c.x - e[0]) * (c.x - e[0]) + (c.y - e[1]) * (c.y - e[1]) }
             var out = face
-            out.eyes = face.eyes.filter { $0 != far }
+            out.eyes = farFirst ? [b] : [a]
+            // Each eye's lines (its opening and lids) and its brow (a row above the eyes) go with the
+            // eye they lie nearer; the far eye's go. The nose's and mouth's lie below both eyes.
             out.lines = face.lines.filter { l in
-                let c = centre(l), dx = abs(c.x - far[0]), dy = c.y - far[1]
+                guard let c = centre(l) else { return true }
                 switch l.kind {
-                case "eye", "dark", "tone": return (dx * dx + dy * dy).squareRoot() >= 3 * far[2]
-                case "mid": return !(dx < reach && dy < 0 && dy > -reach)
+                case "eye", "dark", "tone":
+                    // At the eye's own height: the mouth's dark and tone rows lie well below.
+                    return !(d2(c, far) < d2(c, near) && abs(c.y - far[1]) < Swift.max(apart, 2 * far[2]))
+                case "mid":
+                    let above = c.y < Swift.min(far[1], near[1])
+                    return !(above && abs(c.x - far[0]) < abs(c.x - near[0]))
                 default: return true
                 }
             }
@@ -223,16 +237,19 @@ nonisolated extension MosaicEngine {
         /// The face boxes in working pixels, as the script slices them.
         func boxMask() -> [UInt8] {
             var m = [UInt8](repeating: 0, count: W * H)
-            for b in boxes {
-                func cell(_ v: Float, _ n: Int) -> Int {
-                    guard v.isFinite else { return 0 }
-                    return Swift.min(Swift.max(Int(Swift.max(Swift.min(v * Float(Self.scale), 1e9), -1e9)), 0), n)
-                }
-                let x0 = cell(b[0], W), y0 = cell(b[1], H), x1 = cell(b[2], W), y1 = cell(b[3], H)
-                guard x1 > x0, y1 > y0 else { continue }
-                for y in y0..<y1 { for x in x0..<x1 { m[y * W + x] = 1 } }
-            }
+            for b in boxes { for i in boxCells(b) { m[i] = 1 } }
             return m
+        }
+
+        /// A face box's cells in working pixels (none for a box that is empty or off the image).
+        func boxCells(_ b: [Float]) -> [Int] {
+            func cell(_ v: Float, _ n: Int) -> Int {
+                guard v.isFinite else { return 0 }
+                return Swift.min(Swift.max(Int(Swift.max(Swift.min(v * Float(Self.scale), 1e9), -1e9)), 0), n)
+            }
+            let x0 = cell(b[0], W), y0 = cell(b[1], H), x1 = cell(b[2], W), y1 = cell(b[3], H)
+            guard x1 > x0, y1 > y0 else { return [] }
+            return (y0..<y1).flatMap { y in (x0..<x1).map { y * W + $0 } }
         }
 
         func make(cancel: () -> Bool, progress: (Double) -> Void, trace: inout Trace) throws -> Mosaic {
@@ -257,8 +274,18 @@ nonisolated extension MosaicEngine {
             // The pitch: finer in the faces.
             let inbox = boxes.isEmpty ? [UInt8](repeating: 0, count: W * H) : boxMask()
             if !boxes.isEmpty {
+                // Each face's own pitch, blended as its box's edge is: the mask and the mask times the
+                // pitch blurred alike, their ratio the pitch near a face.
+                var own = [Float](repeating: 0, count: W * H)
+                for (b, f) in zip(boxes, boxFine) {
+                    for i in boxCells(b) where own[i] == 0 || Float(f) < own[i] { own[i] = Float(f) }
+                }
                 let m = Blur.gaussian(Plane(width: W, height: H, pixels: inbox.map { Float($0) }), sigma: s * 1.2)
-                pitchMap.pixels = m.pixels.map { Float(s + (fine - s) * Double(Swift.min(Swift.max($0 * 1.4, 0), 1))) }
+                let a = Blur.gaussian(Plane(width: W, height: H, pixels: own), sigma: s * 1.2)
+                pitchMap.pixels = m.pixels.indices.map { i in
+                    let w = m.pixels[i], near = w > 1e-6 ? Double(a.pixels[i] / w) : fine
+                    return Float(s + (near - s) * Double(Swift.min(Swift.max(w * 1.4, 0), 1)))
+                }
             }
             layout = Layout(width: W, height: H, grout: g, pitchMap: pitchMap.pixels)
             try lap("upscale")
@@ -660,6 +687,15 @@ nonisolated extension MosaicEngine {
                 } else {
                     paint[i] = palette.count; palette.append(Colour.rgb(med[i]))
                 }
+            }
+            // A paint the face's tiles all left: gone, the rest in their order.
+            var used = [Bool](repeating: false, count: palette.count)
+            for p in paint { used[p] = true }
+            if used.contains(false) {
+                var index = [Int](repeating: -1, count: palette.count), kept: [SIMD3<Float>] = []
+                for j in palette.indices where used[j] { index[j] = kept.count; kept.append(palette[j]) }
+                palette = kept
+                paint = paint.map { index[$0] }
             }
             let grout = Colour.rgb(SIMD3(0.86, 0.004, 0.012))
             let half = 1 / Double(Self.scale)
