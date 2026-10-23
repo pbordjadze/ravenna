@@ -27,4 +27,4 @@ controlnet_aux 0.0.10.
 | Round | Photos | What changed |
 | --- | --- | --- |
 | 1 | kodim04, kodim15, kodim17, astronaut, chelsea | Nothing: the prototype as the proposal left it, the baseline. |
-| 2 | kodim04, chelsea | The dial-in grid: 3 tile counts (`prep.py` at 1024, 1448, 2048 px, same pitch) × 3 finishes (`render.py` A, B, C; B and C draw `mosaic_faces.py` with `GROUT=2 TIGHT=1`). |
+| 2 | kodim04, chelsea | 3 finishes at 1024 px (`render.py` A, B, C; B and C draw `mosaic_faces.py` with `GROUT=2 TIGHT=1`), and C at the detail slider's ends (`prep.py` at 724 and 1774 px: about ½ and 3× the tiles). |
