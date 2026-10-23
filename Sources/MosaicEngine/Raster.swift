@@ -541,6 +541,7 @@ nonisolated extension MosaicEngine {
         /// (Felzenszwalb and Huttenlocher, 2012): `distance_transform_edt(~seed)`. Without any seed
         /// every distance is `far`.
         static func edt(seed: [UInt8], width w: Int, height h: Int, far: Float = 1e9) -> Plane {
+            precondition(seed.count == w * h, "a seed mask is width × height")
             let inf: Float = 1e20
             // Down each column: the 1D distance to the nearest seed, squared. In strips of columns, row
             // by row, each column remembering its last seed, so the passes run along memory.

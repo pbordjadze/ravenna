@@ -105,6 +105,7 @@ nonisolated extension MosaicEngine {
 
         /// Each point's nearest centre, found many at once; their distances summed in order after.
         static func assign(_ data: [SIMD3<Float>], _ centers: [SIMD3<Float>], _ labels: inout [Int]) -> Double {
+            precondition(labels.count == data.count, "a label for each point")
             var near = [Float](repeating: 0, count: data.count)
             data.withUnsafeBufferPointer { ds in
                 centers.withUnsafeBufferPointer { cs in
@@ -181,7 +182,9 @@ nonisolated extension MosaicEngine {
 
         /// The value of rank `k` (what `b.sorted()[k]` holds), leaving it at `k` with everything
         /// before it no greater and everything after it no less: quickselect, partitioning three
-        /// ways about a median of three, so runs of equal values end it at once.
+        /// ways about a median of three, so runs of equal values end it at once. For finite values
+        /// (the engine's are: clamped colours, lengths, sizes); a NaN pivot would count all as equal.
+        /// Its worst case is quadratic, on orderings pictures don't make.
         static func select(_ b: UnsafeMutableBufferPointer<Float>, _ k: Int) -> Float {
             var l = 0, r = b.count
             while r - l > 16 {

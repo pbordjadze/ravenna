@@ -532,6 +532,8 @@ nonisolated extension MosaicEngine {
         /// then a field tile's colour leaning on its neighbours'.
         func colours() -> [SIMD3<Float>] {
             let pieces = layout.pieces
+            // The image as constants of its own, read from many threads at once below.
+            let red = red, green = green, blue = blue
             let luma = SIMD3<Float>(0.2126, 0.7152, 0.0722)
             // A toned photo's cast (a sepia print's warmth): an iris is made stronger away from it, so
             // its eyes don't turn orange. The cast is the median colour of every 7th pixel, in OKLab;
