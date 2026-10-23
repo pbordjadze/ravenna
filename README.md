@@ -12,7 +12,12 @@ Not announced. Built on Paint by Moonlight's engine
 - `Sources/MosaicCore`: the engine (Swift, on PaintCore pinned by revision), tested on Linux:
   `tools/paintcore-mirror.sh && swift test` (the script fetches only the pinned PaintCore commit;
   `tools/swift.sh` runs SwiftPM in the swift:6.2 image where no toolchain is installed).
-- `sketchbook/`: how the faces-first rounds are made.
+- `sketchbook/`: how the faces-first rounds are made, and `bundle.py`, which makes the app's mosaics.
+- `App/`: the app (iOS 26, SwiftUI, bundle `com.pbordjadze.ravenna`), v0: five public-domain
+  ancient works from the Met, laid as mosaics on the bench, set tile by tile. It compiles
+  `Sources/MosaicKit` directly. Builds on macOS only when asked (`[compile]`) or on `main` when it
+  changed, as an unsigned IPA for SideStore: add
+  `https://raw.githubusercontent.com/pbordjadze/ravenna/sidestore/source.json` in SideStore.
 - `CLAUDE.md`: the rules for the agents working here.
 
 The name comes from the city whose sixth-century mosaics are the touchstone. Medea, the Moon and

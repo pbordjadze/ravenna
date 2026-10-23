@@ -1,4 +1,4 @@
-"""render.py <design.json> <photo> <finish A|B|C> <out.png> [boxes]: draws a mosaic_faces.py design.
+"""render.py <design.json> <photo> <finish A|B|C|bed> <out.png> [boxes]: draws a mosaic_faces.py design.
 Only the drawing changes between finishes, never the design (its tiles and paints):
   A  flat tiles in their paint, light uniform grout, a thin dark edge (the prototype's own drawing).
   B  the joints coloured by the setting bed under them: the tiles' colours round each joint, a little
@@ -6,6 +6,7 @@ Only the drawing changes between finishes, never the design (its tiles and paint
   C  B plus material: each tile's tone varies a little within its paint (smalti batches differ), a lit
      face with a slight bevelled edge; glass outside the face boxes (sharper bevel, a glint), matte stone
      inside them (soft bevel, grain); gold tiles tilted at random, so each catches the light its own way.
+  bed  B's painted bed alone, under every tile (the app's ground before a tile is set).
 boxes: "x0,y0,x1,y1;..." in photo pixels, the face boxes (stone in C). Deterministic: seeded by tile."""
 import json, sys
 import numpy as np, cv2
@@ -54,6 +55,9 @@ s = pitch * 0.5
 blur = gaussian_filter(img * mask[..., None], (s, s, 0)) / np.maximum(gaussian_filter(mask, s), 1e-3)[..., None]
 bed = oklab(blur.astype(float)) * [0.8, 0.65, 0.65]
 pv = np.where(mask[..., None] > 0, img, srgb(bed).astype(np.float32))
+if finish == "bed":
+    # The painted bed alone, everywhere: what the app shows under tiles not yet set.
+    pv = srgb(oklab(blur.astype(float)) * [0.8, 0.65, 0.65]).astype(np.float32)
 if finish == "C":
     dist = cv2.distanceTransform((ids > 0).astype(np.uint8), cv2.DIST_L2, 5)
     gy, gx = np.gradient(gaussian_filter(dist, 0.8))

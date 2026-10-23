@@ -1,0 +1,45 @@
+{
+  "note": "The mosaics bundled in the app's v0: public-domain ancient works from The Metropolitan Museum of Art's Open Access collection (CC0). bundle.py makes them and takes medium, accession number and credit line from the Met's API.",
+  "mosaics": [
+    {
+      "id": "young-woman-in-red",
+      "met": 547860,
+      "face": true,
+      "title": "Young Woman in Red",
+      "date": "90–120 CE",
+      "place": "Roman Egypt"
+    },
+    {
+      "id": "young-woman-gilded-wreath",
+      "met": 547861,
+      "face": true,
+      "title": "Young Woman with a Gilded Wreath",
+      "date": "120–140 CE",
+      "place": "Roman Egypt"
+    },
+    {
+      "id": "boy-eutyches",
+      "met": 547951,
+      "face": true,
+      "title": "The Boy Eutyches",
+      "date": "100–150 CE",
+      "place": "Roman Egypt"
+    },
+    {
+      "id": "bearded-man",
+      "met": 547856,
+      "face": true,
+      "title": "A Thin-Faced, Bearded Man",
+      "date": "160–180 CE",
+      "place": "Roman Egypt"
+    },
+    {
+      "id": "william",
+      "met": 544227,
+      "face": false,
+      "title": "William the Hippopotamus",
+      "date": "ca. 1961–1878 BCE",
+      "place": "Middle Kingdom Egypt"
+    }
+  ]
+}

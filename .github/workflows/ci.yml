@@ -1,10 +1,16 @@
 name: CI
 
-# Linux only: MosaicCore and its tests with SwiftPM, on every push. No macOS jobs yet: the five
-# macOS runners are shared with Paint by Moonlight, which always goes first (see CLAUDE.md).
+# Linux, on every push: MosaicKit and MosaicCore with their tests (SwiftPM).
+# macOS, only when asked or when the app changed on main: the five macOS runners are shared with
+# Paint by Moonlight, which always goes first (CLAUDE.md). Ask its setup session for a slot first.
+#   compile  `[compile]` in a branch's pushed commit message: an unsigned Debug build of the app.
+#   ipa      main, when App/ or Sources/MosaicKit/ changed (or `[ipa]` on a branch, which archives
+#            without publishing): an unsigned Release archive as a `build-<n>` prerelease (five
+#            kept) and the SideStore source on the `sidestore` branch. Adapted from paint-by-number.
 
 on:
   push:
+    branches-ignore: ['sidestore']
   workflow_dispatch:
 
 permissions:
@@ -14,9 +20,115 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+  PROJECT: App/Ravenna.xcodeproj
+  SCHEME: Ravenna
+
 jobs:
+  changes:
+    name: What changed
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.diff.outputs.app }}
+    steps:
+      - uses: actions/checkout@v5
+        with: { persist-credentials: false, fetch-depth: 0 }
+      - id: diff
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [[ -z "$BEFORE" || "$BEFORE" =~ ^0+$ ]] || ! git cat-file -e "$BEFORE" 2>/dev/null; then
+            echo "app=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$BEFORE" "$GITHUB_SHA" | grep -qE '^(App/|Sources/MosaicKit/)'; then
+            echo "app=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "app=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  compile:
+    name: App compile check (macOS, unsigned Debug)
+    if: github.ref_name != 'main' && contains(github.event.head_commit.message, '[compile]')
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with: { persist-credentials: false }
+      - name: Build
+        run: |
+          set -o pipefail
+          mkdir -p out
+          xcodebuild build -project "$PROJECT" -scheme "$SCHEME" -configuration Debug \
+            -destination 'generic/platform=iOS' -derivedDataPath build/dd -quiet \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            2>&1 | tee out/compile.log | tail -80
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with: { name: compile, path: out, if-no-files-found: ignore }
+
+  ipa:
+    name: IPA for SideStore (unsigned device build)
+    needs: changes
+    if: (github.ref_name == 'main' && needs.changes.outputs.app == 'true') || contains(github.event.head_commit.message, '[ipa]')
+    permissions:
+      contents: write
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      BUILD: ${{ github.run_number }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Archive
+        run: |
+          set -o pipefail
+          mkdir -p out
+          # Version 0.1.<run>, build <run>: every build is an update to the installed one.
+          xcodebuild archive -project "$PROJECT" -scheme "$SCHEME" -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath build/Ravenna.xcarchive -quiet \
+            MARKETING_VERSION="0.1.$BUILD" CURRENT_PROJECT_VERSION="$BUILD" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            2>&1 | tee out/ipa-build.log | tail -80
+      - name: Package
+        run: |
+          # SideStore signs the app with the user's Apple ID when installing it.
+          APP=build/Ravenna.xcarchive/Products/Applications/Ravenna.app
+          mkdir -p build/ipa/Payload
+          cp -R "$APP" build/ipa/Payload/
+          (cd build/ipa && zip -qry ../../out/Ravenna.ipa Payload)
+          ls -l out/Ravenna.ipa
+          /usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" -c "Print CFBundleVersion" "$APP/Info.plist"
+      - name: Publish release and SideStore source
+        if: github.ref_name == 'main'
+        run: |
+          git log -1 --format=%s > out/notes.txt
+          gh release create "build-$BUILD" out/Ravenna.ipa --prerelease --target "$GITHUB_SHA" \
+            --title "Build $BUILD" --notes-file out/notes.txt
+          # Keep the five newest builds (KEEP in ci/sidestore_source.py: the same number).
+          gh release list --limit 100 --json tagName -q '.[].tagName' | grep '^build-' | tail -n +6 |
+            while read -r tag; do gh release delete "$tag" --yes --cleanup-tag; done
+          SOURCE="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/sidestore"
+          mkdir -p build/source
+          python3 ci/sidestore_source.py build/Ravenna.xcarchive/Products/Applications/Ravenna.app \
+            "$SOURCE/icon.png" > build/source/source.json
+          cp App/Ravenna/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png build/source/icon.png
+          printf '# SideStore source\n\nAdd %s/source.json in SideStore (Sources → +).\n' "$SOURCE" > build/source/README.md
+          cp build/source/source.json out/
+          cd build/source
+          git init -q && git checkout -q -b sidestore && git add -A
+          git -c user.name="ci" -c user.email="ci@users.noreply.github.com" commit -qm "SideStore source for build $BUILD"
+          git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "sidestore:refs/heads/sidestore"
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: ipa
+          path: |
+            out
+            !out/*.ipa
+          if-no-files-found: ignore
+
   core:
-    name: MosaicCore build and tests (Linux)
+    name: MosaicKit and MosaicCore build and tests (Linux)
     runs-on: ubuntu-latest
     container: swift:6.2-noble
     timeout-minutes: 30

@@ -11,6 +11,7 @@ let package = Package(
     name: "MosaicCore",
     platforms: [.iOS("18.0"), .macOS("15.0")],
     products: [
+        .library(name: "MosaicKit", targets: ["MosaicKit"]),
         .library(name: "MosaicCore", targets: ["MosaicCore"]),
     ],
     dependencies: [
@@ -20,6 +21,11 @@ let package = Package(
         ),
     ],
     targets: [
+        // The mosaic as the app sets it (tiles, finishes, the painter's progress): plain Swift with
+        // no dependencies, so the app compiles these files directly (App/Ravenna.xcodeproj) without
+        // resolving PaintCore, and Linux tests them.
+        .target(name: "MosaicKit"),
+        .testTarget(name: "MosaicKitTests", dependencies: ["MosaicKit"]),
         .target(
             name: "MosaicCore",
             dependencies: [.product(name: "PaintCore", package: "paint-by-number")]
