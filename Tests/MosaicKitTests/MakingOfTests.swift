@@ -129,6 +129,21 @@ struct MakingOfTests {
         #expect(show.sceneOf.allSatisfy { $0 == .andamento } && show.start.allSatisfy { $0.isFinite })
     }
 
+    @Test func eachBundledMosaicPlaysItsStages() throws {
+        let dir = Self.fixtures.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("App/Ravenna/Resources/Mosaics")
+        let files = try FileManager.default.contentsOfDirectory(atPath: dir.path).filter { $0.hasSuffix("-standard.json") }
+        #expect(files.count == 5)
+        for f in files {
+            let m = try JSONDecoder().decode(Mosaic.self, from: Data(contentsOf: dir.appendingPathComponent(f)))
+            let show = MakingOf.Show(m)
+            #expect(!show.strokes.isEmpty && show.times[.sinopia]!.length > 0, "\(f): a drawing to draw")
+            #expect(show.times[.outlines]!.length > 0, "\(f): its strands")
+            #expect(show.times[.face]!.length > 0 || f.hasPrefix("william"), "\(f): a face, but for the hippopotamus")
+            #expect(show.start.allSatisfy { $0 + MakingOf.setTime <= show.times[.light]!.start }, "\(f): set before the light")
+        }
+    }
+
     @Test func theClosingCardNamesNoOneUntilAsked() {
         let plain = MakingOf.Card(.hold), named = MakingOf.Card(.hold, options: MakingOf.Options(names: true))
         #expect(plain.line == "Most mosaicists are anonymous; a few names survive.")

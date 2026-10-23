@@ -165,7 +165,7 @@ University of Cassino, M/H; Leo's own words not read).
 Each engine stage is a scene. The show is a pure function of time (it can seek and hold still), as
 in Paint by Moonlight's making-of. A tile is never painted on: it drops in from above, a little
 large, its shadow under it, settles, and catches a warm light as it lands. That is the gold, and
-the only gold, in line with the guardians' caution.
+the only gold: gold only where a tile catches the light.
 
 | Scene | Engine stage | What is drawn | Card (title / line / credit) | s |
 | --- | --- | --- | --- | --- |
@@ -197,6 +197,9 @@ map to draw it: it is exactly the lines the outline rows will follow.
 plays `MakingOf` with a Canvas (set tiles baked into one image as they settle, drawn by the look's
 `Drawing`), the card under the picture, and the options in its own menu. With Reduce Motion it moves a
 scene at a time.
+
+The bundled mosaics carry each tile's stage (the engine, e77a25c), so each plays every scene; William
+the hippopotamus has no face and skips that one.
 
 **For Paul, through the setup session:** naming makers is lore, so it waits on him. Until he answers,
 the closing card reads "Most mosaicists are anonymous; a few names survive." and the face's card credits
