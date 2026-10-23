@@ -224,7 +224,7 @@ class Show:
         c = self.plan.card(t)
         if c is None or c[1] <= 0: return frame
         name, a = c
-        title, line, credit = mp.card_text(name, self.options, self.plan.meta)
+        title, line, credit, method = mp.card_text(name, self.options, self.plan.meta)
         im = Image.fromarray((np.clip(frame, 0, 1) * 255).astype(np.uint8)); dr = ImageDraw.Draw(im)
         mix = lambda col: tuple(int(v) for v in (GROUND * (1 - a) + col * a) * 255)
         y = BAND + 26
@@ -236,6 +236,9 @@ class Show:
         y += 10
         for ln in wrap(credit, font(21, True), FW - 124):
             dr.text((76, y), ln, font=font(21, True), fill=mix(MUTED)); y += 28
+        y += 6
+        for ln in wrap(method, font(19), FW - 124):
+            dr.text((76, y), ln, font=font(19), fill=mix(MUTED * 0.85)); y += 25
         return np.asarray(im).astype(np.float32) / 255
 
     def frame(self, t):

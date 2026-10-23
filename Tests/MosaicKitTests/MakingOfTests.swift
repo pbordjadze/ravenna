@@ -30,7 +30,7 @@ struct MakingOfTests {
     }
 
     static let options: [String: MakingOf.Options] = [
-        "scenes": MakingOf.Options(),
+        "scenes": MakingOf.Options(names: false),
         "continuous": MakingOf.Options(sinopia: .indigo, hand: true, flow: .continuous, names: true),
     ]
 
@@ -72,7 +72,7 @@ struct MakingOfTests {
                 #expect(card.scene.rawValue == c["scene"] as? String)
                 Self.close(card.opacity, c["opacity"], "card opacity at \(t)")
                 let text = MakingOf.Card(card.scene, options: options, modelTitle: "Test", modelCredit: "Credit")
-                #expect([text.title, text.line, text.credit] == c["text"] as? [String])
+                #expect([text.title, text.line, text.credit, text.method] == c["text"] as? [String])
             } else {
                 #expect(show.card(at: t) == nil, "no card at \(t)")
             }
@@ -144,11 +144,11 @@ struct MakingOfTests {
         }
     }
 
-    @Test func theClosingCardNamesNoOneUntilAsked() {
-        let plain = MakingOf.Card(.hold), named = MakingOf.Card(.hold, options: MakingOf.Options(names: true))
-        #expect(plain.line == "Most mosaicists are anonymous; a few names survive.")
-        #expect(!plain.line.contains("Sosus") && named.line.contains("Sosus at Pergamon"))
-        #expect(!MakingOf.Card(.face).credit.contains("Dioskourides"), "the face's credit names no one either")
-        #expect(MakingOf.Card(.face, options: MakingOf.Options(names: true)).credit.contains("Dioskourides of Samos"))
+    @Test func theCardsNameTheMakersUnlessAskedNotTo() {
+        let named = MakingOf.Card(.hold), plain = MakingOf.Card(.hold, options: MakingOf.Options(names: false))
+        #expect(named.line.contains("Sosus at Pergamon") && named.line.contains("Ephraim at Bethlehem"), "Paul: \"Name them!\"")
+        #expect(plain.line == "Most mosaicists are anonymous; a few names survive." && !plain.line.contains("Sosus"))
+        #expect(MakingOf.Card(.face).credit.contains("Dioskourides of Samos"))
+        #expect(!MakingOf.Card(.face, options: MakingOf.Options(names: false)).credit.contains("Dioskourides"))
     }
 }
