@@ -1,0 +1,79 @@
+{
+  "name": "Ravenna (CI builds)",
+  "identifier": "com.pbordjadze.ravenna.source",
+  "subtitle": "Automatic builds",
+  "iconURL": "https://raw.githubusercontent.com/pbordjadze/ravenna/sidestore/icon.png",
+  "website": "https://github.com/pbordjadze/ravenna",
+  "tintColor": "#C9A24A",
+  "apps": [
+    {
+      "name": "Ravenna",
+      "bundleIdentifier": "com.pbordjadze.ravenna",
+      "developerName": "pbordjadze",
+      "subtitle": "Set a mosaic, tile by tile",
+      "localizedDescription": "Ancient pictures laid as Byzantine mosaics, to set tile by tile. A workshop build: unfinished, and not announced.",
+      "iconURL": "https://raw.githubusercontent.com/pbordjadze/ravenna/sidestore/icon.png",
+      "tintColor": "#C9A24A",
+      "category": "entertainment",
+      "versions": [
+        {
+          "version": "0.1.105",
+          "buildVersion": "105",
+          "date": "2026-10-23T22:32:28Z",
+          "localizedDescription": "Merge claude/engine-speed: the same mosaic in a quarter of the time and two thirds of the memory",
+          "downloadURL": "https://github.com/pbordjadze/ravenna/releases/download/build-105/Ravenna.ipa",
+          "size": 35576398,
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1.101",
+          "buildVersion": "101",
+          "date": "2026-10-23T21:41:22Z",
+          "localizedDescription": "Merge claude/engine-faces6: faces round 6 (true irises, a profile's hidden eye, finer tiles for a small face)",
+          "downloadURL": "https://github.com/pbordjadze/ravenna/releases/download/build-101/Ravenna.ipa",
+          "size": 35562987,
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1.98",
+          "buildVersion": "98",
+          "date": "2026-10-23T21:32:13Z",
+          "localizedDescription": "Merge claude/look: from the screenshots, readable buttons, Set below the wall, covers in their tiles, aligned cards",
+          "downloadURL": "https://github.com/pbordjadze/ravenna/releases/download/build-98/Ravenna.ipa",
+          "size": 35556382,
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1.91",
+          "buildVersion": "91",
+          "date": "2026-10-23T20:27:22Z",
+          "localizedDescription": "Merge claude/look: the first lesson, the finished wall, a gold ground, gentler misses, VoiceOver headers, and a [shots] job",
+          "downloadURL": "https://github.com/pbordjadze/ravenna/releases/download/build-91/Ravenna.ipa",
+          "size": 35553135,
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1.86",
+          "buildVersion": "86",
+          "date": "2026-10-23T20:20:07Z",
+          "localizedDescription": "Merge claude/engine-batch: four more ancient works, the Pieces slider from half to three times, a checked grout triangulation",
+          "downloadURL": "https://github.com/pbordjadze/ravenna/releases/download/build-86/Ravenna.ipa",
+          "size": 35532771,
+          "minOSVersion": "26.0"
+        }
+      ],
+      "version": "0.1.105",
+      "versionDate": "2026-10-23T22:32:28Z",
+      "versionDescription": "Merge claude/engine-speed: the same mosaic in a quarter of the time and two thirds of the memory",
+      "downloadURL": "https://github.com/pbordjadze/ravenna/releases/download/build-105/Ravenna.ipa",
+      "size": 35576398,
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSPhotoLibraryAddUsageDescription": "Ravenna saves a mosaic to your photo library when you choose Save Image."
+        }
+      }
+    }
+  ],
+  "news": []
+}
