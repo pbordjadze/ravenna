@@ -124,7 +124,9 @@ struct MakingOfTests {
         let show = MakingOf.Show(m)
         #expect(show.times[.face]!.length == 0 && show.times[.outlines]!.length == 0, "no face, no strands: their scenes are skipped")
         #expect(show.times[.sinopia]!.length == 0, "nothing to draw: the drawing's scene is skipped")
-        #expect(show.duration == 48 - 6.5 - 5 - 5)
+        // Typed apart: Swift 6.3 (Xcode 26.6) can't type-check the literals inside #expect in time.
+        let skipped: Double = 48 - 6.5 - 5 - 5
+        #expect(show.duration == skipped)
         #expect(show.strokes.isEmpty)
         #expect(show.sceneOf.allSatisfy { $0 == .andamento } && show.start.allSatisfy { $0.isFinite })
     }
