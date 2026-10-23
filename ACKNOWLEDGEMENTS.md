@@ -7,6 +7,17 @@ Ravenna builds on others' work. Everything here is credited with its source; not
 The mosaics bundled in the app are made from public-domain works in The Metropolitan Museum of
 Art's Open Access collection (CC0): each one's credit line, accession number and link are in the
 app (`App/Ravenna/Resources/Mosaics/catalog.json`).
+`sketchbook/bundle.py` refuses a work whose record isn't public domain.
+
+- *Young Woman in Red*, 90–120 CE, Roman Egypt: https://www.metmuseum.org/art/collection/search/547860 (09.181.6).
+- *Young Woman with a Gilded Wreath*, 120–140 CE, Roman Egypt: https://www.metmuseum.org/art/collection/search/547861 (09.181.7).
+- *The Boy Eutyches*, 100–150 CE, Roman Egypt: https://www.metmuseum.org/art/collection/search/547951 (18.9.2).
+- *A Thin-Faced, Bearded Man*, 160–180 CE, Roman Egypt: https://www.metmuseum.org/art/collection/search/547856 (09.181.1).
+- *William the Hippopotamus*, ca. 1961–1878 BCE, Middle Kingdom Egypt: https://www.metmuseum.org/art/collection/search/544227 (17.9.1).
+- *A Man with a Mole on His Nose*, 130–150 CE, Roman Egypt: https://www.metmuseum.org/art/collection/search/547857 (09.181.2). Checked October 23, 2026: the Met's record marks it public domain (Open Access, CC0) with no rights restriction.
+- *An Elderly Lady with a Gold Wreath*, 100–125 CE, Roman Egypt: https://www.metmuseum.org/art/collection/search/547859 (09.181.5). Checked October 23, 2026: the Met's record marks it public domain (Open Access, CC0) with no rights restriction.
+- *A Mother and Child in Gold Glass*, early 4th century, Roman, probably Alexandria: https://www.metmuseum.org/art/collection/search/463989 (17.190.109a). Checked October 23, 2026: the Met's record marks it public domain (Open Access, CC0) with no rights restriction.
+- *The Virgin and Child, a Hodegetria Icon*, 13th century, Byzantine or Crusader, Egypt: https://www.metmuseum.org/art/collection/search/831188 (2020.401). Checked October 23, 2026: the Met's record marks it public domain (Open Access, CC0) with no rights restriction.
 
 ## Models
 
