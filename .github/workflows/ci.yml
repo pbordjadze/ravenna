@@ -109,7 +109,7 @@ jobs:
             for shot in "$@"; do
               xcrun simctl terminate "$dev" "$BUNDLE" 2>/dev/null || true
               SIMCTL_CHILD_RAVENNA_SHOT=$shot xcrun simctl launch "$dev" "$BUNDLE" >/dev/null
-              sleep 9
+              sleep 14
               xcrun simctl io "$dev" screenshot "out/$label-$shot.png" >/dev/null
             done
           }

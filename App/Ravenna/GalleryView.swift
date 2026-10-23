@@ -115,7 +115,7 @@ struct GalleryView: View {
                 .accessibilityAddTraits(.isHeader)
             if let note { Text(note).font(Theme.body(14)).foregroundStyle(Theme.muted) }
             // One column at the largest text sizes, so titles have room.
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 300 : 160), spacing: 16)], spacing: 22) { content() }
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 300 : 160), spacing: 16, alignment: .top)], spacing: 22) { content() }
         }
     }
 }

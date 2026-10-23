@@ -29,13 +29,15 @@ struct SettingView: View {
                     Wall(bench: bench, finish: library.finish, bed: library.image(work, "bed")) { set in
                         library.save(set, work, library.detail)
                     }
-                    Tray(bench: bench, axis: wide ? .vertical : .horizontal)
-                }
-                // The word Set once the light has passed over the finished wall.
-                if bench.setting.isComplete(bench.mosaic), bench.rake == nil {
-                    Finished(work: work, tiles: bench.mosaic.tiles.count, paints: bench.mosaic.palette.count,
-                             making: making, share: share) { showingWork = true }
-                        .transition(.opacity)
+                    // Once the light has passed over the finished wall, the word Set takes the tray's
+                    // place, so the whole wall stays in view.
+                    if bench.setting.isComplete(bench.mosaic), bench.rake == nil {
+                        Finished(work: work, tiles: bench.mosaic.tiles.count, paints: bench.mosaic.palette.count,
+                                 axis: wide ? .vertical : .horizontal, making: making, share: share) { showingWork = true }
+                            .transition(.opacity)
+                    } else {
+                        Tray(bench: bench, axis: wide ? .vertical : .horizontal)
+                    }
                 }
             } else if failed {
                 ContentUnavailableView("Couldn't open this mosaic", systemImage: "square.grid.3x3",
@@ -397,12 +399,25 @@ private struct Finished: View {
     let work: Work
     let tiles: Int
     let paints: Int
+    /// Below the wall, or down its side.
+    let axis: Axis
     /// The picture to share is being made.
     let making: Bool
     let share: () -> Void
     let about: () -> Void
 
     var body: some View {
+        // As it is when it fits; scrolling when the text is large.
+        ViewThatFits(in: .vertical) {
+            card
+            ScrollView { card }.scrollBounceBehavior(.basedOnSize)
+        }
+        .frame(maxWidth: axis == .vertical ? 320 : .infinity, maxHeight: axis == .vertical ? .infinity : 360)
+        .background(Theme.panel)
+        .layoutPriority(1)
+    }
+
+    private var card: some View {
         VStack(spacing: 10) {
             Text("Set").font(Theme.title(28)).foregroundStyle(Theme.gold)
                 .accessibilityAddTraits(.isHeader)
@@ -417,16 +432,14 @@ private struct Finished: View {
                 VStack(spacing: 8) { buttons }
             }
         }
-        .padding(20)
-        .background(Theme.panel.opacity(0.94), in: RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal, 24)
-        .frame(maxHeight: .infinity, alignment: .top)
-        .padding(.top, 12)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder private var buttons: some View {
         Button(action: share) {
-            if making { ProgressView() } else { Label("Share", systemImage: "square.and.arrow.up") }
+            if making { ProgressView() } else { Label("Share", systemImage: "square.and.arrow.up").foregroundStyle(Theme.ground) }
         }
         .buttonStyle(.borderedProminent)
         .disabled(making)
