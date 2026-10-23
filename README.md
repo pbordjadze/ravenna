@@ -12,6 +12,9 @@ Not announced. Built on Paint by Moonlight's engine
 - `Sources/MosaicCore`: the engine (Swift, on PaintCore pinned by revision), tested on Linux:
   `tools/paintcore-mirror.sh && swift test` (the script fetches only the pinned PaintCore commit;
   `tools/swift.sh` runs SwiftPM in the swift:6.2 image where no toolchain is installed).
+- `Sources/MosaicEngine`: the mosaic generator in Swift (photo, contours and faces in; a `Mosaic`
+  out), ported from `prototype/mosaic_faces.py`, with no dependencies so the app compiles it
+  directly. `swift run mosaic` runs it on a PPM and its contour map, for the bench.
 - `sketchbook/`: how the faces-first rounds are made, and `bundle.py`, which makes the app's mosaics.
 - `App/`: the app (iOS 26, SwiftUI, bundle `com.pbordjadze.ravenna`), v0: five public-domain
   ancient works from the Met, laid as mosaics on the bench, set tile by tile. It compiles
