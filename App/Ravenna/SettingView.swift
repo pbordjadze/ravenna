@@ -17,6 +17,7 @@ struct SettingView: View {
     @State private var making = false
     @State private var wide = false
     @AppStorage(Keys.border) private var border = Border.none
+    @AppStorage(Keys.ground) private var ground = GroundChoice.picture
 
     var body: some View {
         ZStack {
@@ -63,11 +64,12 @@ struct SettingView: View {
         }
         .animation(.easeInOut(duration: 0.5), value: bench?.rake == nil)
         .onGeometryChange(for: Bool.self) { $0.size.width > $0.size.height * 1.15 } action: { wide = $0 }
-        .task(id: library.detail) {
+        .task(id: "\(library.detail.rawValue)-\(ground.rawValue)") {
             bench = nil
             failed = false
             do {
-                let mosaic = try await library.mosaic(work, library.detail)
+                let laid = try await library.mosaic(work, library.detail), ground = self.ground
+                let mosaic = await Task.detached { ground.applied(to: laid) }.value
                 let b = Bench(mosaic: mosaic, setting: library.setting(work, library.detail))
                 // The wall's image is made off the main thread, so a wall of thousands opens without a stall.
                 await b.prepare(library.finish, bed: library.image(work, "bed"))

@@ -7,11 +7,12 @@ struct Cover: View {
     @Environment(Library.self) private var library
     let work: Work
     @State private var image: UIImage?
+    @AppStorage(Keys.ground) private var ground = GroundChoice.picture
 
     var body: some View {
         let progress = library.progress(work)
         let set = library.setting(work, library.detail).set
-        let key = "\(work.id)-\(library.detail.rawValue)-\(library.finish.rawValue)-\(set.count)"
+        let key = "\(work.id)-\(library.detail.rawValue)-\(library.finish.rawValue)-\(ground.rawValue)-\(set.count)"
         Group {
             if let shown = progress > 0 ? image ?? library.image(work, "bed") : library.image(work, "bed") {
                 Image(uiImage: shown).resizable().scaledToFill()
@@ -24,9 +25,9 @@ struct Cover: View {
             guard !set.isEmpty else { image = nil; return }
             if let cached = Covers.shared.images[key] { image = cached; return }
             guard let m = try? await library.mosaic(work, library.detail) else { return }
-            let finish = library.finish, ground = Unchecked(library.image(work, "bed")?.cgImage)
+            let finish = library.finish, bed = Unchecked(library.image(work, "bed")?.cgImage), ground = self.ground
             let made = await Task.detached(priority: .utility) {
-                Unchecked(WallImage.make(m, finish, bed: ground.value, set: set, longest: 720, outlines: false)?.current)
+                Unchecked(WallImage.make(ground.applied(to: m), finish, bed: bed.value, set: set, longest: 720, outlines: false)?.current)
             }.value
             guard let cg = made.value else { return }
             let cover = UIImage(cgImage: cg)
