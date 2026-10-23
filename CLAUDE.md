@@ -35,6 +35,9 @@ Moonlight, a shipping app with its own sessions, CI and rules.
   scikit-image) or keep his in the session's scratch.
 - Credits for techniques and artists in the making-of are researched, with a source for each;
   never invent a name. Much Byzantine work is anonymous, and the app says so.
+- Creative forks become options in the app, and the work moves on: Paul, "where a creative choice
+  diverges just make it an option in the app for now, and we can narrow down later". Names, the
+  app's display name and icon, and deleting what he made wait on him.
 - Taste: Paul decides. The Lamp's ancient guardians (Medea, the Moon, the Astrologer, with
   Originality's veto) named this workshop; whether they become its standing jury is Paul's call.
 - Hand off at about 400k tokens of context: a fresh session with a brief (open issues, branch and
