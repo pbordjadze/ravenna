@@ -33,7 +33,7 @@ nonisolated extension MosaicEngine {
 
         /// Hands what isn't `Sendable` (a closure, a buffer pointer) to the parts, which use it as
         /// `ranges` says.
-        struct Unchecked<T>: @unchecked Sendable {
+        nonisolated struct Unchecked<T>: @unchecked Sendable {
             let value: T
             init(_ value: T) { self.value = value }
         }
