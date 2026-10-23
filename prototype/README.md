@@ -8,6 +8,7 @@ reference the Swift engine is ported from, and the sketchbook's bench until it e
 | `mosaic_look.py` | Any photo as a mosaic: strands from the contour map, rows that echo them, the photo's color edges and the frame, colors gathered into a few smalti. The parrots, lighthouse and hibiscus in the proposal. |
 | `mosaic_faces.py` | The same with the face habits: finer tiles inside face boxes, eyes set as round pieces (a slit pupil for a cat), iris mixed as it looks. The cat and the girl in the proposal. |
 | `byzantine_head.py` | The hand-designed Byzantine head (Paul liked this one): strands traced from the mosaic's own red and dark tiles (`head_guides.py` makes the candidate chains), one smalti per strand family, calm field shading, the photo's grout. |
+| `making_of.py` | The making-of show from a `mosaic_faces.py` design: smalti, the drawing on the bed, the painted bed, the face, the outlines, andamento, the light; each tile dropped in and set, a card naming each technique (`docs/making-of.md`). |
 | `gestures_look.py`, `gestures_head.py` | A design as Refine gestures from Blank (`pbn refine` in paint-by-number replays them): the proof that a mosaic is an ordinary, valid template. |
 
 ## Running them
