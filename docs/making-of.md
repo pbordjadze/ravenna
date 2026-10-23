@@ -176,8 +176,10 @@ own code (Sources/MosaicEngine, App/Ravenna/Contours.swift, Faces.swift, Sources
 | Andamento | Each row a level of the Euclidean distance transform | P. Felzenszwalb and D. Huttenlocher, "Distance Transforms of Sampled Functions", Theory of Computing 8, 2012 (doi:10.4086/toc.2012.v008a019) | H |
 | Set at a tilt | Each tile's tilt from SplitMix64's mixer (`TileColor.wobble`) | G. Steele, D. Lea and C. Flood, "Fast splittable pseudorandom number generators", OOPSLA 2014 (doi:10.1145/2660193.2660195) | H |
 
-The papers' records were checked through Crossref, arXiv and the authors' pages. The model and the
-closing cards carry no algorithm.
+The papers' records were checked through Crossref, arXiv and the authors' pages, and each against the
+code that runs it (Raster.swift's `Distance.edt`, Strokes.swift's `thin`, Cluster.swift's `KMeans`, Bed.swift).
+The model and the closing cards carry no algorithm. The engine also simplifies each tile's outline with
+Douglas–Peucker (Shapes.swift); no card covers that step, so none names it.
 
 ## The storyboard
 
