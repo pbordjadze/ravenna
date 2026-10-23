@@ -193,6 +193,11 @@ The show compresses that into one drawing and one painted bed.
 The drawing is the strands' and features' own tiles chained into strokes, so the app needs no contour
 map to draw it: it is exactly the lines the outline rows will follow.
 
+**In the app:** "The making-of" in a mosaic's More menu opens `App/Ravenna/MakingOfView.swift`, which
+plays `MakingOf` with a Canvas (set tiles baked into one image as they settle, drawn by the look's
+`Drawing`), the card under the picture, and the options in its own menu. With Reduce Motion it moves a
+scene at a time.
+
 **For Paul, through the setup session:** the closing card can name Sosus, Gnosis, Dioskourides and
 Ephraim, which is lore, so it waits on him. Until he answers, it reads "Most mosaicists are anonymous; a
 few names survive." with no names, and the named version is behind `names`.
