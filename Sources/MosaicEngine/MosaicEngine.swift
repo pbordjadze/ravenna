@@ -112,21 +112,30 @@ nonisolated public enum MosaicEngine {
     /// and the features' rows first, then the strands, the rows, the field, and last the pupils (each
     /// laid over its iris, as the script does). The making-of replays the build from that order.
     /// Corners are in the photo's pixels; a tile is stone when its centre is in a face's box.
+    /// `progress` hears how much of the work is done (0...1) after each stage, for a progress bar.
     public static func make(photo: Photo, contours: [Float], faces: [Face], settings: Settings = Settings(),
-                            cancel: () -> Bool = { false }) throws -> Mosaic {
+                            cancel: () -> Bool = { false }, progress: (Double) -> Void = { _ in }) throws -> Mosaic {
         var trace = Trace()
-        return try make(photo: photo, contours: contours, faces: faces, settings: settings, cancel: cancel, trace: &trace)
+        return try make(photo: photo, contours: contours, faces: faces, settings: settings, cancel: cancel,
+                        progress: progress, trace: &trace)
     }
+
+    /// Each stage's share of the work, by its time on a 1448 px portrait (`mosaic` on Linux): what
+    /// `progress` adds up after it.
+    static let shares: [String: Double] = [
+        "upscale": 0.07, "strokes": 0.05, "strands": 0.01, "segments": 0.23, "distance": 0.07,
+        "rows": 0.08, "gaps": 0.28, "colours": 0.14, "palette": 0.07,
+    ]
 
     /// `make`, recording in `trace` each stage's time and tiles, and which tiles are strands and features.
     public static func make(photo: Photo, contours: [Float], faces: [Face], settings: Settings = Settings(),
-                            cancel: () -> Bool, trace: inout Trace) throws -> Mosaic {
+                            cancel: () -> Bool, progress: (Double) -> Void = { _ in }, trace: inout Trace) throws -> Mosaic {
         guard photo.width > 0, photo.height > 0, photo.rgb.count == photo.width * photo.height else {
             throw InputError.photoSize
         }
         guard contours.count == photo.width * photo.height else { throw InputError.contourSize }
         let run = Run(photo: photo, contours: contours, faces: faces, settings: settings)
-        return try run.make(cancel: cancel, trace: &trace)
+        return try run.make(cancel: cancel, progress: progress, trace: &trace)
     }
 }
 
@@ -187,10 +196,13 @@ nonisolated extension MosaicEngine {
             return m
         }
 
-        func make(cancel: () -> Bool, trace: inout Trace) throws -> Mosaic {
+        func make(cancel: () -> Bool, progress: (Double) -> Void, trace: inout Trace) throws -> Mosaic {
             let clock = ContinuousClock()
             var last = clock.now
+            var done = 0.0
             func lap(_ name: String) throws {
+                done += MosaicEngine.shares[name] ?? 0
+                progress(Swift.min(done, 1))
                 let now = clock.now, d = now - last
                 trace.stages.append(.init(name: name, seconds: Double(d.components.seconds) + Double(d.components.attoseconds) * 1e-18,
                                           tiles: layout.pieces.count))
