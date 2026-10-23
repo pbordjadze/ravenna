@@ -2,10 +2,12 @@
 Met's Open Access collection. For each work: the Met's image and record (medium, accession, credit), the
 picture at 724, 1024 and 1448 px (the detail option's Fewer, Standard and More pieces), its contours
 (paint-by-number's HED, through hed.py), its face's features (features.py, for faces), the tight set
-(mosaic_faces.py, GROUT=2 TIGHT=1), and B's painted bed. Writes to <out dir>: <id>-<detail>.json (the
-design in Standard's canvas units: "size", "grout", "palette" as sRGB 0...1, "tiles" each {"c": flat
-corners, "p": paint, "s": 1 when stone (inside the face)}), <id>-bed.jpg, <id>-photo.jpg and catalog.json.
-Run from the scratch directory that holds venv/, pbn/ (paint-by-number) and models/face_landmarker.task."""
+made by the app's own engine (the Swift CLI `mosaic`, as a photo is on the phone) and its painted bed.
+Writes to <out dir>: <id>-<detail>.json (the design in Standard's canvas units: "size", "grout",
+"palette" as sRGB 0...1, "tiles" in laying order, each {"c": flat corners, "p": paint, "s": 1 when stone
+(inside the face), "g": the build stage}), <id>-bed.jpg, <id>-photo.jpg and catalog.json. Run from the
+scratch directory that holds venv/, pbn/ (paint-by-number) and models/face_landmarker.task, after
+`swift build -c release` in the repository (MOSAIC= names another build of the CLI)."""
 import json, os, subprocess, sys, urllib.request
 from PIL import Image
 
@@ -13,6 +15,7 @@ catalog, work, out = sys.argv[1:4]
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 PY = ["venv/bin/python", "-I"]
+MOSAIC = os.environ.get("MOSAIC", f"{ROOT}/.build/release/mosaic")
 DETAILS = {"fewer": 724, "standard": 1024, "more": 1448}
 os.makedirs(work, exist_ok=True); os.makedirs(out, exist_ok=True)
 spec = json.load(open(catalog))
@@ -32,24 +35,22 @@ for m in spec["mosaics"]:
         if side == 1024:
             std = (round(im.width * k), round(im.height * k))
             subprocess.run(PY + [f"{HERE}/hed.py", "pbn/tools/models/convert_hed.py", "--map", ppm, f"{work}/{i}-contours.pgm"], check=True, capture_output=True)
-    env = dict(os.environ, FINE="17", CUT_FINE="0.45", GROUT="2", TIGHT="1")
-    box = None
     for detail, side in DETAILS.items():
-        e = dict(env)
+        cmd = [MOSAIC, f"{work}/{i}-{side}.ppm", f"{work}/{i}-contours.pgm", f"{work}/{i}-{side}"]
         if m["face"]:
             subprocess.run(PY + [f"{HERE}/features.py", f"{work}/{i}-{side}.ppm", "models/face_landmarker.task", f"{work}/{i}-{side}-features.json"], check=True, capture_output=True)
-            e["FEATURES"] = f"{work}/{i}-{side}-features.json"
-        r = subprocess.run(PY + [f"{ROOT}/prototype/mosaic_faces.py", f"{work}/{i}-{side}.ppm", f"{work}/{i}-contours.pgm", f"{work}/{i}-{side}", "30", "18", "0.72"], env=e, check=True, capture_output=True, text=True)
-        print(i, detail, r.stdout.strip())
+            cmd += ["--features", f"{work}/{i}-{side}-features.json"]
+        if side == 1024: cmd += ["--bed", f"{work}/{i}-bed.ppm"]
+        r = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        print(i, detail, r.stdout.splitlines()[0])
         d = json.load(open(f"{work}/{i}-{side}.json"))
         k = std[0] / (d["size"][0] / d["scale"])
         if m["face"]:
             bx = json.load(open(f"{work}/{i}-{side}-features.json"))["box"]
-            if side == 1024: box = bx
         tiles = []
         for t in d["tiles"]:
             c = [round(v * k, 1) for xy in t["corners"] for v in xy]
-            tile = {"c": c, "p": t["paint"]}
+            tile = {"c": c, "p": t["paint"], "g": t["stage"]}
             if m["face"]:
                 cx = sum(t["corners"][j][0] for j in range(len(t["corners"]))) / len(t["corners"])
                 cy = sum(t["corners"][j][1] for j in range(len(t["corners"]))) / len(t["corners"])
@@ -59,8 +60,7 @@ for m in spec["mosaics"]:
         json.dump({"size": list(std), "grout": d["grout"], "palette": d["palette"], "tiles": tiles},
                   open(f"{out}/{i}-{detail}.json", "w"), separators=(",", ":"))
         if side == 1024:
-            subprocess.run(PY + [f"{HERE}/render.py", f"{work}/{i}-1024.json", f"{work}/{i}-1024.ppm", "bed", f"{work}/{i}-bed.png"], check=True)
-            bed = Image.open(f"{work}/{i}-bed.png").convert("RGB").resize(std, Image.LANCZOS)
+            bed = Image.open(f"{work}/{i}-bed.ppm").convert("RGB").resize(std, Image.LANCZOS)
             bed.save(f"{out}/{i}-bed.jpg", quality=82)
             ph = Image.open(f"{work}/{i}-1024.ppm"); ph.save(f"{out}/{i}-photo.jpg", quality=85)
     entries.append({"id": i, "title": m["title"], "date": m["date"], "place": m["place"],

@@ -64,6 +64,22 @@ License 1.1, in full beside the fonts (`Alegreya-OFL.txt`, the same for both fam
 Every sound in the app is synthesized by it (`Sources/MosaicKit/Hand.swift`, `Voice`): noise and
 decaying sine partials, computed at launch. No recordings or samples are used.
 
+## Code
+
+### Earcut
+
+Triangulates each tile and the grout into the mesh a template paints
+(`Sources/MosaicCore/Earcut.swift`). mapbox/earcut 3.0 by Mapbox, Copyright (c) 2016, Mapbox; ISC
+License (below). Copied from Paint by Moonlight's port (pbordjadze/paint-by-number,
+`Sources/PaintCore/Vector/Earcut.swift`).
+
+### Polylabel
+
+Finds the point of a tile, or of the grout, farthest from its edges, where its number goes
+(`Sources/MosaicCore/PolyLabel.swift`). mapbox/polylabel by Mapbox, Copyright (c) 2016 Mapbox; ISC
+License (below). Copied from Paint by Moonlight's port (`Sources/PaintCore/Vector/PolyLabel.swift`
+there).
+
 ## Apache License, Version 2.0
 
 TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
@@ -117,3 +133,9 @@ You may add Your own copyright statement to Your modifications and may provide a
 9. Accepting Warranty or Additional Liability. While redistributing the Work or Derivative Works thereof, You may choose to offer, and charge a fee for, acceptance of support, warranty, indemnity, or other liability obligations and/or rights consistent with this License. However, in accepting such obligations, You may act only on Your own behalf and on Your sole responsibility, not on behalf of any other Contributor, and only if You agree to indemnify, defend, and hold each Contributor harmless for any liability incurred by, or claims asserted against, such Contributor by reason of your accepting any such warranty or additional liability.
 
 END OF TERMS AND CONDITIONS
+
+## ISC License
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.

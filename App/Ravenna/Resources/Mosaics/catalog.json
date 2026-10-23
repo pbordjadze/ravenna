@@ -9,9 +9,9 @@
    "credit": "The Metropolitan Museum of Art, Rogers Fund, 1909 (09.181.6). Public domain.",
    "url": "https://www.metmuseum.org/art/collection/search/547860",
    "tiles": {
-    "fewer": 1526,
-    "standard": 3147,
-    "more": 6360
+    "fewer": 1511,
+    "standard": 3168,
+    "more": 6269
    }
   },
   {
@@ -23,9 +23,9 @@
    "credit": "The Metropolitan Museum of Art, Rogers Fund, 1909 (09.181.7). Public domain.",
    "url": "https://www.metmuseum.org/art/collection/search/547861",
    "tiles": {
-    "fewer": 1708,
-    "standard": 3213,
-    "more": 6620
+    "fewer": 1674,
+    "standard": 3255,
+    "more": 6629
    }
   },
   {
@@ -37,9 +37,9 @@
    "credit": "The Metropolitan Museum of Art, Gift of Edward S. Harkness, 1918 (18.9.2). Public domain.",
    "url": "https://www.metmuseum.org/art/collection/search/547951",
    "tiles": {
-    "fewer": 1748,
-    "standard": 3389,
-    "more": 6648
+    "fewer": 1753,
+    "standard": 3393,
+    "more": 6636
    }
   },
   {
@@ -51,9 +51,9 @@
    "credit": "The Metropolitan Museum of Art, Rogers Fund, 1909 (09.181.1). Public domain.",
    "url": "https://www.metmuseum.org/art/collection/search/547856",
    "tiles": {
-    "fewer": 2036,
-    "standard": 4032,
-    "more": 8091
+    "fewer": 2047,
+    "standard": 4061,
+    "more": 8083
    }
   },
   {
@@ -65,9 +65,9 @@
    "credit": "The Metropolitan Museum of Art, Gift of Edward S. Harkness, 1917 (17.9.1). Public domain.",
    "url": "https://www.metmuseum.org/art/collection/search/544227",
    "tiles": {
-    "fewer": 1800,
-    "standard": 3554,
-    "more": 7002
+    "fewer": 1808,
+    "standard": 3571,
+    "more": 7026
    }
   }
  ]

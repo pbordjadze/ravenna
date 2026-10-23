@@ -1,8 +1,8 @@
 import SwiftUI
 import UIKit
 
-/// A mosaic from the painter's photo: how many pieces (the detail slider, issue #11), then the
-/// tiles are laid on the device. The photo never leaves it.
+/// A mosaic from the painter's photo: how many pieces (the detail slider, issue #11) and how the
+/// eyes are coloured (issue #9), then the tiles are laid on the device. The photo never leaves it.
 struct NewMosaicView: View {
     @Environment(Library.self) private var library
     @Environment(\.dismiss) private var dismiss
@@ -10,6 +10,7 @@ struct NewMosaicView: View {
     let made: (Work) -> Void
 
     @State private var pieces = 0.4
+    @State private var eyes = MosaicEngine.Eyes.asTheyLook
     @State private var progress = MakeProgress()
     @State private var job: Task<Void, Never>?
     @State private var failure: String?
@@ -38,6 +39,17 @@ struct NewMosaicView: View {
                         }
                         .disabled(progress.stage != nil)
                         Text("More pieces take longer to lay, and to set.").font(Theme.body(13)).foregroundStyle(Theme.muted)
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Eyes").font(Theme.title(18)).foregroundStyle(Theme.plaster)
+                        Picker("Eyes", selection: $eyes) {
+                            Text("As they look").tag(MosaicEngine.Eyes.asTheyLook)
+                            Text("The photo's colours").tag(MosaicEngine.Eyes.asInThePhoto)
+                        }
+                        .pickerStyle(.segmented)
+                        .disabled(progress.stage != nil)
+                        Text("Mixed brighter, as an eye catches the light, or kept as the photo has them.")
+                            .font(Theme.body(13)).foregroundStyle(Theme.muted)
                     }
                     if let stage = progress.stage {
                         HStack(spacing: 10) {
@@ -79,12 +91,12 @@ struct NewMosaicView: View {
     private func lay() {
         failure = nil
         progress.stage = .reading
-        let data = data, pieces = pieces, progress = progress
+        let data = data, pieces = pieces, eyes = eyes, progress = progress
         job = Task {
             do {
                 // Detached, so cancelling this task (Cancel) must be passed on to it.
                 let worker = Task.detached(priority: .userInitiated) {
-                    try Maker.make(from: data, pieces: pieces) { s in Task { @MainActor in progress.stage = s } }
+                    try Maker.make(from: data, pieces: pieces, eyes: eyes) { s in Task { @MainActor in progress.stage = s } }
                 }
                 let result = try await withTaskCancellationHandler { try await worker.value } onCancel: { worker.cancel() }
                 let work = try library.keep(result)

@@ -46,7 +46,7 @@ nonisolated enum Faces {
                 let r = 0.21 * width
                 eyes.append([centre.x, centre.y, r, 0.4 * r])
             }
-            for brow in [pts(l.leftEyebrow), pts(l.rightEyebrow)] { add("mid", brow.sorted { $0.x < $1.x }) }
+            for brow in [pts(l.leftEyebrow), pts(l.rightEyebrow)] { add("mid", midline(brow)) }
             // The nose: down its side in shadow, from the top of its crest to the wing.
             let nose = pts(l.nose), crest = pts(l.noseCrest)
             if nose.count >= 4, let top = crest.min(by: { $0.y < $1.y }) {
@@ -69,6 +69,32 @@ nonisolated enum Faces {
             found.append(.init(box: box(animal.boundingBox, margin: 0.05), eyes: [], lines: []))
         }
         return found
+    }
+
+    /// A brow's row: between its upper and lower edges when Vision outlines it as a ring (as the
+    /// bench takes MediaPipe's), else its points left to right.
+    static func midline(_ brow: [SIMD2<Float>]) -> [SIMD2<Float>] {
+        // A ring closes with a step like its others; an open line ends across the brow from its start.
+        func gap(_ a: SIMD2<Float>, _ b: SIMD2<Float>) -> Float { ((b - a) * (b - a)).sum().squareRoot() }
+        let longest = zip(brow, brow.dropFirst()).map(gap).max() ?? 0
+        guard brow.count >= 6, let first = brow.first, let last = brow.last, gap(last, first) <= 1.5 * longest else {
+            return brow.sorted { $0.x < $1.x }
+        }
+        let (upper, lower) = halves(brow)
+        guard upper.count >= 3, lower.count >= 3 else { return brow.sorted { $0.x < $1.x } }
+        let n = max(upper.count, lower.count)
+        return (0..<n).map { k in (along(upper, Float(k) / Float(n - 1)) + along(lower, Float(k) / Float(n - 1))) / 2 }
+    }
+
+    /// The point a fraction `t` of the way along a polyline, by length.
+    static func along(_ p: [SIMD2<Float>], _ t: Float) -> SIMD2<Float> {
+        let seg = zip(p, p.dropFirst()).map { (($1 - $0) * ($1 - $0)).sum().squareRoot() }
+        var left = t * seg.reduce(0, +)
+        for (i, d) in seg.enumerated() {
+            if left <= d || i == seg.count - 1 { return p[i] + (p[i + 1] - p[i]) * (d > 0 ? min(left / d, 1) : 0) }
+            left -= d
+        }
+        return p[0]
     }
 
     /// A closed outline's upper and lower halves, each from its leftmost point to its rightmost (y down).

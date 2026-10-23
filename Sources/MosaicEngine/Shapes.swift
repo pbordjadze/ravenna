@@ -100,6 +100,15 @@ nonisolated extension MosaicEngine {
         }
 
         /// The shoelace area (absolute).
+        /// The distance from `p` to the segment ab.
+        static func segmentDistance(_ p: SIMD2<Double>, _ a: SIMD2<Double>, _ b: SIMD2<Double>) -> Double {
+            let ab = b - a, ap = p - a
+            let len2 = ab.x * ab.x + ab.y * ab.y
+            let t = len2 > 0 ? Swift.min(Swift.max((ap.x * ab.x + ap.y * ab.y) / len2, 0), 1) : 0
+            let d = ap - ab * t
+            return (d.x * d.x + d.y * d.y).squareRoot()
+        }
+
         static func area(_ poly: [SIMD2<Double>]) -> Double {
             guard poly.count > 2 else { return 0 }
             var s = 0.0, j = poly.count - 1
