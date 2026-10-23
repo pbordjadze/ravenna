@@ -103,19 +103,32 @@ nonisolated extension MosaicEngine {
             return best
         }
 
+        /// Each point's nearest centre, found many at once; their distances summed in order after.
         static func assign(_ data: [SIMD3<Float>], _ centers: [SIMD3<Float>], _ labels: inout [Int]) -> Double {
-            var total = 0.0
-            centers.withUnsafeBufferPointer { cs in
-                for i in data.indices {
-                    let v = data[i]
-                    var best = 0, bd = Float.infinity
-                    for j in 0..<cs.count {
-                        let d = distance2(v, cs[j])
-                        if d < bd { bd = d; best = j }
+            var near = [Float](repeating: 0, count: data.count)
+            data.withUnsafeBufferPointer { ds in
+                centers.withUnsafeBufferPointer { cs in
+                    labels.withUnsafeMutableBufferPointer { ls in
+                        near.withUnsafeMutableBufferPointer { ns in
+                            let ds = Parallel.Unchecked(ds), cs = Parallel.Unchecked(cs)
+                            let ls = Parallel.Unchecked(ls), ns = Parallel.Unchecked(ns)
+                            Parallel.ranges(ds.value.count, grain: 2048) { r in
+                                for i in r {
+                                    let v = ds.value[i]
+                                    var best = 0, bd = Float.infinity
+                                    for j in 0..<cs.value.count {
+                                        let d = distance2(v, cs.value[j])
+                                        if d < bd { bd = d; best = j }
+                                    }
+                                    ls.value[i] = best; ns.value[i] = bd
+                                }
+                            }
+                        }
                     }
-                    labels[i] = best; total += Double(bd)
                 }
             }
+            var total = 0.0
+            for d in near { total += Double(d) }
             return total
         }
 
@@ -146,14 +159,55 @@ nonisolated extension MosaicEngine {
     }
 
     nonisolated enum Stats {
-        /// `np.percentile(values, q)` with linear interpolation. Sorts `values`.
+        /// `np.percentile(values, q)` with linear interpolation. Reorders `values`: the two ranks it
+        /// interpolates are selected, not sorted for, and are the very values a sort puts there.
         static func percentile(_ values: inout [Float], _ q: Double) -> Float {
             guard !values.isEmpty else { return 0 }
-            values.sort()
-            let pos = q / 100 * Double(values.count - 1)
-            let lo = Int(pos), hi = Swift.min(lo + 1, values.count - 1)
+            let n = values.count
+            let pos = q / 100 * Double(n - 1)
+            let lo = Int(pos), hi = Swift.min(lo + 1, n - 1)
             let t = Float(pos - Double(lo))
-            return values[lo] + (values[hi] - values[lo]) * t
+            return values.withUnsafeMutableBufferPointer { b in
+                let a = select(b, lo)
+                var c = a
+                if hi > lo {
+                    // Everything after rank lo is at least its value; the next rank is their least.
+                    c = b[hi]
+                    for i in (hi + 1)..<n where b[i] < c { c = b[i] }
+                }
+                return a + (c - a) * t
+            }
+        }
+
+        /// The value of rank `k` (what `b.sorted()[k]` holds), leaving it at `k` with everything
+        /// before it no greater and everything after it no less: quickselect, partitioning three
+        /// ways about a median of three, so runs of equal values end it at once.
+        static func select(_ b: UnsafeMutableBufferPointer<Float>, _ k: Int) -> Float {
+            var l = 0, r = b.count
+            while r - l > 16 {
+                let x = b[l], y = b[(l + r) / 2], z = b[r - 1]
+                let p = x < y ? (y < z ? y : (x < z ? z : x)) : (x < z ? x : (y < z ? z : y))
+                var lt = l, i = l, gt = r
+                while i < gt {
+                    let v = b[i]
+                    if v < p {
+                        b.swapAt(lt, i); lt += 1; i += 1
+                    } else if v > p {
+                        gt -= 1; b.swapAt(i, gt)
+                    } else {
+                        i += 1
+                    }
+                }
+                if k < lt { r = lt } else if k >= gt { l = gt } else { return p }
+            }
+            // A short run: insertion sort.
+            for i in (l + 1)..<Swift.max(r, l + 1) {
+                let v = b[i]
+                var j = i
+                while j > l && b[j - 1] > v { b[j] = b[j - 1]; j -= 1 }
+                b[j] = v
+            }
+            return b[k]
         }
 
         /// Per-channel percentiles of colours, as `np.percentile(px, q, axis=0)`.

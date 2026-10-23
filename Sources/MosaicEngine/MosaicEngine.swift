@@ -123,11 +123,11 @@ nonisolated public enum MosaicEngine {
                         progress: progress, trace: &trace)
     }
 
-    /// Each stage's share of the work, by its time on a 1448 px portrait (`mosaic` on Linux): what
-    /// `progress` adds up after it.
+    /// Each stage's share of the work, by its time on a 1448 px portrait (`mosaic` on Linux, four
+    /// cores): what `progress` adds up after it.
     static let shares: [String: Double] = [
-        "upscale": 0.07, "strokes": 0.05, "strands": 0.01, "segments": 0.23, "distance": 0.07,
-        "rows": 0.08, "gaps": 0.28, "colours": 0.14, "palette": 0.07,
+        "upscale": 0.12, "strokes": 0.06, "strands": 0.01, "segments": 0.19, "distance": 0.06,
+        "rows": 0.13, "gaps": 0.25, "colours": 0.12, "palette": 0.06,
     ]
 
     /// `make`, recording in `trace` each stage's time and tiles, and which tiles are strands and features.
@@ -267,7 +267,14 @@ nonisolated extension MosaicEngine {
             }
             // The photo at twice its size (bicubic), the drawing with it (bilinear).
             func channel(_ c: Int) -> [Float] {
-                Resize.upscale2x(photo.rgb.map { $0[c] }, width: w0, height: h0).map { Swift.min(Swift.max($0, 0), 1) }
+                var up = Resize.upscale2x(photo.rgb.map { $0[c] }, width: w0, height: h0)
+                up.withUnsafeMutableBufferPointer { u in
+                    let u = Parallel.Unchecked(u)
+                    Parallel.ranges(u.value.count, grain: 1 << 16) { r in
+                        for i in r { u.value[i] = Swift.min(Swift.max(u.value[i], 0), 1) }
+                    }
+                }
+                return up
             }
             red = channel(0); green = channel(1); blue = channel(2)
             draw = Resize.bilinear(contours, width: w0, height: h0, to: W, H)
@@ -282,7 +289,7 @@ nonisolated extension MosaicEngine {
                 }
                 let m = Blur.gaussian(Plane(width: W, height: H, pixels: inbox.map { Float($0) }), sigma: s * 1.2)
                 let a = Blur.gaussian(Plane(width: W, height: H, pixels: own), sigma: s * 1.2)
-                pitchMap.pixels = m.pixels.indices.map { i in
+                pitchMap.pixels = Parallel.map(W * H, grain: 1 << 16, zero: Float(0)) { i in
                     let w = m.pixels[i], near = w > 1e-6 ? Double(a.pixels[i] / w) : fine
                     return Float(s + (near - s) * Double(Swift.min(Swift.max(w * 1.4, 0), 1)))
                 }
@@ -291,6 +298,7 @@ nonisolated extension MosaicEngine {
             try lap("upscale")
 
             let guides = strokes(inbox: inbox)
+            draw = []   // the drawing is done with: a plane less at the peak
             try lap("strokes")
 
             let pupils = features()
@@ -312,15 +320,20 @@ nonisolated extension MosaicEngine {
                 }
             }
             D = Blur.gaussian(D, sigma: 2)
-            let around = boxes.isEmpty ? pitchMap : Blur.gaussian(pitchMap, sigma: s)
-            var Dn = D
-            for i in Dn.pixels.indices { Dn.pixels[i] /= around.pixels[i] }
-            try lap("distance")
+            do {
+                let around = boxes.isEmpty ? pitchMap : Blur.gaussian(pitchMap, sigma: s)
+                var Dn = D
+                for i in Dn.pixels.indices { Dn.pixels[i] /= around.pixels[i] }
+                try lap("distance")
 
-            rows(Dn)
-            try lap("rows")
+                rows(Dn)
+                try lap("rows")
+            }
 
-            gaps(D)
+            // The gaps need only the distance smoothed: the rest goes before they start.
+            let smooth = Blur.gaussian(D, sigma: s * 0.6)
+            D = Plane(width: 0, height: 0)
+            gaps(smooth)
             try lap("gaps")
 
             layout.pieces += pupils
@@ -433,13 +446,13 @@ nonisolated extension MosaicEngine {
             let b = Blur.gaussian(Plane(width: W, height: H, pixels: blue), sigma: sigma).pixels
             let ok = FastOKLab()
             let weight = SIMD3<Float>(1, 1.6, 1.6)
-            var X = [SIMD3<Float>](repeating: .zero, count: W * H)
-            for i in X.indices { X[i] = ok.lab(SIMD3(r[i], gr[i], b[i])) * weight }
+            // Each pixel's colour made where it's used, not kept for the whole image (16 bytes a pixel).
+            @inline(__always) func X(_ i: Int) -> SIMD3<Float> { ok.lab(SIMD3(r[i], gr[i], b[i])) * weight }
             var rng = SplitMix64(seed: 3)
-            let sample = rng.sample(X.count, count: 60000).map { X[$0] }
+            let sample = rng.sample(W * H, count: 60000).map(X)
             let km = KMeans.run(sample, k: 8, maxIterations: 30, epsilon: 1e-3, attempts: 3, rng: &rng)
-            var seg = [UInt8](repeating: 0, count: W * H)
-            for i in X.indices { seg[i] = UInt8(KMeans.nearest(X[i], km.centers)) }
+            let centers = km.centers
+            var seg = Parallel.map(W * H, grain: 4096, zero: UInt8(0)) { UInt8(KMeans.nearest(X($0), centers)) }
             seg = Morph.median(seg, width: W, height: H, size: 9, levels: Swift.max(km.centers.count, 1))
             let edges = Morph.labelEdges(seg, width: W, height: H)
             return Components.removeSmall(edges, width: W, height: H, maxSize: Int(s * 3))
@@ -454,7 +467,12 @@ nonisolated extension MosaicEngine {
             var mask = [UInt8](repeating: 0, count: W * H)
             while base + Double(k) < Double(top) {
                 let level = Float(base + Double(k))
-                for i in mask.indices { mask[i] = Dn.pixels[i] < level ? 1 : 0 }
+                Dn.pixels.withUnsafeBufferPointer { d in
+                    mask.withUnsafeMutableBufferPointer { m in
+                        let d = Parallel.Unchecked(d), m = Parallel.Unchecked(m)
+                        Parallel.ranges(W * H, grain: 1 << 16) { r in for i in r { m.value[i] = d.value[i] < level ? 1 : 0 } }
+                    }
+                }
                 var tracer = BorderTracer(mask, width: W, height: H)
                 let rings = tracer.all()
                 let order = rings.indices.sorted { rings[$0].count != rings[$1].count ? rings[$0].count > rings[$1].count : $0 < $1 }
@@ -472,10 +490,14 @@ nonisolated extension MosaicEngine {
             }
         }
 
-        /// The gaps: pieces at the centres of the free spaces, turned along the distance's level lines,
-        /// a little bigger than a tile so they're cut to the space.
-        func gaps(_ D: Plane) {
-            let (gy, gx) = Distance.gradient(Blur.gaussian(D, sigma: s * 0.6))
+        /// The gaps: pieces at the centres of the free spaces, turned along the level lines of the
+        /// distance (`smooth`, blurred by 0.6 of a pitch), a little bigger than a tile so they're cut
+        /// to the space.
+        func gaps(_ smooth: Plane) {
+            // Its slope, as `Distance.gradient` gives it, taken only where a piece goes.
+            func slope(_ x: Int, _ y: Int) -> (gy: Float, gx: Float) {
+                smooth.pixels.withUnsafeBufferPointer { Distance.gradient($0, width: W, height: H, x, y) }
+            }
             let window = Int(s)
             for _ in 0..<4 {
                 var taken = [UInt8](repeating: 0, count: W * H)
@@ -493,7 +515,8 @@ nonisolated extension MosaicEngine {
                 var added = 0
                 for i in peaks where layout.forbid[i] == 0 {
                     let x = i % W, y = i / W
-                    let t = SIMD2(Double(-gy.pixels[i]), Double(gx.pixels[i])) + 1e-6
+                    let (gy, gx) = slope(x, y)
+                    let t = SIMD2(Double(-gy), Double(gx)) + 1e-6
                     if layout.place(layout.square(SIMD2(Double(x), Double(y)), t, grow: 1.12), stage: .field, strand: false,
                                     minFrac: 0.3) {
                         added += 1
@@ -509,28 +532,30 @@ nonisolated extension MosaicEngine {
         /// then a field tile's colour leaning on its neighbours'.
         func colours() -> [SIMD3<Float>] {
             let pieces = layout.pieces
-            var med: [SIMD3<Float>] = []
-            med.reserveCapacity(pieces.count)
             let luma = SIMD3<Float>(0.2126, 0.7152, 0.0722)
             // A toned photo's cast (a sepia print's warmth): an iris is made stronger away from it, so
             // its eyes don't turn orange. The cast is the median colour of every 7th pixel, in OKLab;
             // it counts when nine pixels in ten lie within 0.04 of it (Cameron's prints: 0.02 to
             // 0.036), fading out by 0.06, since a colour photo's median is its subject (a face's
             // warmth, from 0.054 up in the Kodak portraits), not a cast.
-            var cast = SIMD3<Float>.zero
-            if irises == .asTheyLook && !eyes.isEmpty {
-                let sample = stride(from: 0, to: W * H, by: 7).map { Colour.lab(SIMD3(red[$0], green[$0], blue[$0])) }
+            let cast: SIMD3<Float> = {
+                guard irises == .asTheyLook && !eyes.isEmpty else { return .zero }
+                let sample = Parallel.map((W * H + 6) / 7, grain: 1024, zero: SIMD3<Float>.zero) {
+                    Colour.lab(SIMD3(red[7 * $0], green[7 * $0], blue[7 * $0]))
+                }
                 let median = Stats.median(sample)
                 var spread = sample.map { ((SIMD2($0.y, $0.z) - SIMD2(median.y, median.z)) * (SIMD2($0.y, $0.z) - SIMD2(median.y, median.z))).sum().squareRoot() }
                 let toned = Swift.min(Swift.max((0.06 - Stats.percentile(&spread, 90)) / 0.02, 0), 1)
-                cast = SIMD3(0, median.y * toned, median.z * toned)
-            }
+                return SIMD3(0, median.y * toned, median.z * toned)
+            }()
             func brightest(_ px: [SIMD3<Float>], _ q: Double, above: Bool) -> [SIMD3<Float>] {
                 var lum = px.map { ($0 * luma).sum() }
                 let cutoff = Stats.percentile(&lum, q)
                 return px.filter { above ? ($0 * luma).sum() >= cutoff : ($0 * luma).sum() <= cutoff }
             }
-            for t in pieces {
+            // Each tile on its own, so many at once.
+            let med = Parallel.map(pieces.count, grain: 32, zero: SIMD3<Float>.zero) { k in
+                let t = pieces[k]
                 let p = t.poly
                 var lo = p[0], hi = p[0]
                 for q in p { lo = pointwiseMin(lo, q); hi = pointwiseMax(hi, q) }
@@ -538,7 +563,7 @@ nonisolated extension MosaicEngine {
                 let bw = Int(hi.x.rounded(.up)) + 1 - x0, bh = Int(hi.y.rounded(.up)) + 1 - y0
                 var m = [UInt8](repeating: 0, count: Swift.max(bw * bh, 0))
                 Polygon.fill(p, origin: SIMD2(Double(x0), Double(y0)), quarter: false, into: &m, width: bw, height: bh)
-                var px: [SIMD3<Float>] = [], at: [SIMD2<Int>] = []
+                var px: [SIMD3<Float>] = []
                 for yy in 0..<bh {
                     let y = y0 + yy
                     guard y >= 0 && y < H else { continue }
@@ -546,13 +571,13 @@ nonisolated extension MosaicEngine {
                         let x = x0 + xx
                         guard x >= 0 && x < W else { continue }
                         let i = y * W + x
-                        px.append(SIMD3(red[i], green[i], blue[i])); at.append(SIMD2(xx, yy))
+                        px.append(SIMD3(red[i], green[i], blue[i]))
                     }
                 }
                 if px.isEmpty {
                     let c = Polygon.mean(p)
                     let i = clampIndex(Int(c.y), H) * W + clampIndex(Int(c.x), W)
-                    px = [SIMD3(red[i], green[i], blue[i])]; at = [.zero]
+                    px = [SIMD3(red[i], green[i], blue[i])]
                 }
                 var c = Colour.lab(Stats.median(px))
                 if t.eye == .iris {
@@ -608,7 +633,7 @@ nonisolated extension MosaicEngine {
                     c = SIMD3(c.x * 0.86, c.y * 1.15, c.z * 1.15)
                 }
                 if t.strand { c = SIMD3(Swift.min(c.x, 0.30), c.y * 0.8, c.z * 0.8) }
-                med.append(c)
+                return c
             }
             // Shade in zones, as a mosaicist grades it: a field tile's colour leans on its neighbours'.
             let centres = pieces.map { Polygon.mean($0.poly) }
