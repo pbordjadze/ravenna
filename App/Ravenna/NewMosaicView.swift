@@ -1,8 +1,9 @@
 import SwiftUI
 import UIKit
 
-/// A mosaic from the painter's photo: how many pieces (the detail slider, issue #11) and how the
-/// eyes are coloured (issue #9), then the tiles are laid on the device. The photo never leaves it.
+/// A mosaic from the painter's photo: how much of it (the panel), how many pieces (the detail
+/// slider, issue #11) and how the eyes are coloured (issue #9), then the tiles are laid on the
+/// device. The photo never leaves it.
 struct NewMosaicView: View {
     @Environment(Library.self) private var library
     @Environment(\.dismiss) private var dismiss
@@ -10,6 +11,9 @@ struct NewMosaicView: View {
     let data: Data
     let made: (Work) -> Void
 
+    @State private var preview: UIImage?
+    @State private var panel = Panel.whole
+    @State private var centre = CGPoint(x: 0.5, y: 0.5)
     @State private var pieces = 0.4
     @State private var eyes = MosaicEngine.Eyes.asTheyLook
     @State private var progress = MakeProgress()
@@ -20,14 +24,27 @@ struct NewMosaicView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    if let preview = UIImage(data: data) {
+                    if let preview {
                         // The photo as the setter's cartoon, pinned on the bench.
-                        Image(uiImage: preview).resizable().scaledToFit()
+                        FramingView(image: preview, panel: panel, centre: $centre)
                             .frame(maxHeight: 340)
                             .padding(6)
                             .background(Theme.panel)
                             .overlay { Rectangle().stroke(Theme.rule, lineWidth: 1) }
-                            .accessibilityLabel("Your photo")
+                            .disabled(progress.stage != nil)
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Panel").font(Theme.title(18)).foregroundStyle(Theme.plaster)
+                        Group {
+                            if typeSize.isAccessibilitySize {
+                                panelPicker.pickerStyle(.menu)
+                            } else {
+                                panelPicker.pickerStyle(.segmented)
+                            }
+                        }
+                        .disabled(progress.stage != nil)
+                        Text(panel == .whole ? "All of the photo is laid." : "Drag the panel over the part to lay.")
+                            .font(Theme.body(13)).foregroundStyle(Theme.muted)
                     }
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Pieces").font(Theme.title(18)).foregroundStyle(Theme.plaster)
@@ -89,6 +106,17 @@ struct NewMosaicView: View {
                 }
             }
             .interactiveDismissDisabled(progress.stage != nil)
+            .task {
+                let data = data
+                // Small enough to redraw as the panel moves.
+                preview = await Task.detached { Maker.oriented(data, longSide: 1200).map { UIImage(cgImage: $0) } }.value
+            }
+        }
+    }
+
+    private var panelPicker: some View {
+        Picker("Panel", selection: $panel) {
+            ForEach(Panel.allCases) { Text($0.name).tag($0) }
         }
     }
 
@@ -103,11 +131,13 @@ struct NewMosaicView: View {
         failure = nil
         progress.stage = .reading
         let data = data, pieces = pieces, eyes = eyes, progress = progress
+        let unit = preview.map { panel.rect(in: $0.size, centre: centre) } ?? CGRect(x: 0, y: 0, width: 1, height: 1)
         job = Task {
             do {
                 // Detached, so cancelling this task (Cancel) must be passed on to it.
                 let worker = Task.detached(priority: .userInitiated) {
-                    try Maker.make(from: data, pieces: pieces, eyes: eyes) { s in Task { @MainActor in progress.stage = s } }
+                    guard let cut = Panel.cut(data, to: unit) else { throw Maker.MakerError.unreadable }
+                    return try Maker.make(from: cut, pieces: pieces, eyes: eyes) { s in Task { @MainActor in progress.stage = s } }
                 }
                 let result = try await withTaskCancellationHandler { try await worker.value } onCancel: { worker.cancel() }
                 let work = try library.keep(result)
