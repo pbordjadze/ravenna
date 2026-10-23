@@ -2,7 +2,7 @@
 the reference Sources/MosaicKit's MakingOf is ported from (making_of.py draws it). Plain Python, no numpy,
 float64 throughout, so the Swift port can match it to the last digits.
 
-    plan = Plan(mosaic, Options(sinopia="red", hand=True, flow="scenes", names=False))
+    plan = Plan(mosaic, Options(sinopia="red", hand=True, flow="scenes", names=True))
     f = plan.frame(t)          # what to draw at t, as plain data (see `frame`)
 
 <mosaic> is the app's format (App/Ravenna/Resources/Mosaics/*.json, Sources/MosaicKit's Mosaic): "size",
@@ -43,7 +43,7 @@ CARDS = {
     "hold": ("The makers", "Most mosaicists are anonymous; a few names survive.",
              "No source read names the mosaicists of Ravenna or Hagia Sophia"),
 }
-# The cards that name makers, behind `names` until Paul decides (lore waits on him).
+# The cards that name makers, behind `names`: on since Paul's "Name them!" (October 23).
 NAMED_FACE = ("Opus vermiculatum", "The face in the smallest pieces, the eyes set as pieces of their own, row curving round row.",
               "As in the panels Dioskourides of Samos signed in tiny tesserae, Pompeii")
 NAMED = ("The makers", "A few names survive: Sosus at Pergamon, Gnosis at Pella, Dioskourides of Samos, Ephraim at Bethlehem. Most mosaicists are anonymous.",
@@ -68,7 +68,7 @@ class Options:
     setter's hand shown pressing each tile; flow: "scenes" (one stage after another, a card each) or
     "continuous" (one build that quickens, the cards following the stage being set); names: the closing card
     names the makers."""
-    def __init__(self, sinopia="red", hand=False, flow="scenes", names=False):
+    def __init__(self, sinopia="red", hand=False, flow="scenes", names=True):
         assert sinopia in SINOPIA and flow in ("scenes", "continuous")
         self.sinopia, self.hand, self.flow, self.names = sinopia, hand, flow, names
 
@@ -337,7 +337,7 @@ if __name__ == "__main__":
     m = json.load(open(sys.argv[1]))
     out = sys.argv[sys.argv.index("--fixture") + 1]
     res = {}
-    for key, opt in (("scenes", Options()), ("continuous", Options(sinopia="indigo", hand=True, flow="continuous", names=True))):
+    for key, opt in (("scenes", Options(names=False)), ("continuous", Options(sinopia="indigo", hand=True, flow="continuous", names=True))):
         p = Plan(m, opt, {"title": "Test", "credit": "Credit"})
         res[key] = fixture(p, [0.5 + 1.37 * k for k in range(int(p.duration / 1.37) + 1)])
     json.dump(res, open(out, "w"), separators=(",", ":"))

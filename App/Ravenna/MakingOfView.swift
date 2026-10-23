@@ -14,8 +14,8 @@ struct MakingOfView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let work: Work
 
-    // The show's options, until Paul narrows them (docs/making-of.md). The closing card's names stay
-    // off here until he says: `MakingOf.Options.names`.
+    // The show's options, until Paul narrows them (docs/making-of.md). The cards name the makers, as
+    // Paul asked (`MakingOf.Options.names`, on by default).
     @AppStorage("makingOf.sinopia") private var sinopia = MakingOf.Options.Sinopia.red
     @AppStorage("makingOf.hand") private var hand = false
     @AppStorage("makingOf.flow") private var flow = MakingOf.Options.Flow.scenes

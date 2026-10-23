@@ -194,11 +194,11 @@ the only gold: gold only where a tile catches the light.
 | smalti | palette (k-means smalti) | Each paint a cake of glass, glowing orange as poured, cooling to its colour, cut into a grid of tesserae that spread apart | Smalti / glass coloured with copper, cobalt, iron, antimony and tin, poured as a cake, then cut into tesserae / anonymous glassmakers; where they worked is still unknown | 5.5 |
 | sinopia | the cartoon (contour map, face features) | Lines in red earth drawn stroke by stroke on lime, the face first, the frame last | The drawing on the bed / the design is drawn first; at Classe the drawing under the apse shows a different design / Sant'Apollinare in Classe, 6th c.; anonymous | 5 |
 | bed | the painted bed (`Finish.bed`) | The coloured bed spreading down over the drawing, which shows faintly through | The painted bed / "a finished painting in true fresco" / Hagia Sophia, recorded by Whittemore, 1942 | 3.5 |
-| face | features, eyes, fine pitch | The features' rows, then iris and pupil as pieces, then the face's fine field | Opus vermiculatum / the face in the smallest pieces / as in the signed panels in tiny tesserae from Pompeii (Dioskourides named behind `names`) | 6.5 |
+| face | features, eyes, fine pitch | The features' rows, then iris and pupil as pieces, then the face's fine field | Opus vermiculatum / the face in the smallest pieces / as in the panels Dioskourides of Samos signed in tiny tesserae | 6.5 |
 | outlines | strands | The strands, nearest first, tile by tile along each line | The outlines / "the outline of the wing is shown by a row" / Hagia Sophia, the Deesis; anonymous | 5 |
 | andamento | echo rows and field | Ring after ring outward from the strands, quickening | Andamento / each row carries on the curve of the one before / Italian for "the way it goes", a workshop word | 9 |
 | light | the material finish | A light crossing the finished mosaic; each tile flares at its own tilt, gold most, stone least | Set at a tilt / gold and glass at slightly different angles / Hagia Sophia; the Nativity, Bethlehem | 5.5 |
-| hold | — | The finished mosaic | The makers / most mosaicists are anonymous; a few names survive / no source names the mosaicists of Ravenna or Hagia Sophia (named version behind `names`) | 5 |
+| hold | — | The finished mosaic | The makers / a few names survive: Sosus at Pergamon, Gnosis at Pella, Dioskourides of Samos, Ephraim at Bethlehem; most mosaicists are anonymous / Pliny, Natural History 36.184, and the works they signed | 5 |
 
 About 48 seconds. The order follows the engine rather than one site's practice: at Hagia Sophia the
 drawing was on the second bed and each section of the third was painted just before it was set.
@@ -209,7 +209,7 @@ The show compresses that into one drawing and one painted bed.
 - the setter's hand: shown as the shadow of a finger pressing each tile home, or not (`hand`);
 - the flow: one scene a stage with a card each, or one continuous build that quickens, its cards following
   the stage being set (`flow`);
-- the closing card's names (`names`), below.
+- the makers' names (`names`), below.
 
 The drawing is the strands' and features' own tiles chained into strokes, so the app needs no contour
 map to draw it: it is exactly the lines the outline rows will follow.
@@ -222,8 +222,7 @@ scene at a time.
 The bundled mosaics carry each tile's stage (the engine, e77a25c), so each plays every scene; William
 the hippopotamus has no face and skips that one.
 
-**For Paul, through the setup session:** naming makers is lore, so it waits on him. Until he answers,
-the closing card reads "Most mosaicists are anonymous; a few names survive." and the face's card credits
-"the signed panels in tiny tesserae from Pompeii". With `names` on, the closing card names Sosus at
-Pergamon, Gnosis at Pella, Dioskourides of Samos and Ephraim at Bethlehem, and the face's card names
-Dioskourides.
+**The makers' names:** Paul, October 23: "Name them!" The closing card names Sosus at Pergamon, Gnosis at
+Pella, Dioskourides of Samos and Ephraim at Bethlehem, and the face's card credits the panels
+Dioskourides signed. With `names` off, the closing card reads "Most mosaicists are anonymous; a few
+names survive." and the face's card credits "the signed panels in tiny tesserae from Pompeii".

@@ -11,11 +11,11 @@ nonisolated public extension MakingOf {
         /// The setter's hand shown pressing each tile home.
         public var hand: Bool
         public var flow: Flow
-        /// The cards name the makers (the closing card's four, Dioskourides on the face's): lore, so off
-        /// until Paul says (docs/making-of.md).
+        /// The cards name the makers (the closing card's four, Dioskourides on the face's). On since
+        /// Paul's "Name them!" (October 23); off, they credit the works without the names.
         public var names: Bool
 
-        public init(sinopia: Sinopia = .red, hand: Bool = false, flow: Flow = .scenes, names: Bool = false) {
+        public init(sinopia: Sinopia = .red, hand: Bool = false, flow: Flow = .scenes, names: Bool = true) {
             self.sinopia = sinopia; self.hand = hand; self.flow = flow; self.names = names
         }
     }
