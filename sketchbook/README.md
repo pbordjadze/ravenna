@@ -36,6 +36,7 @@ controlnet_aux 0.0.10.
 | 3 | kodim04, kodim15, astronaut, two Fayum portraits (the Met, public domain; scratch only) | Faces: the features set as pieces (`features.py` → `FEATURES`), tight set, finish C; each beside its face without them. |
 | 4 | the young woman in red, kodim04, chelsea | The Swift engine beside the Python bench (`.build/release/mosaic`, same inputs). |
 | 5 | kodim04, kodim15, astronaut, two Fayum portraits | The mouth: as in the photo, or Byzantine (`mosaic --mouth byzantine`), small and closed. |
+| 6 | kodim04, 15, 17, 18, astronaut, chelsea; Cameron's Julia Jackson, Tennyson, Herschel, Mrs. Herbert Duckworth and Capel Cure's dog "Peter" (the Met, public domain) | A wider set: each before and after the round's fixes (irises from the eye's own pixels, a profile's hidden eye left out, finer tiles for a small face, `--face-cut` 0.6, face tiles' paint by colour). Faces the landmarker misses are found zoomed in (`features.py --window`); pets get a box only, as on the phone. |
 
 `bundle.py` makes the app's bundled mosaics with the app's own engine (`swift build -c release`
 first; it runs `.build/release/mosaic`), so each tile carries its build stage for the making-of.

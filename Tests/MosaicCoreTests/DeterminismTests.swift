@@ -28,18 +28,19 @@ struct DeterminismTests {
     /// The hashes, debug and release alike: the same on every platform but for the template's OKLab.
     static let expected: [String: String] = {
         var e = [
-            "engine.palette": "e1f851cbcb66817f",
-            "engine.tiles": "70eb976bdb0b7c6c",
-            "byzantine.tiles": "724f4e7648be8bf7",
-            "template.geometry": "2e5e8dcf51db369",
-            "template.palette.rgb": "c940257d3f3d6d3",
+            "engine.palette": "f432244e79e29602",
+            "engine.tiles": "18f29907b03022e0",
+            "byzantine.tiles": "644df1ada053e27a",
+            "template.geometry": "34b0924ef845a183",
+            "template.palette.rgb": "c3880c5305b0967a",
         ]
         #if canImport(Darwin)
-        e["template.palette"] = "960fc093c645c276"
-        e["template"] = "a78ac9dd88203c58"
+        // From the next `determinism` job: the engine changed (sketchbook round 6).
+        e["template.palette"] = "unknown"
+        e["template"] = "unknown"
         #else
-        e["template.palette"] = "533d60fbe57da087"
-        e["template"] = "4ab3f57257d625ab"
+        e["template.palette"] = "80eb8caf07ec423b"
+        e["template"] = "86b07c77149a3f5"
         #endif
         return e
     }()
