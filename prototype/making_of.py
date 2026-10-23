@@ -171,13 +171,14 @@ class Show:
             cv2.polylines(out, [q], True, tuple(int(v * 0.75) for v in col), 1, shift=2, lineType=cv2.LINE_AA)
         hand = p.hand(t)
         if hand is not None:
-            # The setter's hand, as the shadow of a finger pressing the tile home from the lower right.
-            x, y = np.array(hand) * self.k; r = self.pitch * 0.42
+            # The setter's hand, as the shadow of a finger pressing the tile home from the lower right: a
+            # fingertip two or three tiles wide.
+            x, y = np.array(hand) * self.k; r = self.pitch * 1.2
             ov = np.zeros((self.h, self.w), np.float32)
-            tip = (int((x + r * 0.6) * 4), int((y + r * 0.6) * 4))
-            cv2.line(ov, tip, (int((x + r * 5) * 4), int((y + r * 8) * 4)), 1.0, max(int(r * 2.2), 1), cv2.LINE_AA, shift=2)
-            ov = gaussian_filter(ov, r * 0.5)
-            out = (out * (1 - 0.38 * ov[..., None])).astype(np.uint8)
+            tip = (int((x + r * 0.3) * 4), int((y + r * 0.3) * 4))
+            cv2.line(ov, tip, (int((x + r * 2.6) * 4), int((y + r * 4.4) * 4)), 1.0, max(int(r * 2), 1), cv2.LINE_AA, shift=2)
+            ov = gaussian_filter(ov, r * 0.35)
+            out = (out * (1 - 0.45 * ov[..., None])).astype(np.uint8)
         return out.astype(np.float32) / 255
 
     def light(self, t):

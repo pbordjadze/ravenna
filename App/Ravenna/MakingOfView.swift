@@ -284,13 +284,16 @@ nonisolated final class MakingOfStage: @unchecked Sendable {
             }
         }
         if let h = show.hand(at: t) {
-            // The setter's hand, as the shadow of a finger pressing the tile home from the lower right.
-            let r = show.pitch * k * 0.42
-            let tip = CGPoint(x: rect.minX + h.x * k + r * 0.6, y: rect.minY + h.y * k + r * 0.6)
+            // The setter's hand, as the shadow of a finger pressing the tile home from the lower right: a
+            // fingertip two or three tiles wide, its edge soft.
+            let r = show.pitch * k * 1.2
+            let tip = CGPoint(x: rect.minX + h.x * k + r * 0.3, y: rect.minY + h.y * k + r * 0.3)
             var finger = Path()
             finger.move(to: tip)
-            finger.addLine(to: CGPoint(x: tip.x + r * 4.4, y: tip.y + r * 7.4))
-            context.stroke(finger, with: .color(.black.opacity(0.32)), style: StrokeStyle(lineWidth: r * 2.2, lineCap: .round))
+            finger.addLine(to: CGPoint(x: tip.x + r * 2.3, y: tip.y + r * 4.1))
+            var shade = context
+            shade.addFilter(.blur(radius: r * 0.35))
+            shade.stroke(finger, with: .color(.black.opacity(0.45)), style: StrokeStyle(lineWidth: r * 2, lineCap: .round))
         }
     }
 
