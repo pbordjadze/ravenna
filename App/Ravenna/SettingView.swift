@@ -383,9 +383,9 @@ struct WorkView: View {
                     }
                     Text(work.title).font(Theme.title(24)).foregroundStyle(Theme.plaster)
                     Text("\(work.place), \(work.date)").font(Theme.body(16)).foregroundStyle(Theme.muted)
-                    Text(work.medium).font(Theme.body(15)).foregroundStyle(Theme.muted)
+                    if !work.medium.isEmpty { Text(work.medium).font(Theme.body(15)).foregroundStyle(Theme.muted) }
                     Text(work.credit).font(Theme.body(14)).foregroundStyle(Theme.muted)
-                    Link("See it at the Met", destination: work.url).font(Theme.body(15))
+                    if let url = work.url { Link("See it at the Met", destination: url).font(Theme.body(15)) }
                 }
                 .padding(20)
             }
