@@ -2,7 +2,8 @@ import SwiftUI
 import UIKit
 
 /// One mosaic being set: the wall, the tray of smalti, and the painter's finger. Hold a paint from
-/// the tray, tap its tiles; a set tile drops into place and its gold catches the light as it does.
+/// the tray, then tap its tiles or drag along a row of them; each is pressed, settles into the bed
+/// and catches the light as it does.
 struct SettingView: View {
     @Environment(Library.self) private var library
     let work: Work
@@ -29,7 +30,7 @@ struct SettingView: View {
                 ContentUnavailableView("Couldn't open this mosaic", systemImage: "square.grid.3x3",
                                        description: Text("Its file is missing from the app."))
             } else {
-                ProgressView().tint(Theme.gold)
+                ProgressView().tint(Theme.tint)
             }
         }
         .navigationTitle(work.title)
@@ -57,24 +58,45 @@ struct SettingView: View {
     }
 }
 
-/// A mosaic on the bench: its tiles, where they are, what is set, and the paint in hand.
+/// A mosaic on the bench: its tiles, where they are, what is set, the paint in hand, and the tiles
+/// going in now.
 @Observable
 final class Bench {
     let mosaic: Mosaic
     let index: TileIndex
     var setting: Setting
     var paint: Int?
-    /// Tiles set in the last moment, and when: they are still dropping into place.
+    /// Tiles going in, and when each began; a row's are spaced out, some a moment ahead.
     var recent: [Int: Date] = [:]
-    var placed = 0
-    var misses = 0
+    /// The tile under a finger that has just landed, its tessera held over it.
+    var press: Int?
+    /// When light began raking across the wall, just finished.
+    var rake: Date?
+    static let rakeTime = 2.4
+
+    /// The next moment free in the stroke being laid, if one is.
+    @ObservationIgnored private var stroke: Date?
+    @ObservationIgnored private var laidInStroke = false
     @ObservationIgnored private var drawings: [Finish: Drawing] = [:]
+    @ObservationIgnored private var wallImage: (finish: Finish, image: WallImage?)?
+    /// A middling tile's side, to weigh each tile's sound and tap by its size.
+    private let typical: Float
+
+    enum Tap { case set(Date), miss, nothing }
+
+    /// What setting tiles came to.
+    struct Outcome {
+        var changed = false
+        var ranOut = false
+        var finished = false
+    }
 
     init(mosaic: Mosaic, setting: Setting) {
         self.mosaic = mosaic
         self.index = TileIndex(mosaic)
         self.setting = setting
         self.paint = setting.nextPaint(after: nil, in: mosaic)
+        typical = (mosaic.width * mosaic.height / Float(max(mosaic.tiles.count, 1))).squareRoot()
     }
 
     func drawing(_ finish: Finish) -> Drawing {
@@ -84,199 +106,97 @@ final class Bench {
         return d
     }
 
-    /// Sets the tile if it takes the paint in hand; when that paint runs out, takes up the next.
-    func tap(_ tile: Int) -> Bool {
-        guard let paint, !setting.isSet(tile) else { return false }
-        guard setting.place(tile, with: paint, in: mosaic) else { misses += 1; return false }
-        placed += 1
+    /// The wall's baked image in a finish; only the current finish's is kept.
+    func wall(_ finish: Finish, bed: UIImage?) -> WallImage? {
+        if let w = wallImage, w.finish == finish { return w.image }
+        let image = WallImage(mosaic, drawing: drawing(finish), bed: bed)
+        wallImage = (finish, image)
+        return image
+    }
+
+    /// How large a tile is against a middling one, 0...1, for how loud and firm it lands.
+    func weight(_ tile: Int) -> Double {
+        let (lo, hi) = mosaic.tiles[tile].bounds, side = ((hi.x - lo.x) * (hi.y - lo.y)).squareRoot()
+        return Double(min(max(side / max(typical, 0.01) * 0.6, 0), 1))
+    }
+
+    /// A finger landed: if the tile under it takes the paint in hand, its tessera rises.
+    func pressDown(_ tile: Int?) {
+        press = tile.flatMap { t in paint == mosaic.tiles[t].paint && !setting.isSet(t) ? t : nil }
+    }
+
+    /// Sets the tile if it takes the paint in hand. Call `afterSetting` once the tap is done.
+    func tap(_ tile: Int) -> Tap {
+        let held = press == tile
+        press = nil
+        guard let paint, !setting.isSet(tile) else { return .nothing }
+        guard setting.place(tile, with: paint, in: mosaic) else { return .miss }
+        // A tessera already raised by the press settles straight away.
+        let at = held ? Date.now.addingTimeInterval(-Motion.press) : .now
+        settle([(tile, at)])
+        return .set(at)
+    }
+
+    /// Part of a stroke along a row: sets the tiles it passed over that take the paint in hand, one
+    /// after another, however fast the finger went.
+    func lay(_ passed: [Int]) -> [(tile: Int, at: Date)] {
+        guard let paint else { return [] }
+        var tiles = setting.laying(passed, with: paint, in: mosaic)
+        // The tile the stroke began on goes in first.
+        if stroke == nil, let p = press, !tiles.contains(p), mosaic.tiles[p].paint == paint, !setting.isSet(p) { tiles.insert(p, at: 0) }
+        press = nil
         let now = Date.now
-        recent[tile] = now
-        if setting.remaining(in: mosaic)[paint] == 0 { self.paint = setting.nextPaint(after: paint, in: mosaic) }
+        var next = max(stroke ?? now, now)
+        var laid: [(tile: Int, at: Date)] = []
+        for t in tiles where setting.place(t, with: paint, in: mosaic) {
+            laid.append((t, next))
+            next += Motion.rowGap
+        }
+        stroke = next
+        if !laid.isEmpty { laidInStroke = true }
+        settle(laid)
+        return laid
+    }
+
+    /// The stroke is over (or was taken off by a second finger).
+    func endStroke() -> Outcome {
+        press = nil
+        guard stroke != nil else { return Outcome() }
+        stroke = nil
+        defer { laidInStroke = false }
+        return laidInStroke ? afterSetting() : Outcome()
+    }
+
+    /// After tiles go in: take up the next paint when this one runs out, and see whether the work is set.
+    func afterSetting() -> Outcome {
+        var o = Outcome(changed: true)
+        if let p = paint, setting.remaining(in: mosaic)[p] == 0 {
+            paint = setting.nextPaint(after: p, in: mosaic)
+            o.ranOut = true
+        }
+        o.finished = setting.isComplete(mosaic)
+        return o
+    }
+
+    /// Light rakes once across the finished wall.
+    func beginRake() {
+        let start = Date.now.addingTimeInterval(recent.values.max().map { max($0.timeIntervalSinceNow + Motion.total * 0.6, 0) } ?? 0)
+        rake = start
         Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .milliseconds(600))
-            self?.recent = self?.recent.filter { Date.now.timeIntervalSince($0.value) < 0.5 } ?? [:]
-        }
-        return true
-    }
-}
-
-/// What drawing a mosaic needs, worked out once per finish.
-struct Drawing {
-    var paths: [Path] = []
-    var centres: [CGPoint] = []
-    var boxes: [CGRect] = []
-    /// A tile's size: the side of a square of its bounds' area.
-    var sizes: [CGFloat] = []
-    var body: [Color] = []
-    var lit: [Color] = []
-    var shade: [Color] = []
-
-    init(_ m: Mosaic, finish: Finish) {
-        for (i, t) in m.tiles.enumerated() {
-            var p = Path()
-            p.addLines(t.corners.map { CGPoint(x: CGFloat($0.x), y: CGFloat($0.y)) })
-            p.closeSubpath()
-            paths.append(p)
-            let b = p.boundingRect
-            boxes.append(b)
-            sizes.append((b.width * b.height).squareRoot())
-            centres.append(CGPoint(x: CGFloat(t.centre.x), y: CGFloat(t.centre.y)))
-            let rgb = TileColor.body(m.palette[t.paint], tile: i, finish: finish)
-            body.append(Color(rgb))
-            let (l, s) = TileColor.bevel(rgb, stone: t.stone)
-            lit.append(Color(l))
-            shade.append(Color(s))
+            try? await Task.sleep(for: .seconds(start.timeIntervalSinceNow + Bench.rakeTime + 0.05))
+            if self?.rake == start { self?.rake = nil }
         }
     }
-}
 
-/// Where the mosaic sits on screen: fitted, then zoomed and moved by the painter.
-struct Viewport {
-    var size: CGSize
-    var canvas: CGSize
-    var zoom: CGFloat
-    var offset: CGSize
-
-    var scale: CGFloat { min(size.width / canvas.width, size.height / canvas.height) * 0.94 * zoom }
-
-    func toScreen(_ p: CGPoint) -> CGPoint {
-        CGPoint(x: size.width / 2 + offset.width + (p.x - canvas.width / 2) * scale,
-                y: size.height / 2 + offset.height + (p.y - canvas.height / 2) * scale)
-    }
-
-    func toCanvas(_ q: CGPoint) -> CGPoint {
-        CGPoint(x: canvas.width / 2 + (q.x - size.width / 2 - offset.width) / scale,
-                y: canvas.height / 2 + (q.y - size.height / 2 - offset.height) / scale)
-    }
-}
-
-/// The wall: pinch to zoom, drag to move, tap to set.
-private struct Wall: View {
-    let bench: Bench
-    let finish: Finish
-    let bed: UIImage?
-    let save: (Setting) -> Void
-
-    @State private var zoom: CGFloat = 1
-    @State private var offset: CGSize = .zero
-    @State private var gestureStart: (zoom: CGFloat, offset: CGSize)?
-
-    var body: some View {
-        GeometryReader { geo in
-            let canvas = CGSize(width: CGFloat(bench.mosaic.width), height: CGFloat(bench.mosaic.height))
-            let vp = Viewport(size: geo.size, canvas: canvas, zoom: zoom, offset: offset)
-            // Read here, in body, so SwiftUI redraws the wall when they change.
-            let state = WallState(setting: bench.setting, held: bench.paint, recent: bench.recent)
-            TimelineView(.animation(paused: state.recent.isEmpty)) { timeline in
-                Canvas { ctx, size in
-                    draw(&ctx, Viewport(size: size, canvas: canvas, zoom: zoom, offset: offset), state, now: timeline.date)
-                }
-            }
-            .contentShape(Rectangle())
-            .gesture(SpatialTapGesture().onEnded { v in tap(v.location, vp) })
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 8)
-                    .onChanged { v in
-                        let start = gestureStart ?? (zoom: zoom, offset: offset)
-                        gestureStart = start
-                        offset = CGSize(width: start.offset.width + v.translation.width,
-                                        height: start.offset.height + v.translation.height)
-                    }
-                    .onEnded { _ in gestureStart = nil }
-            )
-            .simultaneousGesture(
-                MagnifyGesture()
-                    .onChanged { v in
-                        let start = gestureStart ?? (zoom: zoom, offset: offset)
-                        gestureStart = start
-                        let z = min(max(start.zoom * v.magnification, 1), 14)
-                        // Keep the point under the pinch where it is.
-                        let a = v.startLocation
-                        let cx = geo.size.width / 2, cy = geo.size.height / 2
-                        let k = z / start.zoom
-                        offset = CGSize(width: a.x - cx - (a.x - cx - start.offset.width) * k,
-                                        height: a.y - cy - (a.y - cy - start.offset.height) * k)
-                        zoom = z
-                    }
-                    .onEnded { _ in gestureStart = nil }
-            )
-            .sensoryFeedback(.impact(weight: .light, intensity: 0.6), trigger: bench.placed)
-            .sensoryFeedback(.error, trigger: bench.misses)
-        }
-        .clipped()
-    }
-
-    private func tap(_ q: CGPoint, _ vp: Viewport) {
-        let p = vp.toCanvas(q)
-        let slop = Float(14 / vp.scale)
-        guard let i = bench.index.tile(at: SIMD2(Float(p.x), Float(p.y)), slop: slop) else { return }
-        if bench.tap(i) { save(bench.setting) }
-    }
-
-    private struct WallState {
-        var setting: Setting
-        var held: Int?
-        var recent: [Int: Date]
-    }
-
-    private func draw(_ ctx: inout GraphicsContext, _ vp: Viewport, _ state: WallState, now: Date) {
-        let m = bench.mosaic, d = bench.drawing(finish), s = vp.scale
-        var g = ctx
-        g.translateBy(x: vp.size.width / 2 + vp.offset.width, y: vp.size.height / 2 + vp.offset.height)
-        g.scaleBy(x: s, y: s)
-        g.translateBy(x: -vp.canvas.width / 2, y: -vp.canvas.height / 2)
-        let wall = CGRect(origin: .zero, size: vp.canvas)
-        if finish.paintedBed, let bed {
-            g.draw(Image(uiImage: bed), in: wall)
-        } else {
-            g.fill(Path(wall), with: .color(Color(m.grout)))
-        }
-        let lo = vp.toCanvas(.zero), hi = vp.toCanvas(CGPoint(x: vp.size.width, y: vp.size.height))
-        let visible = bench.index.tiles(in: SIMD2(Float(lo.x), Float(lo.y)), SIMD2(Float(hi.x), Float(hi.y)))
-        let hair = 1 / s
-        let outline = finish.paintedBed ? Color.black.opacity(0.35) : Color(red: 0.55, green: 0.52, blue: 0.48)
-        let edge = Color(red: 0.2, green: 0.18, blue: 0.17)
-        for i in visible {
-            let path = d.paths[i]
-            if state.setting.isSet(i) {
-                var t: Double = 1
-                if let at = state.recent[i] { t = min(max(now.timeIntervalSince(at) / 0.45, 0), 1) }
-                var tg = g
-                if t < 1 {
-                    let c = d.centres[i], k = 1 + 0.45 * (1 - t) * (1 - t)
-                    tg.translateBy(x: c.x, y: c.y)
-                    tg.scaleBy(x: k, y: k)
-                    tg.translateBy(x: -c.x, y: -c.y)
-                }
-                if finish == .material {
-                    let b = d.boxes[i]
-                    tg.fill(path, with: .linearGradient(Gradient(colors: [d.lit[i], d.body[i], d.shade[i]]),
-                                                        startPoint: b.origin, endPoint: CGPoint(x: b.maxX, y: b.maxY)))
-                } else {
-                    tg.fill(path, with: .color(d.body[i]))
-                }
-                if finish == .flat { tg.stroke(path, with: .color(edge), lineWidth: hair * 0.8) }
-                // Gold catches the light where a tile is being set, and only there.
-                if t < 1 { tg.fill(path, with: .color(Theme.gold.opacity(0.7 * (1 - t)))) }
-            } else {
-                if m.tiles[i].paint == state.held { g.fill(path, with: .color(.white.opacity(0.18))) }
-                g.stroke(path, with: .color(outline), lineWidth: hair * 0.7)
-            }
-        }
-        // Numbers, once a tile is big enough on screen to read one.
-        var texts: [Int: GraphicsContext.ResolvedText] = [:]
-        let ink = finish.paintedBed ? Theme.plaster : Color(red: 0.25, green: 0.23, blue: 0.21)
-        for i in visible where !state.setting.isSet(i) {
-            let side = d.sizes[i] * s
-            guard side >= 16 else { continue }
-            let paint = m.tiles[i].paint
-            let size = Int(min(max(side * 0.4, 8), 20))
-            let key = paint * 64 + size
-            let text = texts[key] ?? ctx.resolve(Text("\(paint + 1)")
-                .font(.system(size: CGFloat(size), weight: .semibold, design: .rounded))
-                .foregroundStyle(ink))
-            texts[key] = text
-            ctx.draw(text, at: vp.toScreen(d.centres[i]))
+    private func settle(_ tiles: [(tile: Int, at: Date)]) {
+        guard let end = tiles.map(\.at).max() else { return }
+        for (t, at) in tiles { recent[t] = at }
+        // Once they are all down, they leave `recent` and the wall's image takes them.
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(max(end.timeIntervalSinceNow + Motion.total + 0.05, 0)))
+            guard let self else { return }
+            let now = Date.now
+            recent = recent.filter { now.timeIntervalSince($0.value) < Motion.total }
         }
     }
 }
@@ -289,14 +209,17 @@ private struct Tray: View {
         let left = bench.setting.remaining(in: bench.mosaic)
         VStack(spacing: 6) {
             Text("\(bench.setting.set.count.formatted()) of \(bench.mosaic.tiles.count.formatted()) tiles set")
-                .font(.caption.monospacedDigit()).foregroundStyle(Theme.muted)
+                .font(Theme.body(13).monospacedDigit()).foregroundStyle(Theme.muted)
             ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
                         ForEach(bench.mosaic.palette.indices, id: \.self) { p in
-                            Chip(color: bench.mosaic.palette[p], number: p + 1, left: left[p], held: bench.paint == p)
-                                .id(p)
-                                .onTapGesture { if left[p] > 0 { bench.paint = p } }
+                            Button { bench.paint = p } label: {
+                                Chip(color: bench.mosaic.palette[p], number: p + 1, left: left[p], held: bench.paint == p, cut: p)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(left[p] == 0)
+                            .id(p)
                         }
                     }
                     .padding(.horizontal, 16)
@@ -313,37 +236,60 @@ private struct Tray: View {
     }
 }
 
+/// A smalti chip, cut a little irregular as a tessera is.
 private struct Chip: View {
     let color: SIMD3<Float>
     let number: Int
     let left: Int
     let held: Bool
+    /// Which cut: each paint's chip is its own shape, always the same.
+    let cut: Int
+    @ScaledMetric(relativeTo: .body) private var scaled: CGFloat = 44
 
     var body: some View {
         let light = 0.2126 * color.x + 0.7152 * color.y + 0.0722 * color.z > 0.55
+        let side = min(scaled, 64)
         VStack(spacing: 3) {
-            RoundedRectangle(cornerRadius: 5)
+            Tessera(cut: cut)
                 .fill(Color(color))
-                .frame(width: 44, height: 44)
+                .frame(width: side, height: side)
                 .overlay {
                     if left == 0 {
-                        Image(systemName: "checkmark").font(.system(size: 15, weight: .bold))
+                        Image(systemName: "checkmark").font(.system(size: side * 0.34, weight: .bold))
                             .foregroundStyle(light ? Color.black.opacity(0.6) : Color.white.opacity(0.8))
                     } else {
-                        Text("\(number)").font(.system(size: 17, weight: .semibold, design: .rounded))
+                        Text("\(number)").font(.system(size: side * 0.39, weight: .semibold, design: .serif))
                             .foregroundStyle(light ? Color.black.opacity(0.75) : Color.white.opacity(0.9))
                     }
                 }
                 .overlay {
-                    RoundedRectangle(cornerRadius: 7).inset(by: -3)
-                        .stroke(held ? Theme.gold : .clear, lineWidth: 2.5)
+                    RoundedRectangle(cornerRadius: 4).inset(by: -4)
+                        .stroke(held ? Theme.tint : .clear, lineWidth: 2)
                 }
-            Text(left == 0 ? " " : "\(left)").font(.caption2.monospacedDigit()).foregroundStyle(Theme.muted)
+                .scaleEffect(held ? 1.06 : 1)
+                .animation(.snappy(duration: 0.18), value: held)
+            Text(left == 0 ? " " : "\(left)").font(Theme.body(12).monospacedDigit()).foregroundStyle(Theme.muted)
         }
         .opacity(left == 0 ? 0.4 : 1)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(left == 0 ? "Paint \(number), all set" : "Paint \(number), \(left) tiles left")
         .accessibilityAddTraits(held ? .isSelected : [])
+    }
+}
+
+/// A square cut by hand: each corner a little off, the same way every time for a given cut.
+private struct Tessera: Shape {
+    let cut: Int
+
+    func path(in r: CGRect) -> Path {
+        let j = { (k: UInt64) in CGFloat(TileColor.wobble(cut, salt: k)) * min(r.width, r.height) * 0.05 }
+        var p = Path()
+        p.move(to: CGPoint(x: r.minX + j(1), y: r.minY + j(2)))
+        p.addLine(to: CGPoint(x: r.maxX + j(3), y: r.minY + j(4)))
+        p.addLine(to: CGPoint(x: r.maxX + j(5), y: r.maxY + j(6)))
+        p.addLine(to: CGPoint(x: r.minX + j(7), y: r.maxY + j(8)))
+        p.closeSubpath()
+        return p
     }
 }
 
