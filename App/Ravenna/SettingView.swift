@@ -16,6 +16,7 @@ struct SettingView: View {
     @State private var keepsake: Keepsake?
     @State private var making = false
     @State private var wide = false
+    @AppStorage(Keys.border) private var border = Border.none
 
     var body: some View {
         ZStack {
@@ -86,9 +87,9 @@ struct SettingView: View {
     private func share() {
         guard let bench, !making else { return }
         making = true
-        let bed = library.image(work, "bed")
+        let bed = library.image(work, "bed"), border = border
         Task {
-            keepsake = await Keepsake.make(bench.mosaic, library.finish, setting: bench.setting, bed: bed)
+            keepsake = await Keepsake.make(bench.mosaic, library.finish, setting: bench.setting, bed: bed, border: border)
             making = false
         }
     }
