@@ -108,7 +108,7 @@ private struct WorkCard: View {
             .clipped()
             .overlay(alignment: .bottom) {
                 GeometryReader { g in
-                    Rectangle().fill(Theme.gold).frame(width: g.size.width * progress, height: 3)
+                    Rectangle().fill(progress >= 1 ? Theme.gold : Theme.tint).frame(width: g.size.width * progress, height: 3)
                 }
                 .frame(height: 3)
             }

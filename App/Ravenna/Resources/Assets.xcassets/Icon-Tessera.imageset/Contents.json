@@ -1,0 +1,12 @@
+{
+  "images": [
+    {
+      "filename": "Icon-Tessera.png",
+      "idiom": "universal"
+    }
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  }
+}

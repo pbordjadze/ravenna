@@ -10,7 +10,7 @@ struct RavennaApp: App {
             GalleryView()
                 .environment(library)
                 .preferredColorScheme(.dark)
-                .tint(Theme.gold)
+                .tint(Theme.tint)
         }
     }
 }
