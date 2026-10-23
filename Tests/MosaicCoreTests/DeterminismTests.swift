@@ -35,9 +35,8 @@ struct DeterminismTests {
             "template.palette.rgb": "c3880c5305b0967a",
         ]
         #if canImport(Darwin)
-        // From the next `determinism` job: the engine changed (sketchbook round 6).
-        e["template.palette"] = "unknown"
-        e["template"] = "unknown"
+        e["template.palette"] = "407e9c685eddcdb4"
+        e["template"] = "7f2421a18db1ada8"
         #else
         e["template.palette"] = "80eb8caf07ec423b"
         e["template"] = "86b07c77149a3f5"
