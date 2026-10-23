@@ -33,6 +33,11 @@ Moonlight, a shipping app with its own sessions, CI and rules.
   with Paint by Moonlight, which always goes first.
 - Paul's own photos never go in this repository: it is public. Use the test photos (Kodak,
   scikit-image) or keep his in the session's scratch.
+- Ravenna ships only through its own SideStore source (this repository's `sidestore` branch).
+  Never add it to the combined source in `pbordjadze/sidestore`, to Paint by Moonlight's
+  source, or to any build others' devices read, until Paul says (October 23: public "if you dig",
+  not shown to others yet). Paint by Moonlight's lore (the Marginarium, the guardians, the
+  chronicles) is private now: add none of it here.
 - Credits for techniques and artists in the making-of are researched, with a source for each;
   never invent a name. Much Byzantine work is anonymous, and the app says so.
 - Creative forks become options in the app, and the work moves on: Paul, "where a creative choice
