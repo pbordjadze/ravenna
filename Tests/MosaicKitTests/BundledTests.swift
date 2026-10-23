@@ -17,7 +17,7 @@ struct BundledTests {
 
     @Test func eachDecodesWithItsStages() throws {
         let catalog = try JSONDecoder().decode(Catalog.self, from: Data(contentsOf: Self.folder.appendingPathComponent("catalog.json")))
-        #expect(catalog.mosaics.count == 5)
+        #expect(catalog.mosaics.count == 9)
         for entry in catalog.mosaics {
             for (detail, count) in entry.tiles {
                 let file = Self.folder.appendingPathComponent("\(entry.id)-\(detail).json")

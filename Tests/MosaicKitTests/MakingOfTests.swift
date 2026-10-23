@@ -135,7 +135,7 @@ struct MakingOfTests {
         let dir = Self.fixtures.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("App/Ravenna/Resources/Mosaics")
         let files = try FileManager.default.contentsOfDirectory(atPath: dir.path).filter { $0.hasSuffix("-standard.json") }
-        #expect(files.count == 5)
+        #expect(files.count == 9)
         for f in files {
             let m = try JSONDecoder().decode(Mosaic.self, from: Data(contentsOf: dir.appendingPathComponent(f)))
             let show = MakingOf.Show(m)

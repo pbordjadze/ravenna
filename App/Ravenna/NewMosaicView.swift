@@ -14,7 +14,7 @@ struct NewMosaicView: View {
     @State private var preview: UIImage?
     @State private var panel = Panel.whole
     @State private var centre = CGPoint(x: 0.5, y: 0.5)
-    @State private var pieces = 0.4
+    @State private var pieces = Maker.standardPieces
     @State private var eyes = MosaicEngine.Eyes.asTheyLook
     @State private var mouth = MosaicEngine.Mouth.asInThePhoto
     @State private var progress = MakeProgress()

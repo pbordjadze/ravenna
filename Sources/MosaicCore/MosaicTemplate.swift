@@ -135,8 +135,7 @@ extension MosaicCore {
         var areas: [Double] = []
         for r in 0...n {
             let poly = polygon(r)
-            var tri: [UInt32] = []
-            earcut.triangulate(poly.points, holeStarts: Array(poly.ringStarts[1..<poly.ringCount]), into: &tri)
+            var tri = fill(poly, &earcut)
             splitTJunctions(poly.points, &tri)
             let base = UInt32(mesh.vertices.count)
             mesh.vertices += poly.points.map { SIMD2<Float>($0) }
@@ -222,6 +221,33 @@ extension MosaicCore {
     private static func shave(_ d: Double) -> Float { Float(d).nextDown }
 
     /// Twice the signed (shoelace) area of a ring: positive when clockwise on screen (y down).
+    /// A region's triangles, checked. Earcut doesn't promise a correct result for every valid
+    /// polygon (mapbox/earcut checks its own with `deviation`): on the Hodegetria's grout, 3,162
+    /// holes on whole coordinates, its bridges crossed and its triangles overlapped by 0.5%, as
+    /// upstream's own earcut.js does on the same rings. When the triangles' areas don't add up to
+    /// the polygon's, it runs again on the polygon mirrored left to right, then top to bottom, then
+    /// transposed, which bridge the holes another way (each mends that grout), and turns their
+    /// triangles back the right way round. The last attempt stands, for `Template.validate` to judge.
+    static func fill(_ poly: FlatPolygon, _ earcut: inout Earcut) -> [UInt32] {
+        let holes = Array(poly.ringStarts[1..<poly.ringCount])
+        let area = abs((0..<poly.ringCount).reduce(0.0) { $0 + poly.area2(ring: $1) })
+        let views: [(SIMD2<Double>) -> SIMD2<Double>] = [{ $0 }, { SIMD2(-$0.x, $0.y) }, { SIMD2($0.x, -$0.y) }, { SIMD2($0.y, $0.x) }]
+        var tri: [UInt32] = []
+        for (k, view) in views.enumerated() {
+            let pts = k == 0 ? poly.points : poly.points.map(view)
+            tri.removeAll(keepingCapacity: true)
+            earcut.triangulate(pts, holeStarts: holes, into: &tri)
+            if k > 0 { for t in stride(from: 0, to: tri.count, by: 3) { tri.swapAt(t + 1, t + 2) } }
+            var covered = 0.0
+            for t in stride(from: 0, to: tri.count, by: 3) {
+                let a = poly.points[Int(tri[t])], b = poly.points[Int(tri[t + 1])], c = poly.points[Int(tri[t + 2])]
+                covered += abs((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x))
+            }
+            if abs(covered - area) <= 1e-9 * Swift.max(area, 1) { break }
+        }
+        return tri
+    }
+
     static func area2(_ ring: [SIMD2<Double>]) -> Double {
         var sum = 0.0
         var j = ring.count - 1

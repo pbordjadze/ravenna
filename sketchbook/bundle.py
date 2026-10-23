@@ -3,6 +3,9 @@ Met's Open Access collection. For each work: the Met's image and record (medium,
 picture at 724, 1024 and 1448 px (the detail option's Fewer, Standard and More pieces), its contours
 (paint-by-number's HED, through hed.py), its face's features (features.py, for faces), the tight set
 made by the app's own engine (the Swift CLI `mosaic`, as a photo is on the phone) and its painted bed.
+A catalog entry may add "window" ("left,top,side" fractions: where features.py looks for a small or
+painted face, found once at Standard and scaled) and "features": "eyes" (only the eyes and their
+lids, where the landmarker misreads the rest).
 Writes to <out dir>: <id>-<detail>.json (the design in Standard's canvas units: "size", "grout",
 "palette" as sRGB 0...1, "tiles" in laying order, each {"c": flat corners, "p": paint, "s": 1 when stone
 (inside the face), "g": the build stage}), <id>-bed.jpg, <id>-photo.jpg and catalog.json. Run from the
@@ -35,10 +38,35 @@ for m in spec["mosaics"]:
         if side == 1024:
             std = (round(im.width * k), round(im.height * k))
             subprocess.run(PY + [f"{HERE}/hed.py", "pbn/tools/models/convert_hed.py", "--map", ppm, f"{work}/{i}-contours.pgm"], check=True, capture_output=True)
+    traced = False
     for detail, side in DETAILS.items():
         cmd = [MOSAIC, f"{work}/{i}-{side}.ppm", f"{work}/{i}-contours.pgm", f"{work}/{i}-{side}"]
         if m["face"]:
-            subprocess.run(PY + [f"{HERE}/features.py", f"{work}/{i}-{side}.ppm", "models/face_landmarker.task", f"{work}/{i}-{side}-features.json"], check=True, capture_output=True)
+            fj = f"{work}/{i}-{side}-features.json"
+            if "window" not in m:
+                subprocess.run(PY + [f"{HERE}/features.py", f"{work}/{i}-{side}.ppm", "models/face_landmarker.task", fj], check=True, capture_output=True)
+            else:
+                # A face found zoomed in is found once, at Standard, and scaled to the other details:
+                # the zoomed window resamples, and a detail's few pixels can lose a painted face.
+                f1024 = f"{work}/{i}-1024-features.json"
+                if not traced:
+                    subprocess.run(PY + [f"{HERE}/features.py", f"{work}/{i}-1024.ppm", "models/face_landmarker.task", f1024, "--window", m["window"]], check=True, capture_output=True)
+                    traced = True
+                if side != 1024:
+                    f, k = json.load(open(f1024)), side / 1024
+                    f["box"] = [round(v * k) for v in f["box"]]
+                    f["eyes"] = [[round(v * k, 1) for v in e] for e in f["eyes"]]
+                    f["lines"] = [{"kind": ln["kind"], "pts": [[round(v * k, 1) for v in p] for p in ln["pts"]]} for ln in f["lines"]]
+                    json.dump(f, open(fj, "w"))
+            if m.get("features") == "eyes":
+                # Only the eyes and their lids: where the landmarker misreads a painted face's mouth
+                # and nose, the work's own lines (its contours) set them instead.
+                f = json.load(open(fj))
+                def near(ln):
+                    cx = sum(p[0] for p in ln["pts"]) / len(ln["pts"]); cy = sum(p[1] for p in ln["pts"]) / len(ln["pts"])
+                    return any((cx - e[0]) ** 2 + (cy - e[1]) ** 2 < (3 * e[2]) ** 2 for e in f["eyes"])
+                f["lines"] = [ln for ln in f["lines"] if ln["kind"] == "eye" or (ln["kind"] in ("dark", "tone") and near(ln))]
+                json.dump(f, open(fj, "w"))
             cmd += ["--features", f"{work}/{i}-{side}-features.json"]
         if side == 1024: cmd += ["--bed", f"{work}/{i}-bed.ppm"]
         r = subprocess.run(cmd, check=True, capture_output=True, text=True)

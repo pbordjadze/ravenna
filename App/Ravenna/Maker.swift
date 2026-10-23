@@ -23,9 +23,16 @@ nonisolated enum Maker {
 
     enum MakerError: Error { case unreadable }
 
-    /// The working long side for a position of the Pieces slider, 0...1: 724 px (about half the
-    /// standard count) to 1448 px (about twice), as the bundled mosaics' details.
-    static func longSide(pieces: Double) -> Int { Int((724 + 724 * min(max(pieces, 0), 1)).rounded()) }
+    /// The working long side for a position of the Pieces slider, 0...1 (issue #11): even steps in
+    /// the number of tiles, which grows with the side squared, from half the standard count (724 px)
+    /// to three times it (1774 px; about 7.8 s and 460 MB at its peak on Linux, against 5.9 s and
+    /// 310 MB at 1448). The standard 1024 px sits at `standardPieces`.
+    static func longSide(pieces: Double) -> Int {
+        Int((1024 * (0.5 * pow(6, min(max(pieces, 0), 1))).squareRoot()).rounded())
+    }
+
+    /// The slider's position for the standard count (1024 px, the bundled mosaics' Standard): log 2 / log 6.
+    static let standardPieces = log(2.0) / log(6.0)
 
     /// Each stage's start and end in the whole job, for the progress bar: the tiles take most of it.
     static let span: [Stage: ClosedRange<Double>] = [

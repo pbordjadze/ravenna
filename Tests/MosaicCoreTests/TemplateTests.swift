@@ -140,7 +140,8 @@ struct TemplateTests {
         #if DEBUG
         ["young-woman-in-red-fewer"]
         #else
-        ["bearded-man", "boy-eutyches", "william", "young-woman-gilded-wreath", "young-woman-in-red"]
+        ["bearded-man", "boy-eutyches", "elderly-lady", "hodegetria", "man-with-a-mole", "mother-and-child-gold-glass",
+         "william", "young-woman-gilded-wreath", "young-woman-in-red"]
             .flatMap { id in ["fewer", "standard", "more"].map { "\(id)-\($0)" } }
         #endif
     }()

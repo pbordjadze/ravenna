@@ -1,7 +1,8 @@
-"""features.py <photo> <model.task> <out.json> [preview.png]: a face's features as mosaic_faces.py's FEATURES,
-from MediaPipe's face landmarker (standing in for Vision's face landmarks in the app). Writes, in the
-photo's pixels: "box" (the face, with a margin), "eyes" ([cx, cy, iris r, pupil r] each) and "lines",
-each {"kind", "pts"}: how a mosaicist sets a feature as its own pieces:
+"""features.py <photo> <model.task> <out.json> [preview.png] [--window left,top,side]: a face's
+features as mosaic_faces.py's FEATURES, from MediaPipe's face landmarker (standing in for Vision's
+face landmarks in the app). Writes, in the photo's pixels: "box" (the face, with a margin), "eyes"
+([cx, cy, iris r, pupil r] each) and "lines", each {"kind", "pts"}: how a mosaicist sets a feature as
+its own pieces:
   dark  a row in a dark smalti of the local hue: the upper lids, the line where the lips meet
   mid   a row in the feature's own shadow colour: brows, the shadow side of the nose, the nostrils
   tone  a row in the photo's colour, which the rows round it echo: lower lids, the lips' outline
@@ -15,15 +16,31 @@ import mediapipe as mp
 from mediapipe.tasks.python import vision, BaseOptions
 
 C = vision.FaceLandmarksConnections
-photo, model, out = sys.argv[1:4]
+args = sys.argv[1:]
+window = None
+if "--window" in args:
+    i = args.index("--window"); window = [float(v) for v in args[i + 1].split(",")]; del args[i:i + 2]
+photo, model, out = args[:3]
 rgb = cv2.cvtColor(cv2.imread(photo), cv2.COLOR_BGR2RGB)
 H, W = rgb.shape[:2]
 lm = vision.FaceLandmarker.create_from_options(vision.FaceLandmarkerOptions(
     base_options=BaseOptions(model_asset_path=model), num_faces=1))
-res = lm.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb))
-if not res.face_landmarks:
-    sys.exit(f"{photo}: no face found")
-P = np.array([[p.x * W, p.y * H] for p in res.face_landmarks[0]])
+if window:
+    # A small or painted face (an icon's) is found only zoomed in: the landmarker sees the window
+    # (left, top as fractions of the width and height, its side as a fraction of the long side)
+    # at 768 px, and its points are mapped back to the photo's pixels.
+    x0, y0, s = round(window[0] * W), round(window[1] * H), round(window[2] * max(W, H))
+    crop = np.ascontiguousarray(cv2.resize(rgb[y0:y0 + s, x0:x0 + s], (768, 768), interpolation=cv2.INTER_CUBIC))
+    res = lm.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=crop))
+    if not res.face_landmarks:
+        sys.exit(f"{photo}: no face found in the window")
+    sw, sh = rgb[y0:y0 + s, x0:x0 + s].shape[1], rgb[y0:y0 + s, x0:x0 + s].shape[0]
+    P = np.array([[x0 + p.x * sw, y0 + p.y * sh] for p in res.face_landmarks[0]])
+else:
+    res = lm.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb))
+    if not res.face_landmarks:
+        sys.exit(f"{photo}: no face found")
+    P = np.array([[p.x * W, p.y * H] for p in res.face_landmarks[0]])
 
 def chain(a, b, conns):
     """The path from landmark a to b along a connection set."""
@@ -77,10 +94,10 @@ m = 0.12 * (x1 - x0)
 box = [max(0, int(x0 - m)), max(0, int(y0 - m)), min(W, int(x1 + m)), min(H, int(y1 + m))]
 json.dump({"box": box, "eyes": eyes, "lines": lines}, open(out, "w"))
 print(f"{photo}: box {box}, eyes {eyes}, {len(lines)} lines, nose shadow on the {shadow}")
-if len(sys.argv) > 4:
+if len(args) > 3:
     pv = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
     col = {"dark": (0, 0, 255), "mid": (0, 200, 255), "tone": (255, 200, 0), "eye": (0, 255, 0), "lips": (0, 255, 0)}
     for ln in lines:
         cv2.polylines(pv, [np.round(np.array(ln["pts"])).astype(np.int32)], ln["kind"] in ("eye", "lips"), col[ln["kind"]], 1, cv2.LINE_AA)
     for cx, cy, r, _ in eyes: cv2.circle(pv, (int(cx), int(cy)), int(r), (255, 0, 255), 1, cv2.LINE_AA)
-    cv2.imwrite(sys.argv[4], pv[box[1]:box[3], box[0]:box[2]])
+    cv2.imwrite(args[3], pv[box[1]:box[3], box[0]:box[2]])
