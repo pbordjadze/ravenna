@@ -18,6 +18,7 @@ struct GalleryView: View {
                 VStack(alignment: .leading, spacing: 28) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Ravenna").font(Theme.title(40)).foregroundStyle(Theme.plaster)
+                            .accessibilityAddTraits(.isHeader)
                         Text("Pictures laid as mosaics. Choose one and set it, tile by tile.")
                             .font(Theme.body(16)).foregroundStyle(Theme.muted)
                     }
@@ -37,6 +38,7 @@ struct GalleryView: View {
                                 .contextMenu {
                                     Button("Remove", systemImage: "trash", role: .destructive) { removing = work }
                                 }
+                                .accessibilityAction(named: "Remove") { removing = work }
                         }
                     }
                     shelf("From the Met") {
@@ -79,6 +81,7 @@ struct GalleryView: View {
     private func shelf<Content: View>(_ title: String, note: String? = nil, @ViewBuilder _ content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title).font(Theme.title(20)).foregroundStyle(Theme.muted)
+                .accessibilityAddTraits(.isHeader)
             if let note { Text(note).font(Theme.body(14)).foregroundStyle(Theme.muted) }
             // One column at the largest text sizes, so titles have room.
             LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 300 : 160), spacing: 16)], spacing: 22) { content() }
@@ -94,6 +97,7 @@ struct PickedPhoto: Identifiable {
 
 private struct WorkCard: View {
     @Environment(Library.self) private var library
+    @Environment(\.dynamicTypeSize) private var typeSize
     let work: Work
 
     var body: some View {
@@ -110,7 +114,7 @@ private struct WorkCard: View {
                 .frame(height: 3)
             }
             Text(work.title).font(Theme.body(16).weight(.medium)).foregroundStyle(Theme.plaster)
-                .lineLimit(3)
+                .lineLimit(typeSize.isAccessibilitySize ? nil : 3)
             Text(work.isOwn ? work.place : "\(work.place), \(work.date)").font(Theme.body(13)).foregroundStyle(Theme.muted)
             if progress > 0 {
                 Text(progress >= 1 ? "Set" : "\(Int((progress * 100).rounded(.down)))% set")
@@ -118,5 +122,7 @@ private struct WorkCard: View {
             }
         }
         .contentShape(Rectangle())
+        // One card, read as one: its title, where it's from, how far it's set.
+        .accessibilityElement(children: .combine)
     }
 }

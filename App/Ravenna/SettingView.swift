@@ -33,7 +33,8 @@ struct SettingView: View {
                 }
                 // The word Set once the light has passed over the finished wall.
                 if bench.setting.isComplete(bench.mosaic), bench.rake == nil {
-                    Finished(work: work, making: making, share: share) { showingWork = true }
+                    Finished(work: work, tiles: bench.mosaic.tiles.count, paints: bench.mosaic.palette.count,
+                             making: making, share: share) { showingWork = true }
                         .transition(.opacity)
                 }
             } else if failed {
@@ -394,6 +395,8 @@ private struct Tessera: Shape {
 /// Every tile in place.
 private struct Finished: View {
     let work: Work
+    let tiles: Int
+    let paints: Int
     /// The picture to share is being made.
     let making: Bool
     let share: () -> Void
@@ -402,7 +405,11 @@ private struct Finished: View {
     var body: some View {
         VStack(spacing: 10) {
             Text("Set").font(Theme.title(28)).foregroundStyle(Theme.gold)
+                .accessibilityAddTraits(.isHeader)
             Text("Every tile of \(work.title) is in place.").font(Theme.body(15)).foregroundStyle(Theme.plaster)
+                .multilineTextAlignment(.center)
+            Text("\(tiles.formatted()) tiles in \(paints) colours, set by your hand.")
+                .font(Theme.body(13)).foregroundStyle(Theme.muted)
                 .multilineTextAlignment(.center)
             // Side by side, or one above the other at the largest text sizes.
             ViewThatFits {

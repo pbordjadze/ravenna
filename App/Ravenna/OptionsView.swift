@@ -10,6 +10,7 @@ enum Keys {
     static let tune = "tune"
     static let row = "rowSound"
     static let ground = "ground"
+    static let lesson = "lesson"
 }
 
 /// What one finger does on the wall (an option until Paul narrows it).
@@ -99,6 +100,7 @@ struct OptionsView: View {
     @AppStorage(Keys.tune) private var tune = Melody.Mode.major
     @AppStorage(Keys.row) private var row = RowSound.run
     @AppStorage(Keys.ground) private var ground = GroundChoice.picture
+    @AppStorage(Keys.lesson) private var lesson = 0
     @State private var icon = AppIcon.current
 
     var body: some View {
@@ -197,6 +199,10 @@ struct OptionsView: View {
                     Text("Icon")
                 } footer: {
                     Text("For now, until one is chosen.")
+                }
+                Section {
+                    Button("Show the first lesson again") { lesson = 0 }
+                        .disabled(lesson == 0)
                 }
                 Section("About") {
                     Text("The pictures are in the public domain, from The Metropolitan Museum of Art's Open Access collection. Each mosaic credits its work.")

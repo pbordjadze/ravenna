@@ -36,6 +36,7 @@ struct NewMosaicView: View {
                     }
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Panel").font(Theme.title(18)).foregroundStyle(Theme.plaster)
+                            .accessibilityAddTraits(.isHeader)
                         Group {
                             if typeSize.isAccessibilitySize {
                                 panelPicker.pickerStyle(.menu)
@@ -49,6 +50,7 @@ struct NewMosaicView: View {
                     }
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Pieces").font(Theme.title(18)).foregroundStyle(Theme.plaster)
+                            .accessibilityAddTraits(.isHeader)
                         Slider(value: $pieces, in: 0...1) {
                             Text("Pieces")
                         } minimumValueLabel: {
@@ -61,6 +63,7 @@ struct NewMosaicView: View {
                     }
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Eyes").font(Theme.title(18)).foregroundStyle(Theme.plaster)
+                            .accessibilityAddTraits(.isHeader)
                         // Segments truncate at the accessibility sizes; a menu keeps the words whole.
                         Group {
                             if typeSize.isAccessibilitySize {
@@ -75,6 +78,7 @@ struct NewMosaicView: View {
                     }
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Mouth").font(Theme.title(18)).foregroundStyle(Theme.plaster)
+                            .accessibilityAddTraits(.isHeader)
                         Group {
                             if typeSize.isAccessibilitySize {
                                 mouthPicker.pickerStyle(.menu)
