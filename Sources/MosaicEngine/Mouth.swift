@@ -18,7 +18,8 @@ nonisolated extension MosaicEngine {
         for f in faces.indices {
             guard let lips = faces[f].lines.first(where: { $0.kind == "lips" }) else { continue }
             let old = lips.pts.filter { $0.count >= 2 }.map { SIMD2(Double($0[0]), Double($0[1])) }
-            guard old.count >= 4 else { continue }
+            // Malformed features (none from Vision or features.py) are left alone rather than trap.
+            guard old.count >= 4, old.allSatisfy({ abs($0.x) < 1e7 && abs($0.y) < 1e7 }) else { continue }
             let xs = old.map(\.x), ys = old.map(\.y)
             let lo = SIMD2(xs.min()!, ys.min()!), hi = SIMD2(xs.max()!, ys.max()!)
             let span = hi - lo, near = (lo - 0.25 * span.x, hi + 0.25 * span.x)
@@ -39,7 +40,7 @@ nonisolated extension MosaicEngine {
             let vs = old.map(v), top = vs.min()!, bottom = vs.max()!
             let meeting = faces[f].lines.first { $0.kind == "dark" && isMouth($0) }
                 .map { l -> Double in
-                    let p = l.pts[l.pts.count / 2]
+                    let pts = l.pts.filter { $0.count >= 2 }, p = pts[pts.count / 2]
                     return v(SIMD2(Double(p[0]), Double(p[1])))
                 } ?? (top + bottom) / 2
 
@@ -64,8 +65,9 @@ nonisolated extension MosaicEngine {
             // The pixels to repaint: the old mouth and a margin round it (its shadow and edge).
             let pad = 0.1 * width
             let W = photo.width, H = photo.height
-            let x0 = Swift.max(Int(lo.x - pad) - 1, 1), x1 = Swift.min(Int(hi.x + pad) + 2, W - 2)
-            let y0 = Swift.max(Int(lo.y - pad) - 1, 1), y1 = Swift.min(Int(hi.y + pad) + 2, H - 2)
+            // To the photo's edge when the mouth is near it (a panel cut under the chin).
+            let x0 = Swift.max(Int(lo.x - pad) - 1, 0), x1 = Swift.min(Int(hi.x + pad) + 2, W - 1)
+            let y0 = Swift.max(Int(lo.y - pad) - 1, 0), y1 = Swift.min(Int(hi.y + pad) + 2, H - 1)
             guard x1 > x0, y1 > y0 else { continue }
             var mask = [Bool](repeating: false, count: W * H)
             var lipPixels: [SIMD3<Float>] = []
@@ -80,14 +82,16 @@ nonisolated extension MosaicEngine {
                 }
             }
             // The skin: each masked pixel first the blend of the nearest unmasked pixels above and
-            // below it, then smoothed with its neighbours (Gauss-Seidel, in raster order).
+            // below it (the one there is, at the photo's edge), then smoothed with its neighbours
+            // (Gauss-Seidel, in raster order; past the edge, the pixel itself).
             for x in x0...x1 {
                 var y = y0
                 while y <= y1 {
                     guard mask[y * W + x] else { y += 1; continue }
                     var e = y
                     while e + 1 < H && mask[(e + 1) * W + x] { e += 1 }
-                    let above = photo.rgb[(y - 1) * W + x], below = photo.rgb[Swift.min(e + 1, H - 1) * W + x]
+                    let up = y > 0 ? photo.rgb[(y - 1) * W + x] : nil, down = e + 1 < H ? photo.rgb[(e + 1) * W + x] : nil
+                    guard let above = up ?? down, let below = down ?? up else { y = e + 1; continue }
                     for k in y...e {
                         let t = Float(k - y + 1) / Float(e - y + 2)
                         photo.rgb[k * W + x] = above * (1 - t) + below * t
@@ -99,7 +103,8 @@ nonisolated extension MosaicEngine {
                 for y in y0...y1 {
                     for x in x0...x1 where mask[y * W + x] {
                         let i = y * W + x
-                        photo.rgb[i] = (photo.rgb[i - 1] + photo.rgb[i + 1] + photo.rgb[i - W] + photo.rgb[i + W]) * 0.25
+                        let l = x > 0 ? i - 1 : i, r = x < W - 1 ? i + 1 : i, u = y > 0 ? i - W : i, d = y < H - 1 ? i + W : i
+                        photo.rgb[i] = (photo.rgb[l] + photo.rgb[r] + photo.rgb[u] + photo.rgb[d]) * 0.25
                     }
                 }
             }

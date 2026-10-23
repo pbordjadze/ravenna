@@ -56,6 +56,18 @@ struct MouthTests {
         #expect(lowerLip.x > upperLip.x)
     }
 
+    @Test func reachesThePhotosEdge() {
+        // The smile cut just under the lower lip, as a panel can cut a photo.
+        let (full, fullContours, face) = Self.smile()
+        let h = 72
+        var photo = MosaicEngine.Photo(width: Self.width, height: h, rgb: Array(full.rgb[..<(Self.width * h)]))
+        var contours = Array(fullContours[..<(Self.width * h)]), faces = [face]
+        MosaicEngine.byzantineMouths(&photo, &contours, &faces)
+        let bottom = photo.rgb[((h - 1) * Self.width)...]
+        #expect(bottom.allSatisfy { !($0.x > 0.7 && $0.y < 0.3) && !($0.x > 0.9 && $0.y > 0.9) }, "no old lip or teeth left on the last row")
+        #expect(contours.allSatisfy { $0 == 0 })
+    }
+
     @Test func leavesAFaceWithoutLipsAsItIs() {
         var (photo, contours, _) = Self.smile()
         let cat = MosaicEngine.Face(box: [10, 10, 110, 95], eyes: [[45, 30, 5, 2]])
