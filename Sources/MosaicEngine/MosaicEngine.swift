@@ -150,7 +150,9 @@ nonisolated extension MosaicEngine {
                 Resize.upscale2x(rgb.map { $0[c] }, width: photo.width, height: photo.height).map { Swift.min(Swift.max($0, 0), 1) }
             }
             red = channel(0); green = channel(1); blue = channel(2)
+            // The script resizes the 8-bit map, so the drawing comes in 8-bit steps.
             draw = Resize.bilinear(contours, width: photo.width, height: photo.height, to: W, H)
+                .map { ($0 * 255).rounded() / 255 }
             pitchMap = Plane(width: W, height: H, value: Float(s))
             layout = Layout(width: W, height: H, grout: g, pitchMap: [])
         }
@@ -253,11 +255,20 @@ nonisolated extension MosaicEngine {
             strong = Morph.close(strong, width: W, height: H, radius: 2)
             strong = Components.removeSmall(strong, width: W, height: H, maxSize: Int(s * 4))
             let skeleton = Strokes.thin(strong, width: W, height: H)
-            let linked = Strokes.link(Strokes.chains(skeleton, width: W, height: H), reach: s * 0.9)
+            let chs = Strokes.chains(skeleton, width: W, height: H)
+            let linked = Strokes.link(chs, reach: s * 0.9)
             var guides: [[SIMD2<Double>]] = []
             for P in linked where Double(P.count) >= 2.2 * s {
                 guides.append(Blur.smooth(P, sigma: s * 0.35, wrap: false))
             }
+            if let path = getenv("MOSAIC_DUMP") {   // DEBUG-DUMP
+                let base = String(cString: path)   // DEBUG-DUMP
+                func pgm(_ name: String, _ m: [UInt8]) { let f = fopen(base + name, "w")!; fputs("P5\n\(W) \(H)\n255\n", f); _ = m.map { $0 * 255 }.withUnsafeBufferPointer { fwrite($0.baseAddress, 1, $0.count, f) }; fclose(f) }   // DEBUG-DUMP
+                pgm("-strong.pgm", strong); pgm("-skel.pgm", skeleton)   // DEBUG-DUMP
+                let f = fopen(base + "-guides.json", "w")!   // DEBUG-DUMP
+                fputs("{\"chains\": \(chs.count), \"linked\": \(linked.map(\.count)), \"guides\": [" + guides.map { "[" + $0.map { "[\($0.x), \($0.y)]" }.joined(separator: ",") + "]" }.joined(separator: ",") + "]}", f); fclose(f)   // DEBUG-DUMP
+                print("chains", chs.count, "linked", linked.count, "guides", guides.count, "strong px", strong.reduce(0) { $0 + Int($1) }, "skel px", skeleton.reduce(0) { $0 + Int($1) })   // DEBUG-DUMP
+            }   // DEBUG-DUMP
             // Longest first; the sort keeps the order of equals.
             return guides.indices.sorted { guides[$0].count != guides[$1].count ? guides[$0].count > guides[$1].count : $0 < $1 }
                 .map { guides[$0] }
@@ -499,7 +510,7 @@ nonisolated extension MosaicEngine {
             for _ in 0..<4 { Xw += Xc.indices.filter { feat[$0] }.map { Xc[$0] } }
             var rng = SplitMix64(seed: 18)
             let km = KMeans.run(Xw, k: paints, maxIterations: 200, epsilon: 1e-5, attempts: 10, rng: &rng)
-            if let path = getenv("MOSAIC_DUMP") {   // DEBUG-DUMP
+            if let path = getenv("MOSAIC_DUMP_XW") {   // DEBUG-DUMP
                 let f = fopen(String(cString: path), "w")!   // DEBUG-DUMP
                 fputs("\(km.compactness)\n", f)   // DEBUG-DUMP
                 for v in Xw { fputs("\(v.x) \(v.y) \(v.z)\n", f) }   // DEBUG-DUMP

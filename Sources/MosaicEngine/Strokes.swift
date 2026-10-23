@@ -3,8 +3,22 @@ nonisolated extension MosaicEngine {
     // chains that continue one another linked (the prototype's skeletonize, chains and link).
 
     nonisolated enum Strokes {
-        /// Zhang and Suen's thinning (1984), as `skimage.morphology.skeletonize` runs it in 2D: border
-        /// pixels peeled in two alternating sub-iterations until none can go, leaving lines one pixel wide.
+        /// Zhang and Suen's thinning (1984) as `skimage.morphology.skeletonize` runs it in 2D: border
+        /// pixels peeled in two alternating sub-iterations until none can go, leaving lines one pixel
+        /// wide. Which pixels may go is scikit-image's table (`_fast_skeletonize`, BSD-3-Clause), by
+        /// the neighbours NW 1, N 2, NE 4, E 8, SE 16, S 32, SW 64, W 128: 1 in the first
+        /// sub-iteration, 2 in the second, 3 in either.
+        static let thinningTable: [UInt8] = [
+            0, 0, 0, 1, 0, 0, 1, 3, 0, 0, 3, 1, 1, 0, 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 3, 0, 3, 3,
+            0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 3, 0, 2, 2,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 3, 0, 2, 0,
+            0, 0, 3, 1, 0, 0, 1, 3, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+            3, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            2, 3, 1, 3, 0, 0, 1, 3, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            2, 3, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 1, 0, 0, 0, 0, 2, 2, 0, 0, 2, 0, 0, 0,
+        ]
+
         static func thin(_ m: [UInt8], width w: Int, height h: Int) -> [UInt8] {
             let s = w + 2
             var img = [UInt8](repeating: 0, count: s * (h + 2))
@@ -15,20 +29,10 @@ nonisolated extension MosaicEngine {
                     img[i] = 1; live.append(i)
                 }
             }
-            // Neighbours P2…P9 (N, NE, E, SE, S, SW, W, NW) as bits 0…7.
-            let offsets = [-s, -s + 1, 1, s + 1, s, s - 1, -1, -s - 1]
-            var lut = [[Bool]](repeating: [Bool](repeating: false, count: 256), count: 2)
-            for code in 0..<256 {
-                let p = (0..<8).map { (code >> $0) & 1 }
-                let b = p.reduce(0, +)
-                var a = 0
-                for k in 0..<8 where p[k] == 0 && p[(k + 1) % 8] == 1 { a += 1 }
-                guard b >= 2, b <= 6, a == 1 else { continue }
-                let (p2, p4, p6, p8) = (p[0], p[2], p[4], p[6])
-                lut[0][code] = p2 * p4 * p6 == 0 && p4 * p6 * p8 == 0
-                lut[1][code] = p2 * p4 * p8 == 0 && p2 * p6 * p8 == 0
-            }
-            var doomed: [Int] = []
+            // The neighbours as the table weighs them: NW, N, NE, E, SE, S, SW, W.
+            let offsets = [-s - 1, -s, -s + 1, 1, s + 1, s, s - 1, -1]
+            let table = thinningTable
+        var doomed: [Int] = []
             var changed = true
             while changed {
                 changed = false
@@ -38,7 +42,7 @@ nonisolated extension MosaicEngine {
                         for i in live where im[i] != 0 {
                             var code = 0
                             for k in 0..<8 where im[i + offsets[k]] != 0 { code |= 1 << k }
-                            if lut[pass][code] { doomed.append(i) }
+                            if table[code] & UInt8(1 << pass) != 0 { doomed.append(i) }
                         }
                     }
                     if !doomed.isEmpty {
