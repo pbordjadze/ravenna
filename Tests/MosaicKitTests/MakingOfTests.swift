@@ -123,6 +123,8 @@ struct MakingOfTests {
         for i in m.tiles.indices { m.tiles[i].stage = nil; m.tiles[i].stone = false }
         let show = MakingOf.Show(m)
         #expect(show.times[.face]!.length == 0 && show.times[.outlines]!.length == 0, "no face, no strands: their scenes are skipped")
+        #expect(show.times[.sinopia]!.length == 0, "nothing to draw: the drawing's scene is skipped")
+        #expect(show.duration == 48 - 6.5 - 5 - 5)
         #expect(show.strokes.isEmpty)
         #expect(show.sceneOf.allSatisfy { $0 == .andamento } && show.start.allSatisfy { $0.isFinite })
     }
@@ -130,6 +132,8 @@ struct MakingOfTests {
     @Test func theClosingCardNamesNoOneUntilAsked() {
         let plain = MakingOf.Card(.hold), named = MakingOf.Card(.hold, options: MakingOf.Options(names: true))
         #expect(plain.line == "Most mosaicists are anonymous; a few names survive.")
-        #expect(!plain.line.contains("Sosus") && named.line.contains("Sosus of Pergamon"))
+        #expect(!plain.line.contains("Sosus") && named.line.contains("Sosus at Pergamon"))
+        #expect(!MakingOf.Card(.face).credit.contains("Dioskourides"), "the face's credit names no one either")
+        #expect(MakingOf.Card(.face, options: MakingOf.Options(names: true)).credit.contains("Dioskourides of Samos"))
     }
 }

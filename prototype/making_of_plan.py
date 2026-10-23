@@ -33,7 +33,7 @@ CARDS = {
     "bed": ("The painted bed", "Each fresh patch of the bed is painted in full colour, “a finished painting in true fresco”, before a tile is set.",
             "Hagia Sophia, recorded by Thomas Whittemore, 1942"),
     "face": ("Opus vermiculatum", "The face in the smallest pieces, the eyes set as pieces of their own, row curving round row.",
-             "As in the panels Dioskourides of Samos signed in tiny tesserae, Pompeii"),
+             "As in the signed panels in tiny tesserae from Pompeii"),
     "outlines": ("The outlines", "Rows set first along the drawing’s lines: “the outline of the wing is shown by a row”.",
                  "Hagia Sophia, the Deesis; anonymous"),
     "andamento": ("Andamento", "Each row carries on the curve of the one before, so the rows show how the form moves.",
@@ -41,10 +41,12 @@ CARDS = {
     "light": ("Set at a tilt", "Gold and glass set at slightly different angles, each catching the light its own way.",
               "Hagia Sophia; the Nativity, Bethlehem"),
     "hold": ("The makers", "Most mosaicists are anonymous; a few names survive.",
-             "No source names the mosaicists of Ravenna or Hagia Sophia"),
+             "No source read names the mosaicists of Ravenna or Hagia Sophia"),
 }
-# The closing card with the names, behind `names` until Paul decides (lore waits on him).
-NAMED = ("The makers", "A few names survive: Sosus of Pergamon, Gnosis at Pella, Dioskourides of Samos, Ephraim at Bethlehem. Most mosaicists are anonymous.",
+# The cards that name makers, behind `names` until Paul decides (lore waits on him).
+NAMED_FACE = ("Opus vermiculatum", "The face in the smallest pieces, the eyes set as pieces of their own, row curving round row.",
+              "As in the panels Dioskourides of Samos signed in tiny tesserae, Pompeii")
+NAMED = ("The makers", "A few names survive: Sosus at Pergamon, Gnosis at Pella, Dioskourides of Samos, Ephraim at Bethlehem. Most mosaicists are anonymous.",
          "Pliny, Natural History 36.184, and the works they signed")
 SINOPIA = {"red": (0.60, 0.25, 0.16), "indigo": (0.20, 0.25, 0.48)}   # Ravenna's red earth; Hagia Sophia's indigo
 GOLD = (0.788, 0.635, 0.290)                                          # Theme.gold
@@ -100,7 +102,8 @@ def ease(u):
 
 
 def card_text(scene, options, meta):
-    title, line, credit = NAMED if scene == "hold" and options.names else CARDS[scene]
+    named = {"hold": NAMED, "face": NAMED_FACE}
+    title, line, credit = named[scene] if options.names and scene in named else CARDS[scene]
     return tuple(x.replace("{title}", meta.get("title", "")).replace("{credit}", meta.get("credit", "")) for x in (title, line, credit))
 
 
@@ -139,10 +142,46 @@ class Plan:
             else: scene.append("andamento")
             rank.append((0 if g == "feature" else 1 if g == "eye" else 2, i))
         self.scene_of = scene
+        # The sinopia: the strands' and features' tiles chained into strokes, nearest the face first
+        # (before the timing: without strokes the drawing's scene is skipped).
+        face = [self.centre[i] for i in range(n) if scene[i] == "face"]
+        fc = (self.width / 2, self.height / 2)
+        if face:
+            x = y = 0.0
+            for px, py in face: x += px; y += py
+            fc = (x / len(face), y / len(face))
+        strokes, cur = [], []
+        for i in range(n):
+            if self.stage[i] not in ("strand", "feature"): continue
+            p = self.centre[i]
+            if cur and (self.stage[cur[-1]] != self.stage[i] or dist(self.centre[cur[-1]], p) > 1.6 * self.pitch):
+                strokes.append(cur); cur = []
+            cur.append(i)
+        if cur: strokes.append(cur)
+        strokes = [[self.centre[i] for i in s] for s in strokes if len(s) >= 2]
+        def far(s):
+            d = 0.0
+            for q in s: d += dist(q, fc)
+            return d / len(s)
+        keyed = sorted(((far(s), j) for j, s in enumerate(strokes)))
+        strokes = [strokes[j] for _, j in keyed]
+        self.strokes = strokes
+        lens = []
+        for s in strokes:
+            L = 0.0
+            for a, b in zip(s, s[1:]): L += dist(a, b)
+            lens.append(L)
+        total = 0.0
+        for L in lens: total += L
+        total = total or 1.0
+        acc, self.stroke_span = 0.0, []
+        for L in lens:
+            self.stroke_span.append((acc / total, (acc + L) / total)); acc += L
         lengths = dict(SCENES)
         count = {k: scene.count(k) for k in BUILD}
         for k in ("face", "outlines"):
             if count[k] == 0: lengths[k] = 0.0
+        if not self.strokes: lengths["sinopia"] = 0.0
         self.times = {}
         t = 0.0
         for name, _ in SCENES:
@@ -182,42 +221,8 @@ class Plan:
             end = self.times["light"][0]
             for j, (k, a) in enumerate(firsts):
                 b = firsts[j + 1][1] if j + 1 < len(firsts) else end
-                self.cards.append((k, a - 0.3 if j else self.times[BUILD[0]][0], b))
+                self.cards.append((k, a if j else self.times[BUILD[0]][0], b))
             self.cards.sort(key=lambda c: c[1])
-        # The sinopia: the strands' and features' tiles chained into strokes, nearest the face first.
-        face = [self.centre[i] for i in range(n) if scene[i] == "face"]
-        fc = (self.width / 2, self.height / 2)
-        if face:
-            x = y = 0.0
-            for px, py in face: x += px; y += py
-            fc = (x / len(face), y / len(face))
-        strokes, cur = [], []
-        for i in range(n):
-            if self.stage[i] not in ("strand", "feature"): continue
-            p = self.centre[i]
-            if cur and (self.stage[cur[-1]] != self.stage[i] or dist(self.centre[cur[-1]], p) > 1.6 * self.pitch):
-                strokes.append(cur); cur = []
-            cur.append(i)
-        if cur: strokes.append(cur)
-        strokes = [[self.centre[i] for i in s] for s in strokes if len(s) >= 2]
-        def far(s):
-            d = 0.0
-            for q in s: d += dist(q, fc)
-            return d / len(s)
-        keyed = sorted(((far(s), j) for j, s in enumerate(strokes)))
-        strokes = [strokes[j] for _, j in keyed]
-        self.strokes = strokes
-        lens = []
-        for s in strokes:
-            L = 0.0
-            for a, b in zip(s, s[1:]): L += dist(a, b)
-            lens.append(L)
-        total = 0.0
-        for L in lens: total += L
-        total = total or 1.0
-        acc, self.stroke_span = 0.0, []
-        for L in lens:
-            self.stroke_span.append((acc / total, (acc + L) / total)); acc += L
         # The light: where each tile is along the sweep, and its tilt.
         self.sweep = [x / self.width * 0.55 + y / self.height * 0.45 for x, y in self.centre]
         self.gold = [is_gold(self.palette[p]) for p in self.paint]
@@ -271,6 +276,7 @@ class Plan:
     def sinopia(self, t):
         """How much of the drawing is drawn at t, 0...1 of its whole length."""
         s, d = self.times["sinopia"]
+        if d == 0: return 1.0 if t >= s else 0.0
         return min(max((t - s - 0.4) / (d - 1.0), 0.0), 1.0)
 
     def bed(self, t):

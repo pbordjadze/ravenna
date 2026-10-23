@@ -166,10 +166,46 @@ nonisolated public enum MakingOf {
                 rank.append(g == .feature ? 0 : g == .eye ? 1 : 2)
             }
             self.sceneOf = sceneOf
+            // The drawing: the strands' and features' tiles chained into strokes, nearest the face first
+            // (before the timing: without strokes the drawing's scene is skipped).
+            var fc = SIMD2(width / 2, height / 2)
+            let face = (0..<n).filter { sceneOf[$0] == .face }
+            if !face.isEmpty {
+                var x = 0.0, y = 0.0
+                for i in face { x += centres[i].x; y += centres[i].y }
+                fc = SIMD2(x / Double(face.count), y / Double(face.count))
+            }
+            var chains: [[Int]] = [], cur: [Int] = []
+            for i in 0..<n where stage[i] == .strand || stage[i] == .feature {
+                if let last = cur.last, stage[last] != stage[i] || MakingOf.distance(centres[last], centres[i]) > 1.6 * pitch {
+                    chains.append(cur); cur = []
+                }
+                cur.append(i)
+            }
+            if !cur.isEmpty { chains.append(cur) }
+            let lines = chains.filter { $0.count >= 2 }.map { $0.map { centres[$0] } }
+            func far(_ s: [SIMD2<Double>]) -> Double {
+                var d = 0.0
+                for q in s { d += MakingOf.distance(q, fc) }
+                return d / Double(s.count)
+            }
+            strokes = lines.enumerated().map { (far($0.element), $0.offset) }.sorted { $0 < $1 }.map { lines[$0.1] }
+            var lengths: [Double] = []
+            for s in strokes {
+                var L = 0.0
+                for k in 1..<s.count { L += MakingOf.distance(s[k - 1], s[k]) }
+                lengths.append(L)
+            }
+            var total = 0.0
+            for L in lengths { total += L }
+            if total == 0 { total = 1 }
+            var acc = 0.0, spans: [(from: Double, to: Double)] = []
+            for L in lengths { spans.append((acc / total, (acc + L) / total)); acc += L }
+            strokeSpans = spans
             var times: [Scene: (start: Double, length: Double)] = [:]
             var t = 0.0
             for s in Scene.allCases {
-                let empty = (s == .face || s == .outlines) && !sceneOf.contains(s)
+                let empty = ((s == .face || s == .outlines) && !sceneOf.contains(s)) || (s == .sinopia && strokes.isEmpty)
                 let d = empty ? 0 : s.length
                 times[s] = (t, d); t += d
             }
@@ -214,46 +250,11 @@ nonisolated public enum MakingOf {
                 let end = times[.light]!.start
                 for (j, (k, a)) in firsts.enumerated() {
                     let b = j + 1 < firsts.count ? firsts[j + 1].1 : end
-                    cards.append((k, j > 0 ? a - 0.3 : times[Scene.build[0]]!.start, b))
+                    cards.append((k, j > 0 ? a : times[Scene.build[0]]!.start, b))
                 }
                 cards = cards.enumerated().sorted { ($0.element.from, $0.offset) < ($1.element.from, $1.offset) }.map(\.element)
             }
             self.cards = cards
-            // The drawing: the strands' and features' tiles chained into strokes, nearest the face first.
-            var fc = SIMD2(width / 2, height / 2)
-            let face = (0..<n).filter { sceneOf[$0] == .face }
-            if !face.isEmpty {
-                var x = 0.0, y = 0.0
-                for i in face { x += centres[i].x; y += centres[i].y }
-                fc = SIMD2(x / Double(face.count), y / Double(face.count))
-            }
-            var chains: [[Int]] = [], cur: [Int] = []
-            for i in 0..<n where stage[i] == .strand || stage[i] == .feature {
-                if let last = cur.last, stage[last] != stage[i] || MakingOf.distance(centres[last], centres[i]) > 1.6 * pitch {
-                    chains.append(cur); cur = []
-                }
-                cur.append(i)
-            }
-            if !cur.isEmpty { chains.append(cur) }
-            let lines = chains.filter { $0.count >= 2 }.map { $0.map { centres[$0] } }
-            func far(_ s: [SIMD2<Double>]) -> Double {
-                var d = 0.0
-                for q in s { d += MakingOf.distance(q, fc) }
-                return d / Double(s.count)
-            }
-            strokes = lines.enumerated().map { (far($0.element), $0.offset) }.sorted { $0 < $1 }.map { lines[$0.1] }
-            var lengths: [Double] = []
-            for s in strokes {
-                var L = 0.0
-                for k in 1..<s.count { L += MakingOf.distance(s[k - 1], s[k]) }
-                lengths.append(L)
-            }
-            var total = 0.0
-            for L in lengths { total += L }
-            if total == 0 { total = 1 }
-            var acc = 0.0, spans: [(from: Double, to: Double)] = []
-            for L in lengths { spans.append((acc / total, (acc + L) / total)); acc += L }
-            strokeSpans = spans
             // The light: where each tile is along its sweep, and each tile's tilt.
             sweep = centres.map { $0.x / width * 0.55 + $0.y / height * 0.45 }
             let palette = mosaic.palette.map { SIMD3(Double($0.x), Double($0.y), Double($0.z)) }
@@ -312,6 +313,7 @@ nonisolated public enum MakingOf {
         /// How much of the drawing is drawn at `t`, 0...1 of its whole length.
         public func sinopia(at t: Double) -> Double {
             let (s, d) = times[.sinopia]!
+            if d == 0 { return t >= s ? 1 : 0 }
             return min(max((t - s - 0.4) / (d - 1.0), 0), 1)
         }
 

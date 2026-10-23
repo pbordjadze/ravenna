@@ -11,7 +11,8 @@ nonisolated public extension MakingOf {
         /// The setter's hand shown pressing each tile home.
         public var hand: Bool
         public var flow: Flow
-        /// The closing card names the makers: lore, so off until Paul says (docs/making-of.md).
+        /// The cards name the makers (the closing card's four, Dioskourides on the face's): lore, so off
+        /// until Paul says (docs/making-of.md).
         public var names: Bool
 
         public init(sinopia: Sinopia = .red, hand: Bool = false, flow: Flow = .scenes, names: Bool = false) {
@@ -50,7 +51,8 @@ nonisolated public extension MakingOf {
                 (title, line, credit) = (
                     "Opus vermiculatum",
                     "The face in the smallest pieces, the eyes set as pieces of their own, row curving round row.",
-                    "As in the panels Dioskourides of Samos signed in tiny tesserae, Pompeii")
+                    options.names ? "As in the panels Dioskourides of Samos signed in tiny tesserae, Pompeii"
+                        : "As in the signed panels in tiny tesserae from Pompeii")
             case .outlines:
                 (title, line, credit) = (
                     "The outlines",
@@ -69,13 +71,13 @@ nonisolated public extension MakingOf {
             case .hold where options.names:
                 (title, line, credit) = (
                     "The makers",
-                    "A few names survive: Sosus of Pergamon, Gnosis at Pella, Dioskourides of Samos, Ephraim at Bethlehem. Most mosaicists are anonymous.",
+                    "A few names survive: Sosus at Pergamon, Gnosis at Pella, Dioskourides of Samos, Ephraim at Bethlehem. Most mosaicists are anonymous.",
                     "Pliny, Natural History 36.184, and the works they signed")
             case .hold:
                 (title, line, credit) = (
                     "The makers",
                     "Most mosaicists are anonymous; a few names survive.",
-                    "No source names the mosaicists of Ravenna or Hagia Sophia")
+                    "No source read names the mosaicists of Ravenna or Hagia Sophia")
             }
         }
     }

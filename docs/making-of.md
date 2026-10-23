@@ -38,7 +38,7 @@ assign to a work are speculation. Buchthal even imagined a dome master who fell 
   da Silva, *Acta Scientiarum. Education*, 2016, citing Mansour 1994).
   <https://www.redalyc.org/journal/3033/303346622001/html/> (M). Not used on a card.
 - "Sinopia" (red earth, named after Sinope) is what the Bologna records call Classe's drawings. The
-  show draws in red by default, or in Hagia Sophia's indigo as an option (`SINOPIA=blue`).
+  show draws in red by default, or in Hagia Sophia's indigo as an option (`SINOPIA=indigo`).
 
 ### 2. Outline rows (the engine's strands)
 
@@ -142,7 +142,7 @@ assign to a work are speculation. Buchthal even imagined a dome master who fell 
 
 | Name | What | Source | Sure |
 | --- | --- | --- | --- |
-| Sosus of Pergamon | The *asarotos oikos*, the "unswept room" floor, and the dove drinking. Pliny: *"celeberrimus fuit in hoc genere Sosus, qui Pergami stravit quem vocant asaroton oecon… parvis e tessellis tinctisque in varios colores."* No date given; Bostock's note: *"His age and country are unknown."* | Pliny, *NH* 36.184 (Bostock & Riley, Perseus: <https://www.perseus.tufts.edu/hopper/text?doc=Perseus:text:1999.02.0137:book=36:chapter=60>; Latin, LacusCurtius) | H |
+| Sosus (at Pergamon; Pliny gives no origin) | The *asarotos oikos*, the "unswept room" floor, and the dove drinking. Pliny: *"celeberrimus fuit in hoc genere Sosus, qui Pergami stravit quem vocant asaroton oecon… parvis e tessellis tinctisque in varios colores."* No date given; Bostock's note: *"His age and country are unknown."* | Pliny, *NH* 36.184 (Bostock & Riley, Perseus: <https://www.perseus.tufts.edu/hopper/text?doc=Perseus:text:1999.02.0137:book=36:chapter=60>; Latin, LacusCurtius) | H |
 | Gnosis | The stag hunt at Pella, a pebble mosaic, late 4th century BC: *"Gnosis epoesen" (Gnosis made this)*. Whether Gnosis set it or drew it is unknown. | BYZART, Bologna: <https://historica.unibo.it/handle/20.500.14008/19566?locale=en> | H |
 | Dioskourides of Samos | Two signed vermiculatum panels, Pompeii (above). | Museo Galileo; Smith | H/M |
 | Ephraim | Church of the Nativity, Bethlehem: *"This work was finished by the hand of Ephraim, historiographer and artist in mosaic"*, 1169. | Liz James, <https://medievalmosaics.com/mosaics/112> | H/M |
@@ -173,7 +173,7 @@ the only gold, in line with the guardians' caution.
 | smalti | palette (k-means smalti) | Each paint a cake of glass, glowing orange as poured, cooling to its colour, cut into a grid of tesserae that spread apart | Smalti / glass coloured with copper, cobalt, iron, antimony and tin, poured as a cake, then cut into tesserae / anonymous glassmakers; where they worked is still unknown | 5.5 |
 | sinopia | the cartoon (contour map, face features) | Lines in red earth drawn stroke by stroke on lime, the face first, the frame last | The drawing on the bed / the design is drawn first; at Classe the drawing under the apse shows a different design / Sant'Apollinare in Classe, 6th c.; anonymous | 5 |
 | bed | the painted bed (`Finish.bed`) | The coloured bed spreading down over the drawing, which shows faintly through | The painted bed / "a finished painting in true fresco" / Hagia Sophia, recorded by Whittemore, 1942 | 3.5 |
-| face | features, eyes, fine pitch | The features' rows, then iris and pupil as pieces, then the face's fine field | Opus vermiculatum / the face in the smallest pieces / as in the panels Dioskourides of Samos signed in tiny tesserae | 6.5 |
+| face | features, eyes, fine pitch | The features' rows, then iris and pupil as pieces, then the face's fine field | Opus vermiculatum / the face in the smallest pieces / as in the signed panels in tiny tesserae from Pompeii (Dioskourides named behind `names`) | 6.5 |
 | outlines | strands | The strands, nearest first, tile by tile along each line | The outlines / "the outline of the wing is shown by a row" / Hagia Sophia, the Deesis; anonymous | 5 |
 | andamento | echo rows and field | Ring after ring outward from the strands, quickening | Andamento / each row carries on the curve of the one before / Italian for "the way it goes", a workshop word | 9 |
 | light | the material finish | A light crossing the finished mosaic; each tile flares at its own tilt, gold most, stone least | Set at a tilt / gold and glass at slightly different angles / Hagia Sophia; the Nativity, Bethlehem | 5.5 |
@@ -198,6 +198,8 @@ plays `MakingOf` with a Canvas (set tiles baked into one image as they settle, d
 `Drawing`), the card under the picture, and the options in its own menu. With Reduce Motion it moves a
 scene at a time.
 
-**For Paul, through the setup session:** the closing card can name Sosus, Gnosis, Dioskourides and
-Ephraim, which is lore, so it waits on him. Until he answers, it reads "Most mosaicists are anonymous; a
-few names survive." with no names, and the named version is behind `names`.
+**For Paul, through the setup session:** naming makers is lore, so it waits on him. Until he answers,
+the closing card reads "Most mosaicists are anonymous; a few names survive." and the face's card credits
+"the signed panels in tiny tesserae from Pompeii". With `names` on, the closing card names Sosus at
+Pergamon, Gnosis at Pella, Dioskourides of Samos and Ephraim at Bethlehem, and the face's card names
+Dioskourides.
