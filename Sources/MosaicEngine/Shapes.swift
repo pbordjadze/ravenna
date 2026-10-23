@@ -117,12 +117,18 @@ nonisolated extension MosaicEngine {
         static func simplify(closed pts: [SIMD2<Double>], epsilon: Double) -> [SIMD2<Double>] {
             let n = pts.count
             guard n > 2 else { return pts }
+            // OpenCV's three passes, each from the last one's farthest point (the first found, going
+            // round from it): the ring starts at the second pass's point and splits at the third's.
             func farthest(from i: Int) -> (Int, Double) {
                 var best = i, bd = 0.0
-                for j in 0..<n { let d = pts[j] - pts[i]; let dd = d.x * d.x + d.y * d.y; if dd > bd { bd = dd; best = j } }
+                for j in 1..<n {
+                    let k = (i + j) % n, d = pts[k] - pts[i], dd = d.x * d.x + d.y * d.y
+                    if dd > bd { bd = dd; best = k }
+                }
                 return (best, bd)
             }
-            let (a, _) = farthest(from: 0)
+            let (first0, _) = farthest(from: 0)
+            let (a, _) = farthest(from: first0)
             let (b, dab) = farthest(from: a)
             guard dab > epsilon * epsilon else { return [pts[a]] }
             func chain(_ from: Int, _ to: Int) -> [Int] {
@@ -136,7 +142,7 @@ nonisolated extension MosaicEngine {
             // Drop a vertex close to the line through its neighbours (OpenCV's last pass).
             let e2 = epsilon * epsilon
             var i = 0
-            while i < out.count && out.count > 3 {
+            while i < out.count && out.count > 2 {
                 let start = out[(i + out.count - 1) % out.count], p = out[i], end = out[(i + 1) % out.count]
                 let dx = end.x - start.x, dy = end.y - start.y
                 let dist = abs((p.x - start.x) * dy - (p.y - start.y) * dx)

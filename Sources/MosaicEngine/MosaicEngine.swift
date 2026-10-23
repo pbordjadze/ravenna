@@ -1,11 +1,6 @@
 #if canImport(MosaicKit)
 import MosaicKit
 #endif
-#if canImport(Darwin)
-import Darwin
-#else
-import Glibc
-#endif
 
 /// Ravenna's mosaic maker: a photo, its contour map and its faces' features in, a `Mosaic` out.
 /// Ported from `prototype/mosaic_faces.py` as the sketchbook runs it (GROUT=2 TIGHT=1, FEATURES):
@@ -42,11 +37,14 @@ nonisolated public enum MosaicEngine {
         }
     }
 
-    /// One face's features in the photo's pixels, as `sketchbook/features.py` writes them.
+    /// One face's features in the photo's pixels, as `sketchbook/features.py` writes them. Several
+    /// faces are laid as one: their boxes, eyes and lines together.
     nonisolated public struct Face: Sendable, Codable, Equatable {
-        /// x0, y0, x1, y1.
+        /// x0, y0, x1, y1: where the tiles are finer, the outline cut lower and the tiles stone.
         public var box: [Float]
-        /// Each [cx, cy, iris r, pupil r].
+        /// Each [cx, cy, iris r, pupil r]: the iris one round piece, cut by the eye's opening, the
+        /// pupil laid over it. A fifth value, when given, is the pupil's height (a cat's slit); a
+        /// third alone means no pupil.
         public var eyes: [[Float]]
         public var lines: [Line]
 
@@ -111,7 +109,7 @@ nonisolated public enum MosaicEngine {
         return try make(photo: photo, contours: contours, faces: faces, settings: settings, cancel: cancel, trace: &trace)
     }
 
-    /// `make`, recording each stage's time and the tiles that are strands in `trace`.
+    /// `make`, recording in `trace` each stage's time and tiles, and which tiles are strands and features.
     public static func make(photo: Photo, contours: [Float], faces: [Face], settings: Settings = Settings(),
                             cancel: () -> Bool, trace: inout Trace) throws -> Mosaic {
         guard photo.width > 0, photo.height > 0, photo.rgb.count == photo.width * photo.height else {
@@ -134,8 +132,10 @@ nonisolated extension MosaicEngine {
         let boxes: [[Float]], eyes: [[Float]], lines: [Face.Line]
         /// The eyes' openings, in working pixels.
         let eyeRings: [[SIMD2<Double>]]
-        var red: [Float], green: [Float], blue: [Float]
-        var draw: [Float]
+        let photo: Photo, contours: [Float]
+        /// The photo at the working size, by channel, and the drawing.
+        var red: [Float] = [], green: [Float] = [], blue: [Float] = []
+        var draw: [Float] = []
         var pitchMap: Plane
         var layout: Layout
 
@@ -151,12 +151,7 @@ nonisolated extension MosaicEngine {
             eyes = faces.flatMap(\.eyes).filter { $0.count >= 3 }
             lines = faces.flatMap(\.lines)
             eyeRings = lines.filter { $0.kind == "eye" }.map { Run.points($0.pts) }
-            let rgb = photo.rgb
-            func channel(_ c: Int) -> [Float] {
-                Resize.upscale2x(rgb.map { $0[c] }, width: photo.width, height: photo.height).map { Swift.min(Swift.max($0, 0), 1) }
-            }
-            red = channel(0); green = channel(1); blue = channel(2)
-            draw = Resize.bilinear(contours, width: photo.width, height: photo.height, to: W, H)
+            self.photo = photo; self.contours = contours
             pitchMap = Plane(width: W, height: H, value: Float(s))
             layout = Layout(width: W, height: H, grout: g, pitchMap: [])
         }
@@ -191,6 +186,13 @@ nonisolated extension MosaicEngine {
                 last = now
                 if cancel() { throw CancellationError() }
             }
+            // The photo at twice its size (bicubic), the drawing with it (bilinear).
+            func channel(_ c: Int) -> [Float] {
+                Resize.upscale2x(photo.rgb.map { $0[c] }, width: w0, height: h0).map { Swift.min(Swift.max($0, 0), 1) }
+            }
+            red = channel(0); green = channel(1); blue = channel(2)
+            draw = Resize.bilinear(contours, width: w0, height: h0, to: W, H)
+            // The pitch: finer in the faces.
             let inbox = boxes.isEmpty ? [UInt8](repeating: 0, count: W * H) : boxMask()
             if !boxes.isEmpty {
                 let m = Blur.gaussian(Plane(width: W, height: H, pixels: inbox.map { Float($0) }), sigma: s * 1.2)
@@ -259,20 +261,11 @@ nonisolated extension MosaicEngine {
             strong = Morph.close(strong, width: W, height: H, radius: 2)
             strong = Components.removeSmall(strong, width: W, height: H, maxSize: Int(s * 4))
             let skeleton = Strokes.thin(strong, width: W, height: H)
-            let chs = Strokes.chains(skeleton, width: W, height: H)
-            let linked = Strokes.link(chs, reach: s * 0.9)
+            let linked = Strokes.link(Strokes.chains(skeleton, width: W, height: H), reach: s * 0.9)
             var guides: [[SIMD2<Double>]] = []
             for P in linked where Double(P.count) >= 2.2 * s {
                 guides.append(Blur.smooth(P, sigma: s * 0.35, wrap: false))
             }
-            if let path = getenv("MOSAIC_DUMP") {   // DEBUG-DUMP
-                let base = String(cString: path)   // DEBUG-DUMP
-                func pgm(_ name: String, _ m: [UInt8]) { let f = fopen(base + name, "w")!; fputs("P5\n\(W) \(H)\n255\n", f); _ = m.map { $0 * 255 }.withUnsafeBufferPointer { fwrite($0.baseAddress, 1, $0.count, f) }; fclose(f) }   // DEBUG-DUMP
-                pgm("-strong.pgm", strong); pgm("-skel.pgm", skeleton)   // DEBUG-DUMP
-                let f = fopen(base + "-guides.json", "w")!   // DEBUG-DUMP
-                fputs("{\"chains\": \(chs.count), \"linked\": \(linked.map(\.count)), \"guides\": [" + guides.map { "[" + $0.map { "[\($0.x), \($0.y)]" }.joined(separator: ",") + "]" }.joined(separator: ",") + "]}", f); fclose(f)   // DEBUG-DUMP
-                print("chains", chs.count, "linked", linked.count, "guides", guides.count, "strong px", strong.reduce(0) { $0 + Int($1) }, "skel px", skeleton.reduce(0) { $0 + Int($1) })   // DEBUG-DUMP
-            }   // DEBUG-DUMP
             // Longest first; the sort keeps the order of equals.
             return guides.indices.sorted { guides[$0].count != guides[$1].count ? guides[$0].count > guides[$1].count : $0 < $1 }
                 .map { guides[$0] }
@@ -306,8 +299,8 @@ nonisolated extension MosaicEngine {
                 let c = SIMD2(Double(e[0]), Double(e[1])) * k, rr = Double(e[2]) * k
                 func ring(_ rx: Double, _ ry: Double) -> [SIMD2<Double>] {
                     (0..<28).map { i in
-                        let a = 2 * Double.pi * Double(i) / 28
-                        return c + SIMD2(rx * cos(a), ry * sin(a))
+                        let (sin, cos) = Exact.sinCos(2 * Double.pi * Double(i) / 28)
+                        return c + SIMD2(rx * cos, ry * sin)
                     }
                 }
                 layout.place(lidded(ring(rr, rr)), stage: .eye, strand: false, minFrac: 0.1, eye: .iris)
@@ -450,7 +443,7 @@ nonisolated extension MosaicEngine {
                     let i = clampIndex(Int(c.y), H) * W + clampIndex(Int(c.x), W)
                     px = [SIMD3(red[i], green[i], blue[i])]; at = [.zero]
                 }
-                var c = OKLab.from(Stats.median(px))
+                var c = Colour.lab(Stats.median(px))
                 if t.eye == .iris {
                     // The iris's own glass: its ring, outside the pupil and inside the lids' shadow,
                     // its lit tone and its colour a little stronger, as the eye takes it.
@@ -462,17 +455,17 @@ nonisolated extension MosaicEngine {
                         if d > 0.4 * rr && d < 0.85 * rr { ring.append(px[j]) }
                     }
                     if ring.count <= 10 { ring = px }
-                    c = OKLab.from(Stats.median(brightest(ring, 70, above: true)))
+                    c = Colour.lab(Stats.median(brightest(ring, 70, above: true)))
                     c = SIMD3(c.x, c.y * 1.4, c.z * 1.4)
                 }
-                if t.eye == .pupil { c = OKLab.from(Stats.percentile(px, 5)) }
+                if t.eye == .pupil { c = Colour.lab(Stats.percentile(px, 5)) }
                 if t.feature == "eye" {
                     // An eye's white: the lit part of the stones under the tile.
-                    c = OKLab.from(Stats.median(brightest(px, 60, above: true)))
+                    c = Colour.lab(Stats.median(brightest(px, 60, above: true)))
                 }
                 if t.feature == "mid" {
                     // The feature's own shadow: the darker part of the stones under it.
-                    c = OKLab.from(Stats.median(brightest(px, 35, above: false)))
+                    c = Colour.lab(Stats.median(brightest(px, 35, above: false)))
                     c = SIMD3(c.x * 0.86, c.y * 1.15, c.z * 1.15)
                 }
                 if t.strand { c = SIMD3(Swift.min(c.x, 0.30), c.y * 0.8, c.z * 0.8) }
@@ -516,12 +509,6 @@ nonisolated extension MosaicEngine {
             for _ in 0..<4 { Xw += Xc.indices.filter { feat[$0] }.map { Xc[$0] } }
             var rng = SplitMix64(seed: 18)
             let km = KMeans.run(Xw, k: paints, maxIterations: 200, epsilon: 1e-5, attempts: 10, rng: &rng)
-            if let path = getenv("MOSAIC_DUMP_XW") {   // DEBUG-DUMP
-                let f = fopen(String(cString: path), "w")!   // DEBUG-DUMP
-                fputs("\(km.compactness)\n", f)   // DEBUG-DUMP
-                for v in Xw { fputs("\(v.x) \(v.y) \(v.z)\n", f) }   // DEBUG-DUMP
-                fclose(f)   // DEBUG-DUMP
-            }   // DEBUG-DUMP
             let a = Xc.map { KMeans.nearest($0, km.centers) }
             var palette: [SIMD3<Float>] = []
             var remap = [Int](repeating: -1, count: km.centers.count)
@@ -529,7 +516,7 @@ nonisolated extension MosaicEngine {
                 let members = a.indices.filter { a[$0] == j }
                 guard !members.isEmpty else { continue }
                 remap[j] = palette.count
-                palette.append(OKLab.toRGB(Stats.median(members.map { med[$0] })))
+                palette.append(Colour.rgb(Stats.median(members.map { med[$0] })))
             }
             var paint = a.map { remap[$0] }
             // An eye keeps its own glass (iris and pupil): its own paint unless one is already as
@@ -537,16 +524,16 @@ nonisolated extension MosaicEngine {
             for (i, t) in pieces.enumerated() where t.eye != nil {
                 var best = -1, bd = Float.infinity
                 for (j, c) in palette.enumerated() {
-                    let d = length(OKLab.from(c) - med[i])
+                    let d = length(Colour.lab(c) - med[i])
                     if d < bd { bd = d; best = j }
                 }
                 if best >= 0 && bd < 0.015 {
                     paint[i] = best
                 } else {
-                    paint[i] = palette.count; palette.append(OKLab.toRGB(med[i]))
+                    paint[i] = palette.count; palette.append(Colour.rgb(med[i]))
                 }
             }
-            let grout = OKLab.toRGB(SIMD3(0.86, 0.004, 0.012))
+            let grout = Colour.rgb(SIMD3(0.86, 0.004, 0.012))
             let half = 1 / Double(Self.scale)
             let tiles = pieces.enumerated().map { i, t in
                 let corners = t.poly.map { SIMD2<Float>(Float($0.x * half), Float($0.y * half)) }

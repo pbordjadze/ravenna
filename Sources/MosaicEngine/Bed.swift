@@ -51,7 +51,7 @@ nonisolated extension MosaicEngine {
         var out = [SIMD3<Float>](repeating: .zero, count: n)
         for i in 0..<n {
             let k = 1 / Swift.max(bc[i], 1e-3)
-            out[i] = OKLab.toRGB(ok.lab(SIMD3(br[i], bg[i], bb[i]) * k) * shade)
+            out[i] = ok.rgb(ok.lab(SIMD3(br[i], bg[i], bb[i]) * k) * shade)
         }
         return out
     }

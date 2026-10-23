@@ -1,9 +1,3 @@
-#if canImport(Darwin)
-import Darwin
-#else
-import Glibc
-#endif
-
 nonisolated extension MosaicEngine {
     /// A small deterministic generator (Steele, Lea and Flood's SplitMix64): the same seed gives the
     /// same numbers on every machine.
@@ -176,34 +170,45 @@ nonisolated extension MosaicEngine {
         static func median(_ colors: [SIMD3<Float>]) -> SIMD3<Float> { percentile(colors, 50) }
     }
 
-    /// Björn Ottosson's OKLab over whole images: a table for the sRGB curve, so a few million pixels
-    /// convert in a blink.
+    /// Björn Ottosson's OKLab over whole images: tables for the sRGB curve both ways, so a few
+    /// million pixels convert in a blink (to within a few thousandths).
     nonisolated struct FastOKLab: Sendable {
-        private let table: [Float]
-        private let steps = 4096
+        private let toLinear: [Float], toEncoded: [Float]
+        private static let steps = 4096
 
         init() {
-            table = (0...4097).map { i in
-                let c = Float(i) / 4096
-                return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
-            }
+            let n = Self.steps
+            toLinear = (0...(n + 1)).map { Float(Colour.linear(Swift.min(Double($0) / Double(n), 1))) }
+            toEncoded = (0...(n + 1)).map { Float(Colour.encoded(Swift.min(Double($0) / Double(n), 1))) }
         }
 
-        @inline(__always) func linear(_ c: Float) -> Float {
+        @inline(__always) private static func lookup(_ table: [Float], _ c: Float) -> Float {
             let v = Swift.min(Swift.max(c, 0), 1) * Float(steps)
             let i = Int(v)
             let t = v - Float(i)
-            return table[i] + (table[i + 1] - table[i]) * t
+            return table.withUnsafeBufferPointer { $0[i] + ($0[i + 1] - $0[i]) * t }
         }
 
         @inline(__always) func lab(_ rgb: SIMD3<Float>) -> SIMD3<Float> {
-            let r = linear(rgb.x), g = linear(rgb.y), b = linear(rgb.z)
-            let l = cbrtf(Swift.max(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b, 0))
-            let m = cbrtf(Swift.max(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b, 0))
-            let s = cbrtf(Swift.max(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b, 0))
+            let r = Self.lookup(toLinear, rgb.x), g = Self.lookup(toLinear, rgb.y), b = Self.lookup(toLinear, rgb.z)
+            let l = Exact.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
+            let m = Exact.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
+            let s = Exact.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
             return SIMD3(0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
                          1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
                          0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s)
+        }
+
+        /// Back to sRGB, the linear values clipped to 0...1.
+        @inline(__always) func rgb(_ lab: SIMD3<Float>) -> SIMD3<Float> {
+            let L = lab.x, a = lab.y, b = lab.z
+            let l0 = L + 0.3963377774 * a + 0.2158037573 * b
+            let m0 = L - 0.1055613458 * a - 0.0638541728 * b
+            let s0 = L - 0.0894841775 * a - 1.2914855480 * b
+            let l = l0 * l0 * l0, m = m0 * m0 * m0, s = s0 * s0 * s0
+            return SIMD3(Self.lookup(toEncoded, 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+                         Self.lookup(toEncoded, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+                         Self.lookup(toEncoded, -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s))
         }
     }
 }

@@ -1,9 +1,3 @@
-#if canImport(Darwin)
-import Darwin
-#else
-import Glibc
-#endif
-
 nonisolated extension MosaicEngine {
     // The image primitives the prototype took from OpenCV and SciPy, in plain Swift: blurs, resizes,
     // morphology, distance transforms and filters over row-major rasters. Bit-exact parity with those
@@ -51,7 +45,7 @@ nonisolated extension MosaicEngine {
             var w = [Double](repeating: 0, count: 2 * r + 1)
             var sum = 0.0
             for i in -r...r {
-                let v = exp(-0.5 * Double(i * i) / (sigma * sigma))
+                let v = Exact.exp(-0.5 * Double(i * i) / (sigma * sigma))
                 w[i + r] = v; sum += v
             }
             return w.map { Float($0 / sum) }
@@ -200,7 +194,7 @@ nonisolated extension MosaicEngine {
             guard n > 1, sigma > 0 else { return pts }
             let r = Int(4 * sigma + 0.5)
             var w = [Double](repeating: 0, count: 2 * r + 1), sum = 0.0
-            for i in -r...r { let v = exp(-0.5 * Double(i * i) / (sigma * sigma)); w[i + r] = v; sum += v }
+            for i in -r...r { let v = Exact.exp(-0.5 * Double(i * i) / (sigma * sigma)); w[i + r] = v; sum += v }
             for i in w.indices { w[i] /= sum }
             var out = [SIMD2<Double>](repeating: .zero, count: n)
             for i in 0..<n {
@@ -288,39 +282,6 @@ nonisolated extension MosaicEngine {
                         let bottom = s[y1 * w + x0] * (1 - tx) + s[y1 * w + x1] * tx
                         out[y * W + x] = top * (1 - ty) + bottom * ty
                     }
-                }
-            }
-            return out
-        }
-
-        /// An area-averaging downscale (or bilinear upscale) of an RGB image: the CLI's `--long-side`.
-        static func rgb(_ src: [SIMD3<Float>], width w: Int, height h: Int, to W: Int, _ H: Int) -> [SIMD3<Float>] {
-            if w == W && h == H { return src }
-            if W > w || H > h {
-                let ch = (0..<3).map { c in bilinear(src.map { $0[c] }, width: w, height: h, to: W, H) }
-                return (0..<(W * H)).map { SIMD3(ch[0][$0], ch[1][$0], ch[2][$0]) }
-            }
-            var out = [SIMD3<Float>](repeating: .zero, count: W * H)
-            let sx = Double(w) / Double(W), sy = Double(h) / Double(H)
-            for y in 0..<H {
-                let fy0 = Double(y) * sy, fy1 = fy0 + sy
-                for x in 0..<W {
-                    let fx0 = Double(x) * sx, fx1 = fx0 + sx
-                    var acc = SIMD3<Double>.zero, wsum = 0.0
-                    var yy = Int(fy0)
-                    while Double(yy) < fy1 && yy < h {
-                        let wy = Swift.min(Double(yy + 1), fy1) - Swift.max(Double(yy), fy0)
-                        var xx = Int(fx0)
-                        while Double(xx) < fx1 && xx < w {
-                            let wx = Swift.min(Double(xx + 1), fx1) - Swift.max(Double(xx), fx0)
-                            let v = src[yy * w + xx]
-                            acc += SIMD3(Double(v.x), Double(v.y), Double(v.z)) * (wx * wy); wsum += wx * wy
-                            xx += 1
-                        }
-                        yy += 1
-                    }
-                    let m = acc / Swift.max(wsum, 1e-12)
-                    out[y * W + x] = SIMD3(Float(m.x), Float(m.y), Float(m.z))
                 }
             }
             return out
@@ -460,9 +421,50 @@ nonisolated extension MosaicEngine {
         static func maxFilter(_ p: Plane, before: Int, after: Int) -> Plane {
             let w = p.width, h = p.height
             let rows = slidingMaxRows(p.pixels, width: w, height: h, before: before, after: after)
-            let t = transpose(rows, width: w, height: h, zero: 0)
-            let cols = slidingMaxRows(t, width: h, height: w, before: before, after: after)
-            return Plane(width: w, height: h, pixels: transpose(cols, width: h, height: w, zero: 0))
+            return Plane(width: w, height: h, pixels: slidingMaxColumns(rows, width: w, height: h, before: before, after: after))
+        }
+
+        /// The column pass of `maxFilter`, row by row (van Herk and Gil-Werman): blocks of the window's
+        /// height, each with its running maxima down from its top and up from its bottom; a window
+        /// spans at most two blocks, so its maximum is the first's from below and the second's from above.
+        static func slidingMaxColumns(_ src: [Float], width w: Int, height h: Int, before: Int, after: Int) -> [Float] {
+            let k = before + after + 1
+            guard k > 1, h > 1 else { return src }
+            var down = src, up = src
+            down.withUnsafeMutableBufferPointer { dn in
+                up.withUnsafeMutableBufferPointer { u in
+                    for y in 0..<h where y % k != 0 {
+                        let cur = dn.baseAddress! + y * w, prev = dn.baseAddress! + (y - 1) * w
+                        for x in 0..<w { cur[x] = Swift.max(cur[x], prev[x]) }
+                    }
+                    for y in stride(from: h - 2, through: 0, by: -1) where (y + 1) % k != 0 {
+                        let cur = u.baseAddress! + y * w, next = u.baseAddress! + (y + 1) * w
+                        for x in 0..<w { cur[x] = Swift.max(cur[x], next[x]) }
+                    }
+                }
+            }
+            var out = [Float](repeating: 0, count: w * h)
+            down.withUnsafeBufferPointer { dn in
+                up.withUnsafeBufferPointer { u in
+                    out.withUnsafeMutableBufferPointer { o in
+                        for y in 0..<h {
+                            let a = Swift.max(y - before, 0), b = Swift.min(y + after, h - 1)
+                            let dst = o.baseAddress! + y * w
+                            let fromA = u.baseAddress! + a * w, toB = dn.baseAddress! + b * w
+                            if a / k != b / k {
+                                for x in 0..<w { dst[x] = Swift.max(fromA[x], toB[x]) }
+                            } else if b == h - 1 || (b + 1) % k == 0 {
+                                // One block, the window reaching its end (clipped at the image's bottom).
+                                for x in 0..<w { dst[x] = fromA[x] }
+                            } else {
+                                // One block, the window from its start (clipped at the image's top).
+                                for x in 0..<w { dst[x] = toB[x] }
+                            }
+                        }
+                    }
+                }
+            }
+            return out
         }
 
         static func slidingMaxRows(_ src: [Float], width w: Int, height h: Int, before: Int, after: Int) -> [Float] {
@@ -497,39 +499,47 @@ nonisolated extension MosaicEngine {
         /// (Felzenszwalb and Huttenlocher, 2012): `distance_transform_edt(~seed)`. Without any seed
         /// every distance is `far`.
         static func edt(seed: [UInt8], width w: Int, height h: Int, far: Float = 1e9) -> Plane {
-            let inf = 1e20
-            // Along rows: the 1D distance to the nearest seed, squared.
-            var g = [Double](repeating: inf, count: w * h)
-            seed.withUnsafeBufferPointer { s in
-                g.withUnsafeMutableBufferPointer { gg in
-                    for y in 0..<h {
-                        let row = y * w
+            let inf: Float = 1e20
+            // Down each column (a row of the transposed mask): the 1D distance to the nearest seed, squared.
+            let st = Morph.transpose(seed, width: w, height: h, zero: 0)
+            var gt = [Float](repeating: inf, count: w * h)
+            st.withUnsafeBufferPointer { s in
+                gt.withUnsafeMutableBufferPointer { g in
+                    for x in 0..<w {
+                        let col = x * h
                         var last = -1
-                        for x in 0..<w {
-                            if s[row + x] != 0 { last = x }
-                            if last >= 0 { let d = Double(x - last); gg[row + x] = d * d }
+                        for y in 0..<h {
+                            if s[col + y] != 0 { last = y }
+                            if last >= 0 { let d = Float(y - last); g[col + y] = d * d }
                         }
                         last = -1
-                        for x in stride(from: w - 1, through: 0, by: -1) {
-                            if s[row + x] != 0 { last = x }
-                            if last >= 0 { let d = Double(last - x); gg[row + x] = Swift.min(gg[row + x], d * d) }
+                        for y in stride(from: h - 1, through: 0, by: -1) {
+                            if s[col + y] != 0 { last = y }
+                            if last >= 0 { let d = Float(last - y); g[col + y] = Swift.min(g[col + y], d * d) }
                         }
                     }
                 }
             }
-            // Along columns: the lower envelope of parabolas.
-            let t = Morph.transpose(g, width: w, height: h, zero: 0)
-            var d = [Double](repeating: 0, count: w * h)
-            var v = [Int](repeating: 0, count: h), z = [Double](repeating: 0, count: h + 1)
-            t.withUnsafeBufferPointer { tt in
-                d.withUnsafeMutableBufferPointer { dd in
-                    for x in 0..<w {
-                        lowerEnvelope(tt.baseAddress! + x * h, count: h, out: dd.baseAddress! + x * h, v: &v, z: &z)
+            // Along rows: the lower envelope of parabolas.
+            let g = Morph.transpose(gt, width: h, height: w, zero: 0)
+            var out = [Float](repeating: 0, count: w * h)
+            var f = [Double](repeating: 0, count: w), d = f
+            var v = [Int](repeating: 0, count: w), z = [Double](repeating: 0, count: w + 1)
+            g.withUnsafeBufferPointer { gg in
+                out.withUnsafeMutableBufferPointer { o in
+                    for y in 0..<h {
+                        let row = y * w
+                        for x in 0..<w { f[x] = Double(gg[row + x]) }
+                        f.withUnsafeBufferPointer { ff in
+                            d.withUnsafeMutableBufferPointer { dd in
+                                lowerEnvelope(ff.baseAddress!, count: w, out: dd.baseAddress!, v: &v, z: &z)
+                            }
+                        }
+                        for x in 0..<w { o[row + x] = d[x] >= 1e19 ? far : Float(d[x].squareRoot()) }
                     }
                 }
             }
-            let back = Morph.transpose(d, width: h, height: w, zero: 0)
-            return Plane(width: w, height: h, pixels: back.map { $0 >= inf * 0.5 ? far : Float($0.squareRoot()) })
+            return Plane(width: w, height: h, pixels: out)
         }
 
         static func lowerEnvelope(_ f: UnsafePointer<Double>, count n: Int, out: UnsafeMutablePointer<Double>,

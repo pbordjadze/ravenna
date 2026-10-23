@@ -1,9 +1,10 @@
-// mosaic <photo.ppm> <contours.pgm> <out prefix> [--features f.json]... [--long-side N]
+// mosaic <photo.ppm> <contours.pgm> <out prefix> [--features f.json]... [--long-side N] [--bed bed.ppm]
 //
 // Runs the engine on files, for comparison with the prototype: reads a binary PPM (P6) photo, its
 // contour map as a binary PGM (P5) and any faces' features (sketchbook/features.py's JSON), and
 // writes <prefix>.json in the format prototype/mosaic_faces.py writes, so sketchbook/render.py can
-// draw it. Prints the tile and paint counts and each stage's time.
+// draw it. Prints the tile and paint counts and each stage's time. --bed also writes the painted
+// bed (MosaicEngine.bed) at twice the photo's size, as render.py's `bed` finish draws it.
 import Foundation
 import MosaicEngine
 import MosaicKit
@@ -124,17 +125,19 @@ func json(_ v: Double, _ places: Double) -> String {
 var positional: [String] = []
 var featureFiles: [String] = []
 var longSide: Int?
+var bedFile: String?
 var args = CommandLine.arguments.dropFirst()
 while let a = args.popFirst() {
     switch a {
     case "--features": guard let f = args.popFirst() else { fail("--features needs a file") }; featureFiles.append(f)
     case "--long-side": guard let v = args.popFirst(), let n = Int(v), n > 0 else { fail("--long-side needs a number") }; longSide = n
+    case "--bed": guard let f = args.popFirst() else { fail("--bed needs a file") }; bedFile = f
     case "-h", "--help":
-        print("mosaic <photo.ppm> <contours.pgm> <out prefix> [--features f.json]... [--long-side N]"); exit(0)
+        print("mosaic <photo.ppm> <contours.pgm> <out prefix> [--features f.json]... [--long-side N] [--bed bed.ppm]"); exit(0)
     default: positional.append(a)
     }
 }
-guard positional.count == 3 else { fail("usage: mosaic <photo.ppm> <contours.pgm> <out prefix> [--features f.json]... [--long-side N]") }
+guard positional.count == 3 else { fail("usage: mosaic <photo.ppm> <contours.pgm> <out prefix> [--features f.json]... [--long-side N] [--bed bed.ppm]") }
 
 let clock = ContinuousClock()
 let started = clock.now
@@ -198,3 +201,12 @@ for s in trace.stages {
     print("  " + s.name.padding(toLength: 9, withPad: " ", startingAt: 0) + String(format: " %6.3f s  %5d tiles", s.seconds, s.tiles))
 }
 print(String(format: "  engine    %6.3f s (reading %.3f s, total %.3f s)", seconds(engine), seconds(read), seconds(clock.now - started)))
+
+if let bedFile {
+    let bw = w * 2, bh = h * 2
+    let bed = MosaicEngine.bed(of: mosaic, width: bw, height: bh)
+    var bytes = [UInt8]("P6\n\(bw) \(bh)\n255\n".utf8)
+    bytes.reserveCapacity(bytes.count + bw * bh * 3)
+    for c in bed { for v in [c.x, c.y, c.z] { bytes.append(UInt8(max(0, min(255, (v * 255).rounded())))) } }
+    guard FileManager.default.createFile(atPath: bedFile, contents: Data(bytes)) else { fail("can't write \(bedFile)") }
+}

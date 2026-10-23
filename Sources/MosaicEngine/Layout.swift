@@ -1,11 +1,6 @@
 #if canImport(MosaicKit)
 import MosaicKit
 #endif
-#if canImport(Darwin)
-import Darwin
-#else
-import Glibc
-#endif
 
 nonisolated extension MosaicEngine {
     /// The prototype's tile laying: a canvas (the working image, twice the photo), the local pitch,
