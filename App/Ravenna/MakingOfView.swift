@@ -14,8 +14,8 @@ struct MakingOfView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let work: Work
 
-    // The show's options, until Paul narrows them (docs/making-of.md). The closing card's names stay
-    // off here until he says: `MakingOf.Options.names`.
+    // The show's options, until Paul narrows them (docs/making-of.md). The cards name the makers, as
+    // Paul asked (`MakingOf.Options.names`, on by default).
     @AppStorage("makingOf.sinopia") private var sinopia = MakingOf.Options.Sinopia.red
     @AppStorage("makingOf.hand") private var hand = false
     @AppStorage("makingOf.flow") private var flow = MakingOf.Options.Flow.scenes
@@ -39,9 +39,9 @@ struct MakingOfView: View {
                             stage.draw(at: at, in: &context, size: size)
                         }
                         .accessibilityLabel(Text(caption(t, stage.show)))
-                        // At least the card's usual room, more when the text is large.
+                        // At least the card's usual room (with its algorithm's line), more when the text is large.
                         CardView(card: stage.show.card(at: t), options: options, work: work)
-                            .frame(minHeight: 210)
+                            .frame(minHeight: 250)
                     }
                 }
             } else if failed {
@@ -66,7 +66,7 @@ struct MakingOfView: View {
     private func caption(_ t: Double, _ show: MakingOf.Show) -> String {
         guard let c = show.card(at: t) else { return "The making-of" }
         let card = MakingOf.Card(c.scene, options: options, modelTitle: work.title, modelCredit: work.credit)
-        return "\(card.title). \(card.line) \(card.credit)"
+        return "\(card.title). \(card.line) \(card.credit). \(card.method)"
     }
 
     private var controls: some View {
@@ -134,6 +134,11 @@ private struct CardView: View {
                     .fixedSize(horizontal: false, vertical: true)
                 Text(text.credit).font(Theme.body(14)).italic().foregroundStyle(Theme.muted)
                     .fixedSize(horizontal: false, vertical: true)
+                if !text.method.isEmpty {
+                    // The algorithm behind the step, credited like the technique.
+                    Text(text.method).font(Theme.body(13)).foregroundStyle(Theme.muted.opacity(0.85))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             Spacer(minLength: 0)
         }
@@ -285,13 +290,16 @@ nonisolated final class MakingOfStage: @unchecked Sendable {
             }
         }
         if let h = show.hand(at: t) {
-            // The setter's hand, as the shadow of a finger pressing the tile home from the lower right.
-            let r = show.pitch * k * 0.42
-            let tip = CGPoint(x: rect.minX + h.x * k + r * 0.6, y: rect.minY + h.y * k + r * 0.6)
+            // The setter's hand, as the shadow of a finger pressing the tile home from the lower right: a
+            // fingertip two or three tiles wide, its edge soft.
+            let r = show.pitch * k * 1.2
+            let tip = CGPoint(x: rect.minX + h.x * k + r * 0.3, y: rect.minY + h.y * k + r * 0.3)
             var finger = Path()
             finger.move(to: tip)
-            finger.addLine(to: CGPoint(x: tip.x + r * 4.4, y: tip.y + r * 7.4))
-            context.stroke(finger, with: .color(.black.opacity(0.32)), style: StrokeStyle(lineWidth: r * 2.2, lineCap: .round))
+            finger.addLine(to: CGPoint(x: tip.x + r * 2.3, y: tip.y + r * 4.1))
+            var shade = context
+            shade.addFilter(.blur(radius: r * 0.35))
+            shade.stroke(finger, with: .color(.black.opacity(0.45)), style: StrokeStyle(lineWidth: r * 2, lineCap: .round))
         }
     }
 
