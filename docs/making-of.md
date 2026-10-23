@@ -198,6 +198,9 @@ plays `MakingOf` with a Canvas (set tiles baked into one image as they settle, d
 `Drawing`), the card under the picture, and the options in its own menu. With Reduce Motion it moves a
 scene at a time.
 
+The bundled mosaics carry each tile's stage (the engine, e77a25c), so each plays every scene; William
+the hippopotamus has no face and skips that one.
+
 **For Paul, through the setup session:** naming makers is lore, so it waits on him. Until he answers,
 the closing card reads "Most mosaicists are anonymous; a few names survive." and the face's card credits
 "the signed panels in tiny tesserae from Pompeii". With `names` on, the closing card names Sosus at
