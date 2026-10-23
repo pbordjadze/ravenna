@@ -48,16 +48,16 @@ for m in spec["mosaics"]:
             else:
                 # A face found zoomed in is found once, at Standard, and scaled to the other details:
                 # the zoomed window resamples, and a detail's few pixels can lose a painted face.
-                f1024 = f"{work}/{i}-1024-features.json"
+                f1024 = f"{work}/{i}-1024-traced.json"
                 if not traced:
                     subprocess.run(PY + [f"{HERE}/features.py", f"{work}/{i}-1024.ppm", "models/face_landmarker.task", f1024, "--window", m["window"]], check=True, capture_output=True)
                     traced = True
+                f, k = json.load(open(f1024)), side / 1024
                 if side != 1024:
-                    f, k = json.load(open(f1024)), side / 1024
                     f["box"] = [round(v * k) for v in f["box"]]
                     f["eyes"] = [[round(v * k, 1) for v in e] for e in f["eyes"]]
                     f["lines"] = [{"kind": ln["kind"], "pts": [[round(v * k, 1) for v in p] for p in ln["pts"]]} for ln in f["lines"]]
-                    json.dump(f, open(fj, "w"))
+                json.dump(f, open(fj, "w"))
             if m.get("features") == "eyes":
                 # Only the eyes and their lids: where the landmarker misreads a painted face's mouth
                 # and nose, the work's own lines (its contours) set them instead.

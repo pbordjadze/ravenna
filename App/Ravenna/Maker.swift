@@ -23,10 +23,10 @@ nonisolated enum Maker {
 
     enum MakerError: Error { case unreadable }
 
-    /// The working long side for a position of the Pieces slider, 0...1 (issue #11): even steps in
-    /// the number of tiles, which grows with the side squared, from half the standard count (724 px)
-    /// to three times it (1774 px; about 7.8 s and 460 MB at its peak on Linux, against 5.9 s and
-    /// 310 MB at 1448). The standard 1024 px sits at `standardPieces`.
+    /// The working long side for a position of the Pieces slider, 0...1 (issue #11): equal steps
+    /// multiply the number of tiles (which grows with the side squared) by the same factor, from
+    /// half the standard count (724 px) to three times it (1774 px; about 7.8 s and 460 MB at its
+    /// peak on Linux, against 5.9 s and 310 MB at 1448). The standard 1024 px sits at `standardPieces`.
     static func longSide(pieces: Double) -> Int {
         Int((1024 * (0.5 * pow(6, min(max(pieces, 0), 1))).squareRoot()).rounded())
     }
