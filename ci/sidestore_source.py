@@ -11,6 +11,7 @@ declares exactly what the app asks for. Needs `gh` with GH_TOKEN and GITHUB_REPO
 import json
 import os
 import plistlib
+import re
 import subprocess
 import sys
 
@@ -37,7 +38,8 @@ for r in releases:
         "version": f"{MARKETING}.{build}",
         "buildVersion": build,
         "date": r["published_at"] or r["created_at"],
-        "localizedDescription": (r["body"] or "").strip() or f"Build {build}",
+        # Release notes without CI tags ([compile], [ipa]), which older releases carry.
+        "localizedDescription": re.sub(r" *\[(compile|ipa)\]", "", r["body"] or "").strip() or f"Build {build}",
         "downloadURL": ipa["browser_download_url"],
         "size": ipa["size"],
         "minOSVersion": info.get("MinimumOSVersion", "26.0"),
