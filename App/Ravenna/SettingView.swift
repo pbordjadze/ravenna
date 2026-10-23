@@ -288,15 +288,21 @@ private struct Tray: View {
     /// Along the bottom, or down the side.
     let axis: Axis
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The side column grows with the text, within reason.
+    @ScaledMetric(relativeTo: .footnote) private var column: CGFloat = 112
 
     var body: some View {
         let left = bench.setting.remaining(in: bench.mosaic)
         let chips = axis == .horizontal ? AnyLayout(HStackLayout(spacing: 10)) : AnyLayout(VStackLayout(spacing: 8))
+        let laid = bench.setting.set.count.formatted(), all = bench.mosaic.tiles.count.formatted()
+        let count: String = axis == .horizontal ? "\(laid) of \(all) tiles set" : "\(laid)\nof \(all) set"
         VStack(spacing: 6) {
-            Text("\(bench.setting.set.count.formatted()) of \(bench.mosaic.tiles.count.formatted()) tiles set")
+            // Down the side, the count in two short lines rather than a narrow wrap.
+            Text(count)
                 .font(Theme.body(13).monospacedDigit()).foregroundStyle(Theme.muted)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 8)
+                .accessibilityLabel("\(laid) of \(all) tiles set")
             ScrollViewReader { proxy in
                 ScrollView(axis == .horizontal ? .horizontal : .vertical, showsIndicators: false) {
                     chips {
@@ -319,7 +325,7 @@ private struct Tray: View {
         }
         .padding(.top, 8)
         .padding(.bottom, 4)
-        .frame(maxWidth: axis == .vertical ? 112 : .infinity)
+        .frame(maxWidth: axis == .vertical ? min(column, 168) : .infinity)
         .background(Theme.panel)
     }
 }

@@ -21,7 +21,7 @@ struct GalleryView: View {
                         Text("Pictures laid as mosaics. Choose one and set it, tile by tile.")
                             .font(Theme.body(16)).foregroundStyle(Theme.muted)
                     }
-                    shelf("Yours") {
+                    shelf("Yours", note: library.own.isEmpty ? "None yet. A photo you choose is laid here, on this device, and never leaves it." : nil) {
                         PhotosPicker(selection: $picked, matching: .images) {
                             VStack(spacing: 10) {
                                 Image(systemName: "square.grid.3x3.square").font(.system(size: 34))
@@ -76,9 +76,10 @@ struct GalleryView: View {
         }
     }
 
-    private func shelf<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {
+    private func shelf<Content: View>(_ title: String, note: String? = nil, @ViewBuilder _ content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title).font(Theme.title(20)).foregroundStyle(Theme.muted)
+            if let note { Text(note).font(Theme.body(14)).foregroundStyle(Theme.muted) }
             // One column at the largest text sizes, so titles have room.
             LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 300 : 160), spacing: 16)], spacing: 22) { content() }
         }
