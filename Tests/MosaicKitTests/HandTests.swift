@@ -64,17 +64,34 @@ struct HandTests {
         #expect(Light.litCorner(square) == 0)
     }
 
-    @Test func eachVoiceIsHeardAndStaysInRange() {
+    @Test func eachVoiceIsAClinkThatDiesAway() {
         for v in Voice.allCases {
-            let s = v.samples(variant: 1)
-            #expect(s.count == Int(44_100 * 0.14))
+            let s = v.clink(frequency: 440)
             #expect(s.allSatisfy { abs($0) <= 1 })
             let early = s[0..<2000].map { abs($0) }.max()!, late = s[(s.count - 500)...].map { abs($0) }.max()!
-            #expect(early > 0.05 && late < early * 0.3, "\(v): a knock that dies away")
-            #expect(s == v.samples(variant: 1), "deterministic")
-            #expect(s != v.samples(variant: 2), "each tile a little different")
+            #expect(early > 0.1 && late < early * 0.1, "\(v): a clink that dies away")
+            #expect(s == v.clink(frequency: 440), "deterministic")
         }
+        #expect(Voice.stone.clink(frequency: 440).count < Voice.glass.clink(frequency: 440).count, "stone is drier")
         let m = Self.row()
         #expect(Voice.of(m.tiles[2], in: m) == .gold && Voice.of(m.tiles[0], in: m) == .glass)
+    }
+
+    @Test func theTunePlaysOnAndBreathes() {
+        var m = Melody()
+        let t0 = Date(timeIntervalSinceReferenceDate: 0)
+        let first = (0..<8).map { m.next(at: t0.addingTimeInterval(Double($0) * 0.1)).index }
+        #expect(first == Array(Melody.tune[0..<8]))
+        #expect(m.latest == Melody.tune[7])
+        _ = m.next(at: t0.addingTimeInterval(1))
+        // Mid-phrase, a long pause: the tune picks up at the next phrase.
+        let after = m.next(at: t0.addingTimeInterval(10))
+        #expect(after.index == Melody.tune[16] && m.position == 17)
+        // Round the whole tune and back to the start.
+        var n = Melody()
+        for k in 0..<Melody.tune.count { _ = n.next(at: t0.addingTimeInterval(Double(k) * 0.1)) }
+        #expect(n.position == 0)
+        #expect(Melody.Mode.allCases.allSatisfy { $0.scale.count == 12 && $0.scale.count > Melody.tune.max()! })
+        #expect(Melody.Mode.minor.scale[1] == Melody.Mode.major.scale[0], "the minor is the same notes, from the B below")
     }
 }

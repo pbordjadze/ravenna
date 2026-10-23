@@ -67,6 +67,8 @@ struct Wall: View {
     @AppStorage(Keys.finger) private var finger = OneFinger.lays
     @AppStorage(Keys.sound) private var sound = true
     @AppStorage(Keys.touch) private var touch = true
+    @AppStorage(Keys.tune) private var tune = Melody.Mode.major
+    @AppStorage(Keys.row) private var row = RowSound.run
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.displayScale) private var displayScale
     @State private var lens = Lens()
@@ -181,14 +183,14 @@ struct Wall: View {
 
     /// The sound and the tap on the finger, as each tile touches the bed.
     private func feel(_ laid: [(tile: Int, at: Date)]) {
-        let sound = self.sound, touch = self.touch, m = bench.mosaic
+        let sound = self.sound, touch = self.touch, tune = self.tune, row = self.row, m = bench.mosaic
         guard sound || touch, !laid.isEmpty else { return }
         for (i, at) in laid {
             let voice = Voice.of(m.tiles[i], in: m), size = bench.weight(i)
             let delay = max(at.timeIntervalSinceNow + Motion.contact, 0)
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(delay))
-                if sound { TileSound.shared.play(voice, variant: i, loudness: Float(0.55 + 0.35 * size)) }
+                if sound { TileSound.shared.play(voice, size: Double(size), mode: tune, row: row) }
                 if touch { TileTouch.shared.set(voice, size: size) }
             }
         }
@@ -197,10 +199,14 @@ struct Wall: View {
     /// After tiles go in: save, and mark a paint running out or the work being set.
     private func ended(_ o: Bench.Outcome) {
         if o.changed { save(bench.setting) }
+        // The last tile's clink first: it sounds as the tile touches the bed.
+        let after = Motion.contact + 0.12
         if o.finished {
+            if sound { TileSound.shared.finished(mode: tune, delay: after) }
             if touch { TileTouch.shared.finished() }
             if !reduceMotion { bench.beginRake() }
         } else if o.ranOut {
+            if sound { TileSound.shared.paintDone(.glass, mode: tune, delay: after) }
             if touch { TileTouch.shared.paintDone() }
             if UIAccessibility.isVoiceOverRunning, let p = bench.paint {
                 AccessibilityNotification.Announcement("That paint is done. Paint \(p + 1) in hand.").post()

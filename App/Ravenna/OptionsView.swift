@@ -6,6 +6,9 @@ enum Keys {
     static let finger = "oneFinger"
     static let sound = "sound"
     static let touch = "touch"
+    static let border = "border"
+    static let tune = "tune"
+    static let row = "rowSound"
 }
 
 /// What one finger does on the wall (an option until Paul narrows it).
@@ -19,6 +22,30 @@ enum OneFinger: String, CaseIterable {
         switch self {
         case .lays: "Lays tiles"
         case .moves: "Moves the wall"
+        }
+    }
+}
+
+/// What a row dragged along the wall sounds like (an option until Paul narrows it).
+enum RowSound: String, CaseIterable {
+    /// A quick run of the tune, a note a tile.
+    case run
+    /// One note for the row.
+    case note
+
+    var name: String {
+        switch self {
+        case .run: "A run of the tune"
+        case .note: "One note"
+        }
+    }
+}
+
+extension Melody.Mode {
+    var name: String {
+        switch self {
+        case .major: "Major"
+        case .minor: "Minor"
         }
     }
 }
@@ -52,6 +79,9 @@ struct OptionsView: View {
     @AppStorage(Keys.finger) private var finger = OneFinger.lays
     @AppStorage(Keys.sound) private var sound = true
     @AppStorage(Keys.touch) private var touch = true
+    @AppStorage(Keys.border) private var border = Border.none
+    @AppStorage(Keys.tune) private var tune = Melody.Mode.major
+    @AppStorage(Keys.row) private var row = RowSound.run
     @State private var icon = AppIcon.current
 
     var body: some View {
@@ -95,11 +125,28 @@ struct OptionsView: View {
                 }
                 Section {
                     Toggle("Sound", isOn: $sound)
+                    Picker("Tune", selection: $tune) {
+                        ForEach(Melody.Mode.allCases, id: \.self) { Text($0.name).tag($0) }
+                    }
+                    .disabled(!sound)
+                    Picker("A row", selection: $row) {
+                        ForEach(RowSound.allCases, id: \.self) { Text($0.name).tag($0) }
+                    }
+                    .disabled(!sound)
                     Toggle("Touch", isOn: $touch)
                 } header: {
                     Text("Setting")
                 } footer: {
-                    Text("Sound: each tile's knock is made by the app as it goes in, glass ringing, stone duller, gold with a shimmer; the silent switch silences it. Touch: a tap on the finger as each tile lands.")
+                    Text("Sound: each tile plays the next note of Paint by Moonlight's tune as it clinks into the bed: glass rings, stone is drier, gold shimmers. A used-up paint plays a rising arpeggio, and a finished wall a finale. The silent switch silences it. Touch: a tap on the finger as each tile lands.")
+                }
+                Section {
+                    Picker("Border", selection: $border) {
+                        ForEach(Border.allCases) { Text($0.name).tag($0) }
+                    }
+                } header: {
+                    Text("Sharing")
+                } footer: {
+                    Text("What goes round the picture of the wall when you share or save it.")
                 }
                 Section {
                     ForEach(AppIcon.allCases) { choice in
