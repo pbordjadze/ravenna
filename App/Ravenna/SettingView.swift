@@ -17,6 +17,7 @@ struct SettingView: View {
     @State private var making = false
     @State private var wide = false
     @AppStorage(Keys.border) private var border = Border.none
+    @AppStorage(Keys.ground) private var ground = GroundChoice.picture
 
     var body: some View {
         ZStack {
@@ -32,7 +33,8 @@ struct SettingView: View {
                 }
                 // The word Set once the light has passed over the finished wall.
                 if bench.setting.isComplete(bench.mosaic), bench.rake == nil {
-                    Finished(work: work, making: making, share: share) { showingWork = true }
+                    Finished(work: work, tiles: bench.mosaic.tiles.count, paints: bench.mosaic.palette.count,
+                             making: making, share: share) { showingWork = true }
                         .transition(.opacity)
                 }
             } else if failed {
@@ -63,11 +65,12 @@ struct SettingView: View {
         }
         .animation(.easeInOut(duration: 0.5), value: bench?.rake == nil)
         .onGeometryChange(for: Bool.self) { $0.size.width > $0.size.height * 1.15 } action: { wide = $0 }
-        .task(id: library.detail) {
+        .task(id: "\(library.detail.rawValue)-\(ground.rawValue)") {
             bench = nil
             failed = false
             do {
-                let mosaic = try await library.mosaic(work, library.detail)
+                let laid = try await library.mosaic(work, library.detail), ground = self.ground
+                let mosaic = await Task.detached { ground.applied(to: laid) }.value
                 let b = Bench(mosaic: mosaic, setting: library.setting(work, library.detail))
                 // The wall's image is made off the main thread, so a wall of thousands opens without a stall.
                 await b.prepare(library.finish, bed: library.image(work, "bed"))
@@ -392,6 +395,8 @@ private struct Tessera: Shape {
 /// Every tile in place.
 private struct Finished: View {
     let work: Work
+    let tiles: Int
+    let paints: Int
     /// The picture to share is being made.
     let making: Bool
     let share: () -> Void
@@ -400,7 +405,11 @@ private struct Finished: View {
     var body: some View {
         VStack(spacing: 10) {
             Text("Set").font(Theme.title(28)).foregroundStyle(Theme.gold)
+                .accessibilityAddTraits(.isHeader)
             Text("Every tile of \(work.title) is in place.").font(Theme.body(15)).foregroundStyle(Theme.plaster)
+                .multilineTextAlignment(.center)
+            Text("\(tiles.formatted()) tiles in \(paints) colours, set by your hand.")
+                .font(Theme.body(13)).foregroundStyle(Theme.muted)
                 .multilineTextAlignment(.center)
             // Side by side, or one above the other at the largest text sizes.
             ViewThatFits {

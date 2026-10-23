@@ -15,6 +15,7 @@ final class TileSound {
     /// Each voice's notes in each mode, made the first time they're needed.
     private var made: [String: [AVAudioPCMBuffer]] = [:]
     private var built = false
+    private var missed: AVAudioPCMBuffer?
     private var melody = Melody()
     /// When the last tile asked for a note, played or not, and when one last sounded.
     private var lastAsked = Date.distantPast, lastPlayed = Date.distantPast
@@ -38,11 +39,21 @@ final class TileSound {
         sound(notes(voice, mode)[note.index], volume: volume)
     }
 
+    /// The arpeggio's notes are this far apart.
+    static func step(_ mode: Melody.Mode) -> TimeInterval { mode == .major ? 0.085 : 0.12 }
+
+    /// A tile that takes another paint: a dull, low clack, the tune's home note an octave down in stone.
+    func miss() {
+        guard start() else { return }
+        if missed == nil { missed = buffer(Voice.stone.clink(frequency: Melody.Mode.major.scale[0] / 2, rate: format.sampleRate)) }
+        if let missed { sound(missed, volume: 0.35) }
+    }
+
     /// A paint used up: a little rising arpeggio from the tune's latest note, after `delay` s.
     func paintDone(_ voice: Voice, mode: Melody.Mode, delay: TimeInterval) {
         guard start() else { return }
         let tones = notes(voice, mode), root = min(melody.latest, tones.count - 5)
-        let step = mode == .major ? 0.085 : 0.12
+        let step = Self.step(mode)
         for (k, interval) in [0, 2, 4].enumerated() {
             sound(tones[root + interval], volume: 0.45, delay: delay + step * Double(k))
         }

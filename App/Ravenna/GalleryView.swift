@@ -18,6 +18,7 @@ struct GalleryView: View {
                 VStack(alignment: .leading, spacing: 28) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Ravenna").font(Theme.title(40)).foregroundStyle(Theme.plaster)
+                            .accessibilityAddTraits(.isHeader)
                         Text("Pictures laid as mosaics. Choose one and set it, tile by tile.")
                             .font(Theme.body(16)).foregroundStyle(Theme.muted)
                     }
@@ -37,6 +38,7 @@ struct GalleryView: View {
                                 .contextMenu {
                                     Button("Remove", systemImage: "trash", role: .destructive) { removing = work }
                                 }
+                                .accessibilityAction(named: "Remove") { removing = work }
                         }
                     }
                     shelf("From the Met") {
@@ -67,6 +69,9 @@ struct GalleryView: View {
                     picked = nil
                 }
             }
+            #if DEBUG
+            .task { await shoot() }
+            #endif
             .confirmationDialog("Remove this mosaic?", isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
                                 titleVisibility: .visible) {
                 Button("Remove", role: .destructive) { if let w = removing { library.remove(w) }; removing = nil }
@@ -76,9 +81,38 @@ struct GalleryView: View {
         }
     }
 
+    #if DEBUG
+    /// CI's screenshots (the `[shots]` job): `RAVENNA_SHOT` names the screen to open, with the
+    /// state it needs. Debug builds only.
+    private func shoot() async {
+        guard let shot = ProcessInfo.processInfo.environment["RAVENNA_SHOT"], library.works.count >= 5 else { return }
+        let d = UserDefaults.standard, w = library.works
+        d.set(shot == "lesson" ? 0 : 2, forKey: Keys.lesson)
+        d.set(shot == "gold" ? GroundChoice.gold.rawValue : GroundChoice.picture.rawValue, forKey: Keys.ground)
+        func fill(_ work: Work, _ fraction: Double) async {
+            guard let m = try? await library.mosaic(work, library.detail) else { return }
+            library.save(Setting(set: Set(0..<Int(Double(m.tiles.count) * fraction))), work, library.detail)
+        }
+        await fill(w[2], 0.4)
+        await fill(w[0], 1)
+        await fill(w[1], 1)
+        await fill(w[4], 0)
+        switch shot {
+        case "options": showingOptions = true
+        case "new": if let data = library.image(w[3], "photo")?.jpegData(compressionQuality: 0.9) { photo = PickedPhoto(data: data) }
+        case "wall": path = [w[2]]
+        case "lesson": path = [w[4]]
+        case "finished": path = [w[0]]
+        case "gold": path = [w[1]]
+        default: break
+        }
+    }
+    #endif
+
     private func shelf<Content: View>(_ title: String, note: String? = nil, @ViewBuilder _ content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title).font(Theme.title(20)).foregroundStyle(Theme.muted)
+                .accessibilityAddTraits(.isHeader)
             if let note { Text(note).font(Theme.body(14)).foregroundStyle(Theme.muted) }
             // One column at the largest text sizes, so titles have room.
             LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 300 : 160), spacing: 16)], spacing: 22) { content() }
@@ -94,6 +128,7 @@ struct PickedPhoto: Identifiable {
 
 private struct WorkCard: View {
     @Environment(Library.self) private var library
+    @Environment(\.dynamicTypeSize) private var typeSize
     let work: Work
 
     var body: some View {
@@ -110,7 +145,7 @@ private struct WorkCard: View {
                 .frame(height: 3)
             }
             Text(work.title).font(Theme.body(16).weight(.medium)).foregroundStyle(Theme.plaster)
-                .lineLimit(3)
+                .lineLimit(typeSize.isAccessibilitySize ? nil : 3)
             Text(work.isOwn ? work.place : "\(work.place), \(work.date)").font(Theme.body(13)).foregroundStyle(Theme.muted)
             if progress > 0 {
                 Text(progress >= 1 ? "Set" : "\(Int((progress * 100).rounded(.down)))% set")
@@ -118,5 +153,7 @@ private struct WorkCard: View {
             }
         }
         .contentShape(Rectangle())
+        // One card, read as one: its title, where it's from, how far it's set.
+        .accessibilityElement(children: .combine)
     }
 }

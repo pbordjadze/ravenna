@@ -9,6 +9,8 @@ enum Keys {
     static let border = "border"
     static let tune = "tune"
     static let row = "rowSound"
+    static let ground = "ground"
+    static let lesson = "lesson"
 }
 
 /// What one finger does on the wall (an option until Paul narrows it).
@@ -50,6 +52,21 @@ extension Melody.Mode {
     }
 }
 
+/// The picture's background as it is, or laid in gold (an option until Paul narrows it).
+nonisolated enum GroundChoice: String, CaseIterable, Sendable {
+    case picture, gold
+
+    var name: String {
+        switch self {
+        case .picture: "As in the picture"
+        case .gold: "Gold"
+        }
+    }
+
+    /// The mosaic to set, its background gilded or not.
+    func applied(to m: Mosaic) -> Mosaic { self == .gold ? m.goldGround() : m }
+}
+
 /// The app's icon: v0's and the alternatives on the design page, until Paul picks.
 enum AppIcon: String, CaseIterable, Identifiable {
     case halo, stars, tessera, rows
@@ -82,6 +99,8 @@ struct OptionsView: View {
     @AppStorage(Keys.border) private var border = Border.none
     @AppStorage(Keys.tune) private var tune = Melody.Mode.major
     @AppStorage(Keys.row) private var row = RowSound.run
+    @AppStorage(Keys.ground) private var ground = GroundChoice.picture
+    @AppStorage(Keys.lesson) private var lesson = 0
     @State private var icon = AppIcon.current
 
     var body: some View {
@@ -98,6 +117,17 @@ struct OptionsView: View {
                     Text("Finish")
                 } footer: {
                     Text("How set tiles look. Painted bed: the joints take the colour of the tiles round them, as the plaster under Byzantine mosaics was painted. Glass and stone: glass catches the light at its edges, faces are matte stone, and gold tilts.")
+                }
+                Section {
+                    Picker("Ground", selection: $ground) {
+                        ForEach(GroundChoice.allCases, id: \.self) { Text($0.name).tag($0) }
+                    }
+                    .pickerStyle(.inline)
+                    .labelsHidden()
+                } header: {
+                    Text("Ground")
+                } footer: {
+                    Text("Gold lays the picture's background in gold smalti, as behind the figures at Ravenna and in the icons, on a red-brown bed. Your work carries over either way.")
                 }
                 Section {
                     Picker("Detail", selection: $library.detail) {
@@ -169,6 +199,10 @@ struct OptionsView: View {
                     Text("Icon")
                 } footer: {
                     Text("For now, until one is chosen.")
+                }
+                Section {
+                    Button("Show the first lesson again") { lesson = 0 }
+                        .disabled(lesson == 0)
                 }
                 Section("About") {
                     Text("The pictures are in the public domain, from The Metropolitan Museum of Art's Open Access collection. Each mosaic credits its work.")

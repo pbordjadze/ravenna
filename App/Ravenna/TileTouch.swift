@@ -1,7 +1,8 @@
 import UIKit
 
 /// What the finger feels: the system's own taps, rigid for glass, soft for stone, firmer for gold,
-/// as strong as the tile is large; a light tick when a paint runs out; success when a work is set.
+/// as strong as the tile is large; a soft double tap for a tile that takes another paint; three
+/// ticks with the arpeggio when a paint runs out; success when a work is set.
 final class TileTouch {
     static let shared = TileTouch()
 
@@ -29,7 +30,25 @@ final class TileTouch {
         g.prepare()
     }
 
-    func miss() { notice.notificationOccurred(.error) }
-    func paintDone() { tick.selectionChanged() }
+    /// Not this tile: a soft "no", two light taps.
+    func miss() {
+        stone.impactOccurred(intensity: 0.55)
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(90))
+            stone.impactOccurred(intensity: 0.35)
+        }
+    }
+
+    /// A paint used up: a tick with each note of the arpeggio (`TileSound.paintDone`), after `delay` s.
+    func paintDone(delay: TimeInterval, step: TimeInterval) {
+        tick.prepare()
+        for k in 0..<3 {
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(delay + step * Double(k)))
+                tick.selectionChanged()
+            }
+        }
+    }
+
     func finished() { notice.notificationOccurred(.success) }
 }

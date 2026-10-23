@@ -69,6 +69,10 @@ struct Wall: View {
     @AppStorage(Keys.touch) private var touch = true
     @AppStorage(Keys.tune) private var tune = Melody.Mode.major
     @AppStorage(Keys.row) private var row = RowSound.run
+    /// The first lesson: 0, set a tile; 1, lay a row; 2, learnt.
+    @AppStorage(Keys.lesson) private var lesson = 0
+    /// The tile the lesson points to.
+    @State private var hint: Int?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.displayScale) private var displayScale
     @State private var lens = Lens()
@@ -80,7 +84,8 @@ struct Wall: View {
         // Read here, in body, so SwiftUI redraws the wall when they change.
         let state = WallState(setting: bench.setting, held: bench.paint, recent: bench.recent, press: bench.press,
                               rake: bench.rake, zoom: lens.zoom, offset: lens.offset, flight: lens.flight)
-        let moving = !state.recent.isEmpty || state.press != nil || state.rake != nil || state.flight != nil
+        let teaching = lesson < 2 && hint != nil && !reduceMotion
+        let moving = !state.recent.isEmpty || state.press != nil || state.rake != nil || state.flight != nil || teaching
         TimelineView(.animation(paused: !moving)) { timeline in
             Canvas { ctx, size in
                 draw(&ctx, Lens.viewport(size, canvas, zoom: state.zoom, offset: state.offset, flight: state.flight, at: timeline.date),
@@ -88,6 +93,23 @@ struct Wall: View {
             }
         }
         .overlay { TouchSurface(events: events(canvas)).accessibilityHidden(true) }
+        .overlay(alignment: .top) {
+            if lesson < 2, let p = bench.paint {
+                Lesson(step: lesson, paint: p + 1, lays: finger == .lays)
+                    .transition(.opacity)
+            }
+        }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: lesson)
+        .task {
+            // The first time: fly in to a tile of the paint in hand, so it's big enough to tap.
+            guard lesson < 2 else { return }
+            try? await Task.sleep(for: .milliseconds(350))
+            point(canvas)
+            if let h = hint, lens.zoom < 2 {
+                fly(zoom: 3.5, around: viewport(canvas).toScreen(CGPoint(x: CGFloat(bench.mosaic.tiles[h].centre.x),
+                                                                          y: CGFloat(bench.mosaic.tiles[h].centre.y))), canvas)
+            }
+        }
         .onGeometryChange(for: CGSize.self) { $0.size } action: { lens.size = $0 }
         .clipped()
         .accessibilityElement(children: .ignore)
@@ -137,7 +159,11 @@ struct Wall: View {
         }
         e.up = { p, tap in
             if tap { return setTile(at: p, canvas) }
-            if finger == .lays { ended(bench.endStroke()) }
+            if finger == .lays {
+                let o = bench.endStroke()
+                ended(o)
+                if o.changed { learnt(row: true, canvas) }
+            }
             return true
         }
         e.cancel = { ended(bench.endStroke()) }
@@ -152,6 +178,20 @@ struct Wall: View {
         return e
     }
 
+    /// The lesson moves on: a tile set teaches the row next (when one finger lays), a row ends it.
+    private func learnt(row: Bool, _ canvas: CGSize) {
+        guard lesson < 2 else { return }
+        if row || finger == .moves { lesson = 2 } else { lesson = max(lesson, 1) }
+        if lesson < 2 { point(canvas) } else { hint = nil }
+    }
+
+    /// Points the lesson at the unset tile of the paint in hand nearest the middle of the view.
+    private func point(_ canvas: CGSize) {
+        guard let p = bench.paint else { hint = nil; return }
+        let c = viewport(canvas).toCanvas(centre)
+        hint = bench.setting.nearestUnset(of: p, to: SIMD2(Float(c.x), Float(c.y)), in: bench.mosaic)
+    }
+
     private func tile(at q: CGPoint, _ canvas: CGSize) -> Int? {
         let vp = viewport(canvas), p = vp.toCanvas(q)
         return bench.index.tile(at: SIMD2(Float(p.x), Float(p.y)), slop: Float(14 / vp.scale))
@@ -164,8 +204,10 @@ struct Wall: View {
         case .set(let at):
             feel([(i, at)])
             ended(bench.afterSetting())
+            learnt(row: false, canvas)
             return true
         case .miss:
+            if sound { TileSound.shared.miss() }
             if touch { TileTouch.shared.miss() }
             return true
         case .nothing:
@@ -199,15 +241,27 @@ struct Wall: View {
     /// After tiles go in: save, and mark a paint running out or the work being set.
     private func ended(_ o: Bench.Outcome) {
         if o.changed { save(bench.setting) }
-        // The last tile's clink first: it sounds as the tile touches the bed.
-        let after = Motion.contact + 0.12
+        // The last tile's note first (it sounds as the tile touches the bed), then the flourish
+        // from it.
+        let after = Motion.contact + 0.12, tune = self.tune
+        func flourish(_ play: @escaping @MainActor () -> Void) {
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(after))
+                play()
+            }
+        }
         if o.finished {
-            if sound { TileSound.shared.finished(mode: tune, delay: after) }
+            if sound { flourish { TileSound.shared.finished(mode: tune, delay: 0) } }
             if touch { TileTouch.shared.finished() }
+            // Step back to see the whole wall as the light passes over it.
+            fly(zoom: 1, around: nil, CGSize(width: CGFloat(bench.mosaic.width), height: CGFloat(bench.mosaic.height)))
             if !reduceMotion { bench.beginRake() }
+            if UIAccessibility.isVoiceOverRunning {
+                AccessibilityNotification.Announcement("Every tile is set.").post()
+            }
         } else if o.ranOut {
-            if sound { TileSound.shared.paintDone(.glass, mode: tune, delay: after) }
-            if touch { TileTouch.shared.paintDone() }
+            if sound { flourish { TileSound.shared.paintDone(.glass, mode: tune, delay: 0) } }
+            if touch { TileTouch.shared.paintDone(delay: after, step: TileSound.step(tune)) }
             if UIAccessibility.isVoiceOverRunning, let p = bench.paint {
                 AccessibilityNotification.Announcement("That paint is done. Paint \(p + 1) in hand.").post()
             }
@@ -225,6 +279,7 @@ struct Wall: View {
             ended(bench.afterSetting())
         }
         feel(laid)
+        if !laid.isEmpty { lesson = 2 }
         var said = laid.count == 1 ? "One tile set." : "\(laid.count) tiles set."
         if laid.isEmpty { said = "Nothing left to set." }
         if let p = bench.paint { said += " Paint \(p + 1), \(bench.setting.remaining(in: bench.mosaic)[p]) left." }
@@ -344,6 +399,12 @@ struct Wall: View {
             g.fill(marks, with: .color(.white.opacity(0.16)))
         }
 
+        // The lesson's tile, ringed, breathing unless motion is reduced.
+        if lesson < 2, let h = hint, !state.setting.isSet(h) {
+            let pulse = reduceMotion ? 1 : 0.55 + 0.45 * sin(now.timeIntervalSinceReferenceDate * 4)
+            g.stroke(Path(d.paths[h]), with: .color(Theme.tint.opacity(pulse)), lineWidth: 2.5 / s)
+        }
+
         // Light raking once across the finished wall, as a lamp carried past it.
         if let r = state.rake {
             let t = now.timeIntervalSince(r) / Bench.rakeTime
@@ -401,5 +462,41 @@ struct Wall: View {
         cg.rotate(by: turn)
         cg.scaleBy(x: k, y: k)
         cg.translateBy(x: -c.x, y: -c.y)
+    }
+}
+
+/// The first lesson, over the top of the wall: how a tile is set, then how a row is laid.
+private struct Lesson: View {
+    let step: Int
+    /// The number of the paint in hand.
+    let paint: Int
+    /// Whether one finger lays rows (otherwise it moves the wall).
+    let lays: Bool
+
+    var body: some View {
+        let voiceOver = UIAccessibility.isVoiceOverRunning
+        let (symbol, words): (String, String) = if voiceOver {
+            ("hand.tap", "Choose a paint in the tray, then use the wall's actions to set its tiles.")
+        } else if step == 0 {
+            ("hand.tap", "Tap the ringed tile, marked \(paint), to set it.")
+        } else if lays {
+            ("hand.draw", "Now drag along a row of \(paint)s: each one you pass goes in. Two fingers move and zoom.")
+        } else {
+            ("hand.draw", "Drag to move the wall; pinch to zoom.")
+        }
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Image(systemName: symbol).foregroundStyle(Theme.tint).accessibilityHidden(true)
+            Text(words).font(Theme.body(16)).foregroundStyle(Theme.plaster)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(maxWidth: 520, alignment: .leading)
+        .background(Theme.panel.opacity(0.94), in: RoundedRectangle(cornerRadius: 12))
+        .padding(12)
+        // Touches go through to the wall.
+        .allowsHitTesting(false)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isStaticText)
     }
 }

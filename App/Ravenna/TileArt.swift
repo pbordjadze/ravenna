@@ -132,7 +132,7 @@ nonisolated final class WallImage: @unchecked Sendable {
         cg.interpolationQuality = .high
         context = cg
         self.drawing = drawing
-        self.bed = drawing.finish.paintedBed ? bed : nil
+        self.bed = drawing.finish.paintedBed ? bed.map { Self.bole(under: $0, m) ?? $0 } : nil
         grout = CGColor(srgbRed: CGFloat(m.grout.x), green: CGFloat(m.grout.y), blue: CGFloat(m.grout.z), alpha: 1)
         ground()
         guard outlines else { return }
@@ -175,6 +175,32 @@ nonisolated final class WallImage: @unchecked Sendable {
     var current: CGImage? {
         if image == nil { image = context.makeImage() }
         return image
+    }
+
+    /// The painted bed with a red-brown bole under the gold ground's tiles (`Mosaic.goldGround`),
+    /// so their joints are warm rather than the old background's colour; nil when there's no gold
+    /// ground.
+    private static func bole(under bed: CGImage, _ m: Mosaic) -> CGImage? {
+        let gold = m.palette.indices.filter { m.palette[$0] == Mosaic.groundGold }
+        guard let paint = gold.last, m.width > 0,
+              let cg = CGContext(data: nil, width: bed.width, height: bed.height, bitsPerComponent: 8, bytesPerRow: 0,
+                                 space: Drawing.space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        cg.draw(bed, in: CGRect(x: 0, y: 0, width: bed.width, height: bed.height))
+        // Canvas units, y down.
+        let k = CGFloat(bed.width) / CGFloat(m.width)
+        cg.translateBy(x: 0, y: CGFloat(bed.height))
+        cg.scaleBy(x: k, y: -k)
+        cg.setFillColor(CGColor(srgbRed: 0.6, green: 0.33, blue: 0.2, alpha: 1))
+        for t in m.tiles where t.paint == paint {
+            // A little wider than the tile, to fill the joints round it.
+            let c = t.centre, grown = t.corners.map { c + ($0 - c) * 1.35 }
+            guard let first = grown.first else { continue }
+            cg.move(to: CGPoint(x: CGFloat(first.x), y: CGFloat(first.y)))
+            for p in grown.dropFirst() { cg.addLine(to: CGPoint(x: CGFloat(p.x), y: CGFloat(p.y))) }
+            cg.closePath()
+            cg.fillPath()
+        }
+        return cg.makeImage()
     }
 
     private func ground() {
