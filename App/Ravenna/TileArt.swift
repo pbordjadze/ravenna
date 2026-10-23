@@ -93,7 +93,7 @@ nonisolated struct Drawing: @unchecked Sendable {
         }
     }
 
-    nonisolated(unsafe) static let space = CGColorSpace(name: CGColorSpace.sRGB)!
+    static let space = CGColorSpace(name: CGColorSpace.sRGB)!
     nonisolated(unsafe) static let glow = CGGradient(colorsSpace: space, colors: [CGColor(srgbRed: 1, green: 0.98, blue: 0.92, alpha: 0.16),
                                                               CGColor(srgbRed: 1, green: 0.98, blue: 0.92, alpha: 0)] as CFArray,
                                  locations: [0, 1])!
