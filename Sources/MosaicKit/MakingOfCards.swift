@@ -1,11 +1,11 @@
 nonisolated public extension MakingOf {
     /// The show's creative forks: options until Paul narrows them.
-    struct Options: Sendable, Equatable, Codable {
+    nonisolated struct Options: Sendable, Equatable, Codable {
         /// The drawing's colour: Ravenna's red earth or Hagia Sophia's indigo.
-        public enum Sinopia: String, Sendable, Codable, CaseIterable { case red, indigo }
+        nonisolated public enum Sinopia: String, Sendable, Codable, CaseIterable { case red, indigo }
         /// One stage after another with a card each, or one build that quickens, its cards following
         /// the stage being set.
-        public enum Flow: String, Sendable, Codable, CaseIterable { case scenes, continuous }
+        nonisolated public enum Flow: String, Sendable, Codable, CaseIterable { case scenes, continuous }
 
         public var sinopia: Sinopia
         /// The setter's hand shown pressing each tile home.
@@ -21,7 +21,7 @@ nonisolated public extension MakingOf {
 
     /// A scene's card: the technique's name, a line on it, and who is credited. Every claim has its
     /// source in docs/making-of.md; never add a name without one.
-    struct Card: Sendable, Equatable {
+    nonisolated struct Card: Sendable, Equatable {
         public var title: String
         public var line: String
         public var credit: String

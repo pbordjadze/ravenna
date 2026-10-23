@@ -19,7 +19,7 @@ import Glibc
 /// agree on a fixture the reference writes (its doc comment says how).
 nonisolated public enum MakingOf {
     /// The scenes, in the order they play, and their lengths in seconds.
-    public enum Scene: String, CaseIterable, Sendable, Codable {
+    nonisolated public enum Scene: String, CaseIterable, Sendable, Codable {
         /// The picture the mosaic is made from.
         case model
         /// The glass: each paint a cake, cooling, then cut into tesserae.
@@ -64,14 +64,14 @@ nonisolated public enum MakingOf {
 
     /// A tile in flight: its lift above its place and its scale (0 and 1 when it lands), in canvas
     /// units; the strength of its shadow under it; the warm light it catches as it lands.
-    public struct Flight: Sendable, Equatable {
+    nonisolated public struct Flight: Sendable, Equatable {
         public var lift: Double
         public var scale: Double
         public var shadow: Double
         public var glow: Double
     }
 
-    public enum TileState: Sendable, Equatable {
+    nonisolated public enum TileState: Sendable, Equatable {
         case waiting
         case flying(Flight)
         case set
@@ -79,7 +79,7 @@ nonisolated public enum MakingOf {
 
     /// A smalti's cake in the smalti scene: how far it has appeared, cooled from glowing orange to
     /// its colour, and been cut into tesserae, each 0...1.
-    public struct Cake: Sendable, Equatable {
+    nonisolated public struct Cake: Sendable, Equatable {
         public var shown: Double
         public var cool: Double
         public var cut: Double
@@ -90,7 +90,7 @@ nonisolated public enum MakingOf {
         return u * u * (3 - 2 * u)
     }
 
-    static func distance(_ a: SIMD2<Double>, _ b: SIMD2<Double>) -> Double {
+    public static func distance(_ a: SIMD2<Double>, _ b: SIMD2<Double>) -> Double {
         let dx = a.x - b.x, dy = a.y - b.y
         return (dx * dx + dy * dy).squareRoot()
     }
@@ -109,7 +109,7 @@ nonisolated public enum MakingOf {
         return L > 0.55 && (A * A + B * B).squareRoot() > 0.07 && hue > 55 && hue < 105
     }
 
-    public struct Show: Sendable {
+    nonisolated public struct Show: Sendable {
         public let options: Options
         /// Each scene's start and length in seconds (the face and the outlines last 0 when the mosaic
         /// has none).

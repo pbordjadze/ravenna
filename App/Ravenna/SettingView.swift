@@ -12,6 +12,7 @@ struct SettingView: View {
     @State private var failed = false
     @State private var showingWork = false
     @State private var showingOptions = false
+    @State private var showingMakingOf = false
     @State private var keepsake: Keepsake?
     @State private var making = false
     @State private var wide = false
@@ -46,6 +47,7 @@ struct SettingView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu("More", systemImage: "ellipsis.circle") {
                     Button("About this work", systemImage: "info.circle") { showingWork = true }
+                    Button("The making-of", systemImage: "film") { showingMakingOf = true }
                     Button("Share the wall", systemImage: "square.and.arrow.up", action: share)
                         .disabled(bench == nil || making)
                     Button("Options", systemImage: "slider.horizontal.3") { showingOptions = true }
@@ -54,6 +56,7 @@ struct SettingView: View {
         }
         .sheet(isPresented: $showingWork) { WorkView(work: work) }
         .sheet(isPresented: $showingOptions) { OptionsView() }
+        .fullScreenCover(isPresented: $showingMakingOf) { MakingOfView(work: work) }
         .sheet(item: $keepsake) { k in
             ShareSheet(items: [k.image]).presentationDetents([.medium, .large]).ignoresSafeArea()
         }
