@@ -1,3 +1,5 @@
+import Foundation
+
 #if canImport(Darwin)
 import Darwin
 #else
@@ -66,39 +68,98 @@ nonisolated public enum Light {
     }
 }
 
-/// The sound of a tile going in, synthesized: no recordings. A short burst of noise for the knock
-/// and a few decaying partials for the ring, mono samples in -1...1. Deterministic by variant.
+/// The tune setting plays: Paint by Moonlight's painting melody, one note per tile set whatever
+/// its paint, so any order of setting sounds like the same tune. Copied, with its scales, from
+/// pbordjadze/paint-by-number at 805b7ff (`App/PaintByNumber/Feedback/PaintingMelody.swift` and
+/// `SoundPlayer.swift`), as Paul asked: "the same melodies as the original app but in a clink of
+/// mosaic tiles being placed".
+nonisolated public struct Melody: Sendable {
+    /// Indices into a scale: six eight-note phrases that rise, answer and settle on the first note.
+    public static let tune: [Int] = [
+        2, 3, 4, 3, 2, 1, 0, 1,
+        2, 3, 4, 5, 4, 3, 2, 3,
+        4, 5, 6, 7, 6, 5, 4, 5,
+        6, 7, 8, 7, 6, 5, 4, 3,
+        2, 3, 4, 3, 2, 1, 2, 3,
+        5, 4, 3, 2, 1, 2, 1, 0,
+    ]
+    public static let phraseLength = 8
+    /// After a pause this long the tune picks up at the start of its next phrase.
+    public static let breath: TimeInterval = 5
+
+    /// Which scale the tune is in (an option until Paul narrows it).
+    public enum Mode: String, CaseIterable, Sendable {
+        /// D major pentatonic over two octaves from D4 (Paint by Moonlight's Sun).
+        case major
+        /// The same five notes as their minor, from the B below (its Moon).
+        case minor
+
+        public var scale: [Double] {
+            let major = [293.66, 329.63, 369.99, 440.00, 493.88, 587.33, 659.26, 739.99, 880.00, 987.77, 1174.66, 1318.51]
+            return self == .major ? major : [246.94] + major.dropLast()
+        }
+    }
+
+    public private(set) var position = 0
+    /// The most recently played note (the tune's first before any).
+    public private(set) var latest = Self.tune[0]
+    private var lastPlayed: Date?
+
+    public init() {}
+
+    /// The next note's place on the scale for a tile set at `now`, and whether it ends its phrase.
+    public mutating func next(at now: Date) -> (index: Int, endsPhrase: Bool) {
+        if let lastPlayed, now.timeIntervalSince(lastPlayed) >= Self.breath, !position.isMultiple(of: Self.phraseLength) {
+            position = (position / Self.phraseLength + 1) * Self.phraseLength % Self.tune.count
+        }
+        lastPlayed = now
+        latest = Self.tune[position]
+        let ends = (position + 1).isMultiple(of: Self.phraseLength)
+        position = (position + 1) % Self.tune.count
+        return (latest, ends)
+    }
+}
+
+/// The sound of a tile going in, synthesized: no recordings. A clink, a note of the tune: a short
+/// tap of noise as the tessera meets the bed, then the pitched ring of what it is made of. Mono
+/// samples in -1...1, deterministic.
 nonisolated public enum Voice: Int, CaseIterable, Sendable {
-    /// Glass smalti: a bright click, two high partials.
+    /// Glass smalti: a bright clink, ringing like a struck bar (its overtones off the octave).
     case glass
-    /// Stone (the faces): a duller, lower tock.
+    /// Stone (the faces): a drier clack, the note short and the tap louder.
     case stone
-    /// Gold: glass with a faint shimmer.
+    /// Gold: glass with a faint shimmer, its gold leaf under a glass skin.
     case gold
 
-    public func samples(variant: Int, rate: Double = 44_100) -> [Float] {
-        let n = Int(rate * 0.14)
+    /// The clink at `frequency` Hz.
+    public func clink(frequency f: Double, rate: Double = 44_100) -> [Float] {
+        let length = self == .stone ? 0.28 : 0.6, fade = 0.04
+        let n = Int(rate * length)
         var out = [Float](repeating: 0, count: n)
-        var seed = UInt64(truncatingIfNeeded: variant &* 7919 &+ rawValue &* 104_729) &+ 0x2545_F491_4F6C_DD1D
-        func noise() -> Float {
+        var seed = UInt64(f * 1000) &+ UInt64(rawValue) &* 0x9E37_79B9 &+ 0x2545_F491_4F6C_DD1D
+        func noise() -> Double {
             seed ^= seed << 13; seed ^= seed >> 7; seed ^= seed << 17
-            return Float(seed >> 40) / Float(1 << 23) - 1
+            return Double(seed >> 11) / Double(1 << 53) * 2 - 1
         }
-        let tune = 1 + 0.04 * Double(TileColor.wobble(variant, salt: 7))
-        let partials: [(hz: Double, decay: Double, gain: Double)] = switch self {
-        case .stone: [(620, 70, 0.25), (1310, 90, 0.12)]
-        case .glass, .gold: [(2350, 45, 0.22), (5150, 70, 0.11), (7400, 95, 0.07)]
+        // A free bar's modes (1, 2.76, 5.40): glass rings on, stone damps them fast.
+        let partials: [(ratio: Double, decay: Double, gain: Double)] = switch self {
+        case .stone: [(1, 26, 0.75), (2.76, 60, 0.22), (5.40, 110, 0.08)]
+        case .glass, .gold: [(1, 7.5, 0.7), (2.76, 16, 0.3), (5.40, 34, 0.14)]
         }
-        let knockDecay: Double = self == .stone ? 140 : 220, smooth: Float = self == .stone ? 0.18 : 0.6
-        var low: Float = 0
+        let tap: (gain: Double, decay: Double, smooth: Double) = self == .stone ? (0.55, 260, 0.3) : (0.35, 700, 0.85)
+        var low = 0.0, previous = 0.0
         for i in 0..<n {
             let t = Double(i) / rate
-            low += (noise() - low) * smooth
-            var v = Double(low) * exp(-t * knockDecay) * 0.9
-            for p in partials { v += sin(2 * .pi * p.hz * tune * t) * exp(-t * p.decay) * p.gain }
-            if self == .gold { v += sin(2 * .pi * 3720 * tune * t) * exp(-t * 18) * 0.06 * (1 + sin(2 * .pi * 23 * t)) }
-            let attack = min(1, Double(i) / 24)
-            out[i] = Float(max(-1, min(1, v * attack * 0.5)))
+            // The tap: noise, darker for stone, the brighter difference of it for glass.
+            low += (noise() - low) * tap.smooth
+            let click = self == .stone ? low : low - previous
+            previous = low
+            var v = click * tap.gain * exp(-t * tap.decay)
+            let attack = min(1, t / 0.0015)
+            for p in partials { v += attack * sin(2 * .pi * f * p.ratio * t) * exp(-t * p.decay) * p.gain }
+            if self == .gold { v += attack * 0.1 * sin(2 * .pi * (2 * f + 4) * t) * exp(-t * 5) }
+            let tail = min(1, (length - t) / fade)
+            out[i] = Float(max(-1, min(1, v * tail * 0.55)))
         }
         return out
     }

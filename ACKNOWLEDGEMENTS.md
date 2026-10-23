@@ -61,8 +61,13 @@ License 1.1, in full beside the fonts (`Alegreya-OFL.txt`, the same for both fam
 
 ## Sound
 
-Every sound in the app is synthesized by it (`Sources/MosaicKit/Hand.swift`, `Voice`): noise and
-decaying sine partials, computed at launch. No recordings or samples are used.
+Every sound in the app is synthesized by it (`Sources/MosaicKit/Hand.swift`, `Voice`): a tap of
+noise and decaying sine partials at a free bar's modes, computed when first needed. No recordings
+or samples are used.
+
+The tune the tiles play, its two scales, the arpeggio for a finished paint and the finale are
+Paint by Moonlight's (pbordjadze/paint-by-number at 805b7ff: `App/PaintByNumber/Feedback/
+PaintingMelody.swift` and `SoundPlayer.swift`), carried over at Paul's request.
 
 ## Code
 
