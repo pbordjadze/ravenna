@@ -160,6 +160,25 @@ craftsmen sent by Emperor Nicephorus II"* (the Mezquita's own site, M; James doe
 Desiderius brought craftsmen from Constantinople to Monte Cassino (1066–71, after Leo of Ostia;
 University of Cassino, M/H; Leo's own words not read).
 
+## The algorithms
+
+Paul: "maaaaybe a tiny addition as well of what algorithms we're using too still, since that remains
+the case". Under each card, a line names the algorithm Ravenna uses for that step, from the engine's
+own code (Sources/MosaicEngine, App/Ravenna/Contours.swift, Faces.swift, Sources/MosaicKit/Finish.swift):
+
+| Card | Algorithm | Source | Sure |
+| --- | --- | --- | --- |
+| Smalti | k-means++ seeding, then Lloyd's iterations, in OKLab | D. Arthur and S. Vassilvitskii, "k-means++: The Advantages of Careful Seeding", SODA 2007, pp. 1027–1035 (<https://www.haralick.org/ML/kMeansPP-soda.pdf>); B. Ottosson, "A perceptual color space for image processing", 2020 (<https://bottosson.github.io/posts/oklab/>) | H |
+| The drawing | HED edge detection, ControlNet's retraining by Lvmin Zhang (Apache-2.0) | S. Xie and Z. Tu, "Holistically-Nested Edge Detection", ICCV 2015 (<https://arxiv.org/abs/1504.06375>); the model's provenance in paint-by-number's `tools/models/convert_hed.py` | H |
+| The painted bed | A Gaussian blur of the tiles' colours (sketchbook/render.py's bed; Bed.swift) | The code | H |
+| Opus vermiculatum | Face landmarks: Apple's Vision (`VNDetectFaceLandmarksRequest`) on the device; Google's MediaPipe face landmarker for the bundled works (sketchbook/features.py) | The code | H |
+| The outlines | Zhang–Suen thinning, as scikit-image's skeletonize runs it | T. Y. Zhang and C. Y. Suen, "A fast parallel algorithm for thinning digital patterns", CACM 27(3), 1984 (doi:10.1145/357994.358023) | H |
+| Andamento | Each row a level of the Euclidean distance transform | P. Felzenszwalb and D. Huttenlocher, "Distance Transforms of Sampled Functions", Theory of Computing 8, 2012 (doi:10.4086/toc.2012.v008a019) | H |
+| Set at a tilt | Each tile's tilt from SplitMix64's mixer (`TileColor.wobble`) | G. Steele, D. Lea and C. Flood, "Fast splittable pseudorandom number generators", OOPSLA 2014 (doi:10.1145/2660193.2660195) | H |
+
+The papers' records were checked through Crossref, arXiv and the authors' pages. The model and the
+closing cards carry no algorithm.
+
 ## The storyboard
 
 Each engine stage is a scene. The show is a pure function of time (it can seek and hold still), as

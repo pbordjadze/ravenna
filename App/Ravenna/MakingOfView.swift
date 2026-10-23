@@ -39,9 +39,9 @@ struct MakingOfView: View {
                             stage.draw(at: at, in: &context, size: size)
                         }
                         .accessibilityLabel(Text(caption(t, stage.show)))
-                        // At least the card's usual room, more when the text is large.
+                        // At least the card's usual room (with its algorithm's line), more when the text is large.
                         CardView(card: stage.show.card(at: t), options: options, work: work)
-                            .frame(minHeight: 210)
+                            .frame(minHeight: 250)
                     }
                 }
             } else if failed {
@@ -66,7 +66,7 @@ struct MakingOfView: View {
     private func caption(_ t: Double, _ show: MakingOf.Show) -> String {
         guard let c = show.card(at: t) else { return "The making-of" }
         let card = MakingOf.Card(c.scene, options: options, modelTitle: work.title, modelCredit: work.credit)
-        return "\(card.title). \(card.line) \(card.credit)"
+        return "\(card.title). \(card.line) \(card.credit). \(card.method)"
     }
 
     private var controls: some View {
@@ -134,6 +134,11 @@ private struct CardView: View {
                     .fixedSize(horizontal: false, vertical: true)
                 Text(text.credit).font(Theme.body(14)).italic().foregroundStyle(Theme.muted)
                     .fixedSize(horizontal: false, vertical: true)
+                if !text.method.isEmpty {
+                    // The algorithm behind the step, credited like the technique.
+                    Text(text.method).font(Theme.body(13)).foregroundStyle(Theme.muted.opacity(0.85))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             Spacer(minLength: 0)
         }

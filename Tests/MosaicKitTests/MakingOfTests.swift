@@ -72,7 +72,7 @@ struct MakingOfTests {
                 #expect(card.scene.rawValue == c["scene"] as? String)
                 Self.close(card.opacity, c["opacity"], "card opacity at \(t)")
                 let text = MakingOf.Card(card.scene, options: options, modelTitle: "Test", modelCredit: "Credit")
-                #expect([text.title, text.line, text.credit] == c["text"] as? [String])
+                #expect([text.title, text.line, text.credit, text.method] == c["text"] as? [String])
             } else {
                 #expect(show.card(at: t) == nil, "no card at \(t)")
             }

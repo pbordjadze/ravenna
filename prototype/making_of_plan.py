@@ -48,6 +48,17 @@ NAMED_FACE = ("Opus vermiculatum", "The face in the smallest pieces, the eyes se
               "As in the panels Dioskourides of Samos signed in tiny tesserae, Pompeii")
 NAMED = ("The makers", "A few names survive: Sosus at Pergamon, Gnosis at Pella, Dioskourides of Samos, Ephraim at Bethlehem. Most mosaicists are anonymous.",
          "Pliny, Natural History 36.184, and the works they signed")
+# Under each card, the algorithm Ravenna uses for that step, credited like the techniques (Paul: "what
+# algorithms we're using too"). Sources: docs/making-of.md, "The algorithms".
+METHODS = {
+    "smalti": "The smalti chosen by k-means++ (David Arthur and Sergei Vassilvitskii, 2007) in Björn Ottosson’s OKLab (2020)",
+    "sinopia": "The lines found by HED edge detection (Saining Xie and Zhuowen Tu, 2015), retrained for ControlNet by Lvmin Zhang",
+    "bed": "The bed’s colours: a Gaussian blur of the tiles’ own",
+    "face": "The features found by face landmarks: Apple’s Vision, or Google’s MediaPipe for the works that came with the app",
+    "outlines": "The lines thinned to single rows by Zhang–Suen thinning (T. Y. Zhang and C. Y. Suen, 1984)",
+    "andamento": "Each row a level of a distance transform (Pedro Felzenszwalb and Daniel Huttenlocher, 2012)",
+    "light": "Each tile’s tilt from SplitMix64’s mixer (Guy Steele, Doug Lea and Christine Flood, 2014)",
+}
 SINOPIA = {"red": (0.60, 0.25, 0.16), "indigo": (0.20, 0.25, 0.48)}   # Ravenna's red earth; Hagia Sophia's indigo
 GOLD = (0.788, 0.635, 0.290)                                          # Theme.gold
 
@@ -104,7 +115,7 @@ def ease(u):
 def card_text(scene, options, meta):
     named = {"hold": NAMED, "face": NAMED_FACE}
     title, line, credit = named[scene] if options.names and scene in named else CARDS[scene]
-    return tuple(x.replace("{title}", meta.get("title", "")).replace("{credit}", meta.get("credit", "")) for x in (title, line, credit))
+    return tuple(x.replace("{title}", meta.get("title", "")).replace("{credit}", meta.get("credit", "")) for x in (title, line, credit)) + (METHODS.get(scene, ""),)
 
 
 class Plan:

@@ -26,9 +26,13 @@ nonisolated public extension MakingOf {
         public var title: String
         public var line: String
         public var credit: String
+        /// The algorithm Ravenna uses for the step, credited like the technique (empty for the model
+        /// and the closing card).
+        public var method: String
 
         /// The card for `scene`; the model's card carries the picture's own title and credit.
         public init(_ scene: Scene, options: Options = Options(), modelTitle: String = "", modelCredit: String = "") {
+            method = Self.method(scene)
             switch scene {
             case .model:
                 (title, line, credit) = ("The model", modelTitle, modelCredit)
@@ -78,6 +82,21 @@ nonisolated public extension MakingOf {
                     "The makers",
                     "Most mosaicists are anonymous; a few names survive.",
                     "No source read names the mosaicists of Ravenna or Hagia Sophia")
+            }
+        }
+
+        /// Under each card, the algorithm for that step (Paul: "what algorithms we're using too").
+        /// Sources: docs/making-of.md, "The algorithms".
+        static func method(_ scene: Scene) -> String {
+            switch scene {
+            case .smalti: "The smalti chosen by k-means++ (David Arthur and Sergei Vassilvitskii, 2007) in Björn Ottosson’s OKLab (2020)"
+            case .sinopia: "The lines found by HED edge detection (Saining Xie and Zhuowen Tu, 2015), retrained for ControlNet by Lvmin Zhang"
+            case .bed: "The bed’s colours: a Gaussian blur of the tiles’ own"
+            case .face: "The features found by face landmarks: Apple’s Vision, or Google’s MediaPipe for the works that came with the app"
+            case .outlines: "The lines thinned to single rows by Zhang–Suen thinning (T. Y. Zhang and C. Y. Suen, 1984)"
+            case .andamento: "Each row a level of a distance transform (Pedro Felzenszwalb and Daniel Huttenlocher, 2012)"
+            case .light: "Each tile’s tilt from SplitMix64’s mixer (Guy Steele, Doug Lea and Christine Flood, 2014)"
+            case .model, .hold: ""
             }
         }
     }
