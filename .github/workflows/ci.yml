@@ -4,6 +4,9 @@ name: CI
 # macOS, only when asked or when the app changed on main: the five macOS runners are shared with
 # Paint by Moonlight, which always goes first (CLAUDE.md). Ask its setup session for a slot first.
 #   compile  `[compile]` in a branch's pushed commit message: an unsigned Debug build of the app.
+#   shots    `[shots]` in a branch's pushed commit message: a Debug simulator build, and each screen
+#            screenshotted (iPhone at the default and the largest text size, iPad at the default),
+#            as the `shots` artifact. The app opens each screen from RAVENNA_SHOT (Debug only).
 #   determinism  `[determinism]` in a branch's pushed commit message: the Determinism tests on
 #            Apple silicon, against Linux's hashes (SwiftPM, no Xcode project).
 #   ipa      main, when App/, Sources/MosaicKit/ or Sources/MosaicEngine/ changed (or `[ipa]` on a branch, which archives
@@ -67,6 +70,58 @@ jobs:
       - uses: actions/upload-artifact@v5
         if: always()
         with: { name: compile, path: out, if-no-files-found: ignore }
+
+  shots:
+    name: Screenshots (macOS, simulator)
+    if: github.ref_name != 'main' && contains(github.event.head_commit.message, '[shots]')
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+        with: { persist-credentials: false }
+      - name: Build
+        run: |
+          set -o pipefail
+          mkdir -p out
+          xcodebuild build -project "$PROJECT" -scheme "$SCHEME" -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build/dd -quiet \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee out/build.log | tail -80
+      - name: Shoot
+        run: |
+          set -euo pipefail
+          APP=$(find build/dd/Build/Products/Debug-iphonesimulator -maxdepth 1 -name '*.app' | head -1)
+          BUNDLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")
+          pick() {
+            xcrun simctl list devices available -j | python3 -c "import json,sys
+          ds=[d for r,l in json.load(sys.stdin)['devices'].items() if 'iOS' in r for d in l]
+          m=[d for d in ds if '$1' in d['name'] and 'Max' not in d['name'] and 'mini' not in d['name']]
+          m=m or [d for d in ds if '$1'.split()[0] in d['name']]
+          print(sorted(m, key=lambda d: d['name'])[-1]['udid'])"
+          }
+          shoot() {  # device, label, text size, shots...
+            local dev=$1 label=$2 size=$3; shift 3
+            xcrun simctl ui "$dev" content_size "$size"
+            for shot in "$@"; do
+              xcrun simctl terminate "$dev" "$BUNDLE" 2>/dev/null || true
+              SIMCTL_CHILD_RAVENNA_SHOT=$shot xcrun simctl launch "$dev" "$BUNDLE" >/dev/null
+              sleep 9
+              xcrun simctl io "$dev" screenshot "out/$label-$shot.png" >/dev/null
+            done
+          }
+          ALL="gallery options new wall lesson finished gold"
+          for kind in "iPhone 17 Pro:iphone" "iPad Pro 11:ipad"; do
+            dev=$(pick "${kind%%:*}") label=${kind##*:}
+            xcrun simctl boot "$dev"; xcrun simctl bootstatus "$dev" -b >/dev/null
+            xcrun simctl status_bar "$dev" override --time 9:41 --batteryLevel 100 || true
+            xcrun simctl ui "$dev" appearance dark
+            xcrun simctl install "$dev" "$APP"
+            shoot "$dev" "$label" large $ALL
+            if [ "$label" = iphone ]; then shoot "$dev" "$label-ax5" accessibility-extra-extra-extra-large $ALL; fi
+            xcrun simctl shutdown "$dev"
+          done
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with: { name: shots, path: out, if-no-files-found: ignore }
 
   ipa:
     name: IPA for SideStore (unsigned device build)

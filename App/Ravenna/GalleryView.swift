@@ -69,6 +69,9 @@ struct GalleryView: View {
                     picked = nil
                 }
             }
+            #if DEBUG
+            .task { await shoot() }
+            #endif
             .confirmationDialog("Remove this mosaic?", isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
                                 titleVisibility: .visible) {
                 Button("Remove", role: .destructive) { if let w = removing { library.remove(w) }; removing = nil }
@@ -77,6 +80,34 @@ struct GalleryView: View {
             }
         }
     }
+
+    #if DEBUG
+    /// CI's screenshots (the `[shots]` job): `RAVENNA_SHOT` names the screen to open, with the
+    /// state it needs. Debug builds only.
+    private func shoot() async {
+        guard let shot = ProcessInfo.processInfo.environment["RAVENNA_SHOT"], library.works.count >= 5 else { return }
+        let d = UserDefaults.standard, w = library.works
+        d.set(shot == "lesson" ? 0 : 2, forKey: Keys.lesson)
+        d.set(shot == "gold" ? GroundChoice.gold.rawValue : GroundChoice.picture.rawValue, forKey: Keys.ground)
+        func fill(_ work: Work, _ fraction: Double) async {
+            guard let m = try? await library.mosaic(work, library.detail) else { return }
+            library.save(Setting(set: Set(0..<Int(Double(m.tiles.count) * fraction))), work, library.detail)
+        }
+        await fill(w[2], 0.4)
+        await fill(w[0], 1)
+        await fill(w[1], 1)
+        await fill(w[4], 0)
+        switch shot {
+        case "options": showingOptions = true
+        case "new": if let data = library.image(w[3], "photo")?.jpegData(compressionQuality: 0.9) { photo = PickedPhoto(data: data) }
+        case "wall": path = [w[2]]
+        case "lesson": path = [w[4]]
+        case "finished": path = [w[0]]
+        case "gold": path = [w[1]]
+        default: break
+        }
+    }
+    #endif
 
     private func shelf<Content: View>(_ title: String, note: String? = nil, @ViewBuilder _ content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 12) {
