@@ -56,8 +56,8 @@ struct NewMosaicView: View {
                             .font(Theme.body(13)).foregroundStyle(Theme.muted)
                     }
                     if let stage = progress.stage {
-                        HStack(spacing: 10) {
-                            ProgressView().tint(Theme.tint)
+                        VStack(alignment: .leading, spacing: 8) {
+                            ProgressView(value: progress.done).tint(Theme.tint)
                             Text(stage.rawValue).font(Theme.body(15)).foregroundStyle(Theme.plaster)
                         }
                     } else if let failure {
@@ -102,12 +102,19 @@ struct NewMosaicView: View {
     private func lay() {
         failure = nil
         progress.stage = .reading
+        progress.done = 0
         let data = data, pieces = pieces, eyes = eyes, progress = progress
         job = Task {
             do {
                 // Detached, so cancelling this task (Cancel) must be passed on to it.
                 let worker = Task.detached(priority: .userInitiated) {
-                    try Maker.make(from: data, pieces: pieces, eyes: eyes) { s in Task { @MainActor in progress.stage = s } }
+                    try Maker.make(from: data, pieces: pieces, eyes: eyes) { s, done in
+                        Task { @MainActor in
+                            // A hop that lands after the job has ended (cancelled, failed) changes nothing.
+                            guard progress.stage != nil, done >= progress.done else { return }
+                            progress.stage = s; progress.done = done
+                        }
+                    }
                 }
                 let result = try await withTaskCancellationHandler { try await worker.value } onCancel: { worker.cancel() }
                 let work = try library.keep(result)
@@ -124,9 +131,10 @@ struct NewMosaicView: View {
     }
 }
 
-/// Which stage the maker is at, for the sheet (main-actor isolated, so the maker's thread can hand
-/// it a stage).
+/// Which stage the maker is at and how much of the job is done, for the sheet (main-actor isolated,
+/// so the maker's thread can hand it both; `done` only rises, whatever order the hops arrive in).
 @Observable
 final class MakeProgress {
     var stage: Maker.Stage?
+    var done = 0.0
 }

@@ -154,6 +154,15 @@ struct EngineTests {
         #expect(off(looks) > off(photo_), "as it looks, stronger than the photo's")
     }
 
+    @Test func reportsItsProgressUpToTheEnd() throws {
+        let (photo, contours) = Self.picture()
+        var heard: [Double] = []
+        _ = try MosaicEngine.make(photo: photo, contours: contours, faces: [], settings: Self.settings(), progress: { heard.append($0) })
+        #expect(heard.count == MosaicEngine.shares.count)
+        #expect(zip(heard, heard.dropFirst()).allSatisfy { $0 < $1 })
+        #expect(abs(heard.last! - 1) < 1e-9)
+    }
+
     @Test func readsTheFeaturesJSON() throws {
         let json = #"{"box": [97, 263, 603, 802], "eyes": [[303.9, 442.2, 17.5, 7.0]], "lines": [{"kind": "dark", "pts": [[273.5, 436.3], [278.5, 434.3]]}]}"#
         let f = try JSONDecoder().decode(MosaicEngine.Face.self, from: Data(json.utf8))
