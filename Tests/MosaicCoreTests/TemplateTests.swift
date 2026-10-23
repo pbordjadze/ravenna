@@ -1,4 +1,5 @@
 import Foundation
+import MosaicEngine
 import MosaicKit
 import PaintCore
 import Testing
@@ -45,7 +46,7 @@ struct TemplateTests {
     }
 
     @Test func aFoldedOutlineKeepsItsBiggestLoop() {
-        // A bow tie: the bigger triangle stays, cut where the sides cross, inside the tile as laid.
+        // A bow tie: the bigger triangle stays, cut where the sides cross.
         let tie: [SIMD2<Double>] = [SIMD2(0, 0), SIMD2(10, 10), SIMD2(10, 0), SIMD2(0, 4)]
         let kept = MosaicCore.simple(tie, snap: { $0 })!
         #expect(kept.count == 3 && MosaicCore.firstSelfContact(kept) == nil)
@@ -54,6 +55,10 @@ struct TemplateTests {
         let spiked: [SIMD2<Double>] = [SIMD2(0, 0), SIMD2(5, 0), SIMD2(10, 0), SIMD2(10, 10), SIMD2(10, 10), SIMD2(5, 10),
                                        SIMD2(5, 15), SIMD2(5, 10), SIMD2(0, 10)]
         #expect(MosaicCore.simple(spiked, snap: { $0 }) == [SIMD2(0, 0), SIMD2(10, 0), SIMD2(10, 10), SIMD2(0, 10)])
+        // Folded twice: still one simple loop (it may cover a lobe the fold had cancelled out).
+        let lobed: [SIMD2<Double>] = [SIMD2(3, 4), SIMD2(4, 2), SIMD2(3, 1), SIMD2(3, 6), SIMD2(2, 5), SIMD2(1, 3), SIMD2(4, 1), SIMD2(6, 3)]
+        let kept2 = MosaicCore.simple(lobed, snap: { $0 })!
+        #expect(kept2.count >= 3 && MosaicCore.firstSelfContact(kept2) == nil)
         // Nothing with area: nil.
         #expect(MosaicCore.simple([SIMD2(0, 0), SIMD2(4, 0), SIMD2(8, 0)], snap: { $0 }) == nil)
     }
@@ -82,6 +87,51 @@ struct TemplateTests {
             #expect(eyes.prefix(2).contains(Int(edge.left)) && Int(edge.right) == pupil, "the pupil's edge is shared with its iris")
         }
         #expect(t.regions.last!.ringCount == UInt32(1 + m.tiles.count - 2), "the grout's holes: every tile but the pupils")
+    }
+
+    static func square(_ x0: Float, _ y0: Float, _ x1: Float, _ y1: Float, paint: Int = 0) -> Mosaic.Tile {
+        Mosaic.Tile(corners: [SIMD2(x0, y0), SIMD2(x1, y0), SIMD2(x1, y1), SIMD2(x0, y1)], paint: paint)
+    }
+
+    @Test func aPupilNearTheLidStaysClearOfIt() throws {
+        // The engine's test face with its eye looking up: the pupil 2 px under the upper lid.
+        var face = MosaicEngine.Face(box: [14, 10, 56, 48], eyes: [[34, 24, 5, 2]],
+                                     lines: [.init(kind: "eye", pts: [[26, 25], [30, 22.5], [36, 22], [42, 25], [36, 32], [30, 32], [26, 25]])])
+        face.box = [14, 10, 56, 48]
+        let w = 96, h = 64
+        var rgb = [SIMD3<Float>](repeating: SIMD3(0.85, 0.75, 0.55), count: w * h)
+        for y in 0..<h { for x in 0..<w where (Float(x) - 34) * (Float(x) - 34) + (Float(y) - 24) * (Float(y) - 24) < 25 { rgb[y * w + x] = SIMD3(0.45, 0.55, 0.65) } }
+        var settings = MosaicEngine.Settings()
+        settings.paints = 8
+        let m = try MosaicEngine.make(photo: .init(width: w, height: h, rgb: rgb), contours: [Float](repeating: 0, count: w * h),
+                                      faces: [face], settings: settings)
+        let t = try MosaicCore.template(of: m)
+        let report = t.validate(minLabelRadius: LabelSizing.minimumRadius)
+        #expect(report.isValid, "\(report)")
+    }
+
+    @Test func anIrisRoundItsPupilGetsTheRoomItsRingHas() throws {
+        // A pupil leaving its iris a thin ring: the canvas grows for the ring, not the whole square.
+        let m = Mosaic(width: 100, height: 100, grout: SIMD3(0.9, 0.9, 0.9), palette: [SIMD3(0.2, 0.3, 0.6), SIMD3(0.1, 0.1, 0.1)],
+                       tiles: [Self.square(10, 10, 12, 12), Self.square(10.05, 10.05, 11.95, 11.95, paint: 1)])
+        let t = try MosaicCore.template(of: m)
+        #expect(t.width > MosaicCore.templateLongSide)
+        let report = t.validate(minLabelRadius: LabelSizing.minimumRadius)
+        #expect(report.isValid, "\(report)")
+    }
+
+    @Test func nestedTilesAreHitInnermost() throws {
+        // Three deep, the innermost with a lower index than the one it lies in.
+        let m = Mosaic(width: 40, height: 40, grout: SIMD3(0.9, 0.9, 0.9), palette: [SIMD3(0.2, 0.3, 0.6)],
+                       tiles: [Self.square(2, 2, 38, 38), Self.square(16, 16, 24, 24), Self.square(8, 8, 32, 32)])
+        let t = try MosaicCore.template(of: m, longSide: 400)
+        #expect(t.validate(minLabelRadius: LabelSizing.minimumRadius).isValid)
+        #expect(t.regionMap[200, 200] == 1 && t.regionMap[100, 100] == 2 && t.regionMap[40, 40] == 0 && t.regionMap[5, 5] == 3)
+    }
+
+    @Test func aLongerSideIsKept() throws {
+        let t = try MosaicCore.template(of: Self.small(), longSide: 5000)
+        #expect(t.width == 5000)
     }
 
     /// Every bundled mosaic at every detail, in an optimized build (`swift test -c release`: about a

@@ -292,11 +292,18 @@ nonisolated extension MosaicEngine {
             }
         }
 
-        /// The part of an iris or pupil inside its eye's opening (all of it when there is none).
-        func lidded(_ poly: [SIMD2<Double>]) -> [SIMD2<Double>] {
+        /// The part of an iris or pupil inside its eye's opening (all of it when there is none). With
+        /// `inset`, inside the opening drawn that much closer round the piece's centre: a pupil
+        /// keeps clear of the lid that cuts its iris, so the two never share an outline (a template
+        /// needs grout between them, `MosaicCore.template`); nil when the centre is that near the lid.
+        func lidded(_ poly: [SIMD2<Double>], inset: Double = 0) -> [SIMD2<Double>]? {
             let c = Polygon.mean(poly)
             for ring in eyeRings where Polygon.contains(ring, c) {
-                return intersect(poly, ring) ?? poly
+                guard inset > 0 else { return intersect(poly, ring) ?? poly }
+                let near = zip(ring, ring.dropFirst() + ring.prefix(1)).map { Polygon.segmentDistance(c, $0, $1) }.min() ?? 0
+                guard near > inset else { return nil }
+                let f = 1 - inset / near
+                return intersect(poly, ring.map { c + ($0 - c) * f })
             }
             return poly
         }
@@ -314,10 +321,12 @@ nonisolated extension MosaicEngine {
                         return c + SIMD2(rx * cos, ry * sin)
                     }
                 }
-                layout.place(lidded(ring(rr, rr)), stage: .eye, strand: false, minFrac: 0.1, eye: .iris)
+                layout.place(lidded(ring(rr, rr))!, stage: .eye, strand: false, minFrac: 0.1, eye: .iris)
                 if e.count > 3 {
                     let px = Double(e[3]) * k, py = Double(e.count > 4 ? e[4] : e[3]) * k
-                    pupils.append(Layout.Piece(poly: lidded(ring(px, py)), strand: false, eye: .pupil, feature: nil, stage: .eye))
+                    if let pupil = lidded(ring(px, py), inset: 1.5) {
+                        pupils.append(Layout.Piece(poly: pupil, strand: false, eye: .pupil, feature: nil, stage: .eye))
+                    }
                 }
             }
             for ln in lines where ln.kind != "eye" && ln.kind != "lips" {

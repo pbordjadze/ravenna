@@ -24,7 +24,7 @@ extension MosaicCore {
     /// - A tile laid over another and inside it (a pupil over its iris) is a hole in that tile, its
     ///   edge shared with it rather than the grout.
     /// - An outline that crosses or touches itself (the engine's simplified tracings fold now and
-    ///   then, about one tile in a thousand) keeps its biggest simple loop, inside the tile as laid.
+    ///   then, about one tile in a thousand) keeps its biggest simple loop turning its own way.
     ///
     /// A tile is numbered at its pole; one too small for the usual floor (`LabelSizing.minimumRadius`,
     /// a sliver cut in the gap fill) is a detail area, read zoomed in. The grout is numbered at its
@@ -36,18 +36,28 @@ extension MosaicCore {
         let n = mosaic.tiles.count
         guard n > 0, mosaic.width > 0, mosaic.height > 0 else { throw TemplateError.noTiles }
         let base = Double(longSide) / Double(max(mosaic.width, mosaic.height))
+        // Each tile's room at that scale, a tile laid inside another (a pupil) a hole in it.
+        let rough = mosaic.tiles.map { tile -> [SIMD2<Double>] in
+            let ring = simple(tile.corners.map { SIMD2(Double($0.x), Double($0.y)) * base }, snap: { $0 }) ?? []
+            return area2(ring) < 0 ? ring.reversed() : ring
+        }
+        let roughOutside = containers(rough)
+        var roughHoles = [[Int]](repeating: [], count: n)
+        for i in 0..<n { if let o = roughOutside[i] { roughHoles[o].append(i) } }
         var need = 1.0
-        for tile in mosaic.tiles {
-            let ring = tile.corners.map { SIMD2(Double($0.x), Double($0.y)) * base }
-            guard let simple = simple(ring, snap: { $0 }) else { continue }
+        for (i, tile) in mosaic.tiles.enumerated() where rough[i].count >= 3 {
             var poly = FlatPolygon()
-            poly.points = simple
+            poly.points = rough[i]
             poly.closeRing()
-            let room = PolyLabel.find(poly, precision: 0.005, seed: simple.reduce(.zero, +) / Double(simple.count)).distance
+            for h in roughHoles[i] where rough[h].count >= 3 {
+                poly.points += rough[h].reversed()
+                poly.closeRing()
+            }
+            let room = PolyLabel.find(poly, precision: 0.005, seed: rough[i].reduce(.zero, +) / Double(rough[i].count)).distance
             let floor = Double(LabelSizing.minimumRadius(digits: LabelSizing.digitCount(colorIndex: UInt32(tile.paint)), detail: true))
             if room > 0 { need = max(need, floor / room) }
         }
-        let k = base * min(need > 1 ? need * 1.05 : 1, Double(maximumLongSide) / Double(longSide))
+        let k = base * min(need > 1 ? need * 1.05 : 1, Double(max(maximumLongSide, longSide)) / Double(longSide))
         let width = max(Int((Double(mosaic.width) * k).rounded(.up)), 1)
         let height = max(Int((Double(mosaic.height) * k).rounded(.up)), 1)
         func snap(_ p: SIMD2<Double>) -> SIMD2<Double> {
@@ -137,9 +147,15 @@ extension MosaicCore {
         }
 
         // The region map, for hit testing: each tile's pixels by their centres, the rest grout; a
-        // tile laid inside another after it.
+        // tile laid inside another after it, outermost first.
         var map = RegionMap(width: width, height: height, repeating: UInt32(groutRegion))
-        for i in (0..<n).filter({ outside[$0] == nil }) + (0..<n).filter({ outside[$0] != nil }) {
+        func depth(_ i: Int) -> Int {
+            var d = 0, j = i
+            while let o = outside[j], d <= n { d += 1; j = o }
+            return d
+        }
+        let depths = (0..<n).map(depth)
+        for i in (0..<n).sorted(by: { depths[$0] != depths[$1] ? depths[$0] < depths[$1] : $0 < $1 }) {
             let ring = outlines[i]
             let ys = ring.map(\.y), xs = ring.map(\.x)
             let y0 = max(Int((ys.min()! - 0.5).rounded(.up)), 0), y1 = min(Int((ys.max()! - 0.5).rounded(.down)), height - 1)
@@ -228,22 +244,28 @@ extension MosaicCore {
     }
 
     /// The ring tidied (no repeated points, spikes or points on a straight run), and while it
-    /// crosses or touches itself, cut where it first does into two loops, keeping the bigger: a
-    /// simple ring inside the original, or nil when nothing with area is left. Coordinates on the
-    /// quantum grid keep the tests exact.
+    /// crosses or touches itself, cut where it first does into two loops, keeping the bigger of
+    /// those turning its own way: a simple ring, or nil when nothing with area is left. Mostly
+    /// inside the tile as laid; where a fold had cancelled out a lobe (winding 0), the loop kept can
+    /// cover it, no more than the lobe, and `Template.validate` still catches any touch with a
+    /// neighbour. Coordinates on the quantum grid keep the tests exact.
     static func simple(_ points: [SIMD2<Double>], snap: (SIMD2<Double>) -> SIMD2<Double>) -> [SIMD2<Double>]? {
         func tidy(_ p: [SIMD2<Double>]) -> [SIMD2<Double>] {
             var out: [SIMD2<Double>] = []
             for q in p where out.last != q { out.append(q) }
             while out.count > 1 && out.first == out.last { out.removeLast() }
-            var i = 0
-            while out.count >= 3 && i < out.count {
-                let a = out[(i + out.count - 1) % out.count], b = out[i], c = out[(i + 1) % out.count]
-                if a == b || cross(b - a, c - b) == 0 {
-                    out.remove(at: i)
-                    i = max(i - 1, 0)
-                } else {
-                    i += 1
+            var changed = true
+            while changed && out.count >= 3 {
+                changed = false
+                var i = 0
+                while out.count >= 3 && i < out.count {
+                    let a = out[(i + out.count - 1) % out.count], b = out[i], c = out[(i + 1) % out.count]
+                    if a == b || cross(b - a, c - b) == 0 {
+                        out.remove(at: i)
+                        changed = true
+                    } else {
+                        i += 1
+                    }
                 }
             }
             return out
@@ -261,7 +283,10 @@ extension MosaicCore {
             q = (j + 1) % m
             while q != (i + 1) % m { two.append(ring[q]); q = (q + 1) % m }
             one = tidy(one); two = tidy(two)
-            let a1 = one.count >= 3 ? abs(area2(one)) : 0, a2 = two.count >= 3 ? abs(area2(two)) : 0
+            // The loop turning the ring's own way and bigger: a lobe folded back the other way is
+            // outside the tile as laid (winding 0), whatever its size.
+            let way: Double = area2(ring) >= 0 ? 1 : -1
+            let a1 = one.count >= 3 ? way * area2(one) : -.infinity, a2 = two.count >= 3 ? way * area2(two) : -.infinity
             ring = a1 >= a2 ? one : two
         }
         return nil
@@ -300,19 +325,21 @@ extension MosaicCore {
 
     /// For each ring, the ring it lies inside, if any (the smallest such: a pupil's iris). Rings are
     /// bucketed by their bounds; one inside another has its first point inside it and its bounds
-    /// within the other's. Whether it also touches it is left to `Template.validate`.
+    /// within the other's. The engine keeps a pupil clear of its iris's outline; whether a tile
+    /// touches the one it lies in is left to `Template.validate`.
     static func containers(_ rings: [[SIMD2<Double>]]) -> [Int?] {
         let bounds = rings.map { r -> (lo: SIMD2<Double>, hi: SIMD2<Double>) in
             (r.reduce(SIMD2(repeating: .infinity)) { pointwiseMin($0, $1) }, r.reduce(SIMD2(repeating: -.infinity)) { pointwiseMax($0, $1) })
         }
         let cell = 64.0
         var buckets: [SIMD2<Int>: [Int]] = [:]
-        for (i, b) in bounds.enumerated() {
+        for (i, b) in bounds.enumerated() where rings[i].count >= 3 {
             for y in Int(b.lo.y / cell)...Int(b.hi.y / cell) {
                 for x in Int(b.lo.x / cell)...Int(b.hi.x / cell) { buckets[SIMD2(x, y), default: []].append(i) }
             }
         }
         return rings.indices.map { i in
+            guard rings[i].count >= 3 else { return nil }
             let b = bounds[i], p = rings[i][0]
             var best: Int?
             for j in buckets[SIMD2(Int(p.x / cell), Int(p.y / cell))] ?? [] where j != i {

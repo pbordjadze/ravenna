@@ -74,6 +74,12 @@ nonisolated enum Faces {
     /// A brow's row: between its upper and lower edges when Vision outlines it as a ring (as the
     /// bench takes MediaPipe's), else its points left to right.
     static func midline(_ brow: [SIMD2<Float>]) -> [SIMD2<Float>] {
+        // A ring closes with a step like its others; an open line ends across the brow from its start.
+        func gap(_ a: SIMD2<Float>, _ b: SIMD2<Float>) -> Float { ((b - a) * (b - a)).sum().squareRoot() }
+        let longest = zip(brow, brow.dropFirst()).map(gap).max() ?? 0
+        guard brow.count >= 6, let first = brow.first, let last = brow.last, gap(last, first) <= 1.5 * longest else {
+            return brow.sorted { $0.x < $1.x }
+        }
         let (upper, lower) = halves(brow)
         guard upper.count >= 3, lower.count >= 3 else { return brow.sorted { $0.x < $1.x } }
         let n = max(upper.count, lower.count)

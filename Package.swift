@@ -38,7 +38,7 @@ let package = Package(
         ),
         .testTarget(
             name: "MosaicCoreTests",
-            dependencies: ["MosaicCore", "MosaicKit", .product(name: "PaintCore", package: "paint-by-number")]
+            dependencies: ["MosaicCore", "MosaicKit", "MosaicEngine", .product(name: "PaintCore", package: "paint-by-number")]
         ),
     ],
     swiftLanguageModes: [.v6]
