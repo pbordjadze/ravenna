@@ -39,8 +39,9 @@ struct MakingOfView: View {
                             stage.draw(at: at, in: &context, size: size)
                         }
                         .accessibilityLabel(Text(caption(t, stage.show)))
+                        // At least the card's usual room, more when the text is large.
                         CardView(card: stage.show.card(at: t), options: options, work: work)
-                            .frame(height: 210)
+                            .frame(minHeight: 210)
                     }
                 }
             } else if failed {
