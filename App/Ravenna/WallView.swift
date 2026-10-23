@@ -180,7 +180,7 @@ struct Wall: View {
 
     /// The sound and the tap on the finger, as each tile touches the bed.
     private func feel(_ laid: [(tile: Int, at: Date)]) {
-        let sound = sound, touch = touch, m = bench.mosaic
+        let sound = self.sound, touch = self.touch, m = bench.mosaic
         guard sound || touch, !laid.isEmpty else { return }
         for (i, at) in laid {
             let voice = Voice.of(m.tiles[i], in: m), size = bench.weight(i)
@@ -215,9 +215,9 @@ struct Wall: View {
             ended(bench.afterSetting())
         }
         feel(laid)
-        let left = bench.paint.map { bench.setting.remaining(in: bench.mosaic)[$0] } ?? 0
-        let said = laid.isEmpty ? "Nothing left to set." :
-            "\(laid.count == 1 ? "One tile" : "\(laid.count) tiles") set. " + (bench.paint.map { "Paint \($0 + 1), \(left) left." } ?? "")
+        var said = laid.count == 1 ? "One tile set." : "\(laid.count) tiles set."
+        if laid.isEmpty { said = "Nothing left to set." }
+        if let p = bench.paint { said += " Paint \(p + 1), \(bench.setting.remaining(in: bench.mosaic)[p]) left." }
         AccessibilityNotification.Announcement(said).post()
     }
 
@@ -264,7 +264,7 @@ struct Wall: View {
         }
         guard !reduceMotion else { return }
         lens.flight = from
-        let lens = lens, start = from.start
+        let lens = self.lens, start = from.start
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(Lens.longest + 0.02))
             if lens.flight?.start == start { lens.flight = nil }
