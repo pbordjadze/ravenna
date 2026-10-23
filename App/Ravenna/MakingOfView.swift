@@ -33,9 +33,10 @@ struct MakingOfView: View {
             if let stage {
                 TimelineView(.animation(paused: pausedAt != nil)) { tl in
                     let t = min(pausedAt ?? tl.date.timeIntervalSince(origin), stage.show.duration)
+                    let at = shown(t, stage.show)
                     VStack(spacing: 0) {
                         Canvas { context, size in
-                            stage.draw(at: shown(t, stage.show), card: t, in: &context, size: size)
+                            stage.draw(at: at, in: &context, size: size)
                         }
                         .accessibilityLabel(Text(caption(t, stage.show)))
                         CardView(card: stage.show.card(at: t), options: options, work: work)
@@ -193,7 +194,7 @@ nonisolated final class MakingOfStage: @unchecked Sendable {
         if image == nil { image = set.makeImage() }
     }
 
-    func draw(at t: Double, card: Double, in context: inout GraphicsContext, size view: CGSize) {
+    func draw(at t: Double, in context: inout GraphicsContext, size view: CGSize) {
         let k = min(view.width / size.width, view.height / size.height) * 0.94
         let rect = CGRect(x: (view.width - size.width * k) / 2, y: (view.height - size.height * k) / 2,
                           width: size.width * k, height: size.height * k)
@@ -218,8 +219,8 @@ nonisolated final class MakingOfStage: @unchecked Sendable {
     private func drawUnder(_ t: Double, in context: inout GraphicsContext, rect: CGRect, k: CGFloat) {
         context.fill(Path(rect), with: .color(Self.lime))
         let ink = show.options.sinopia == .red ? Color(red: 0.60, green: 0.25, blue: 0.16) : Color(red: 0.20, green: 0.25, blue: 0.48)
-        let drawing = sinopia(show.sinopia(at: t), rect: rect, k: k)
-        context.stroke(drawing, with: .color(ink.opacity(0.85)), style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
+        let lines = sinopia(show.sinopia(at: t), rect: rect, k: k)
+        context.stroke(lines, with: .color(ink.opacity(0.85)), style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
         let front = show.bed(at: t)
         guard front > 0, let bed else { return }
         let laid = CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height * min(front, 1.1))
@@ -227,7 +228,7 @@ nonisolated final class MakingOfStage: @unchecked Sendable {
         under.clip(to: Path(laid))
         under.draw(Image(decorative: bed, scale: 1), in: rect)
         // The drawing shows faintly through the fresh bed.
-        under.stroke(drawing, with: .color(ink.opacity(0.15)), style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
+        under.stroke(lines, with: .color(ink.opacity(0.15)), style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
     }
 
     /// The drawing's strokes, as far as the brush has gone.
