@@ -9,7 +9,8 @@ Not announced. Built on Paint by Moonlight's engine
 
 - `docs/brief.md`: what this is, Paul's words and decisions, and the plan.
 - `prototype/`: the Python prototype the engine is ported from.
-- `Sources/MosaicCore`: the engine (Swift, on PaintCore pinned by revision), tested on Linux:
+- `Sources/MosaicCore`: a mosaic as a PaintCore template (`MosaicCore.template(of:)`: a numbered
+  area per tile, the grout one more), on PaintCore pinned by revision, tested on Linux:
   `tools/paintcore-mirror.sh && swift test` (the script fetches only the pinned PaintCore commit;
   `tools/swift.sh` runs SwiftPM in the swift:6.2 image where no toolchain is installed).
 - `Sources/MosaicEngine`: the mosaic generator in Swift (photo, contours and faces in; a `Mosaic`
