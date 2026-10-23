@@ -26,6 +26,8 @@ nonisolated public enum MosaicEngine {
         public var grout: Int = 2
         /// How an iris is coloured (issue #9, an option until Paul narrows it).
         public var eyes: Eyes = .asTheyLook
+        /// How a mouth is set (issue #1, an option until Paul narrows it).
+        public var mouth: Mouth = .asInThePhoto
         public init() {}
     }
 
@@ -134,6 +136,8 @@ nonisolated public enum MosaicEngine {
             throw InputError.photoSize
         }
         guard contours.count == photo.width * photo.height else { throw InputError.contourSize }
+        var photo = photo, contours = contours, faces = faces
+        if settings.mouth == .byzantine { byzantineMouths(&photo, &contours, &faces) }
         let run = Run(photo: photo, contours: contours, faces: faces, settings: settings)
         return try run.make(cancel: cancel, progress: progress, trace: &trace)
     }

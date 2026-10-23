@@ -4,6 +4,8 @@ name: CI
 # macOS, only when asked or when the app changed on main: the five macOS runners are shared with
 # Paint by Moonlight, which always goes first (CLAUDE.md). Ask its setup session for a slot first.
 #   compile  `[compile]` in a branch's pushed commit message: an unsigned Debug build of the app.
+#   determinism  `[determinism]` in a branch's pushed commit message: the Determinism tests on
+#            Apple silicon, against Linux's hashes (SwiftPM, no Xcode project).
 #   ipa      main, when App/, Sources/MosaicKit/ or Sources/MosaicEngine/ changed (or `[ipa]` on a branch, which archives
 #            without publishing): an unsigned Release archive as a `build-<n>` prerelease (five
 #            kept) and the SideStore source on the `sidestore` branch. Adapted from paint-by-number.
@@ -127,6 +129,28 @@ jobs:
             out
             !out/*.ipa
           if-no-files-found: ignore
+
+  determinism:
+    # `[determinism]` in a branch's pushed commit message: the Determinism suite on Apple silicon,
+    # whose hashes are Linux's (Tests/MosaicCoreTests/DeterminismTests.swift). Debug and release.
+    name: Same mosaic on Apple silicon (macOS, SwiftPM)
+    if: github.ref_name != 'main' && contains(github.event.head_commit.message, '[determinism]')
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with: { persist-credentials: false }
+      - name: PaintCore from a slim mirror
+        run: tools/paintcore-mirror.sh
+      - name: Test
+        run: |
+          set -o pipefail
+          uname -m; swift --version
+          status=0
+          for c in debug release; do
+            swift test -c $c --filter Determinism 2>&1 | grep -vE '^\[[0-9]+/[0-9]+\]' || status=1
+          done
+          exit $status
 
   core:
     name: MosaicKit and MosaicCore build and tests (Linux)
