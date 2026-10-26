@@ -169,7 +169,8 @@ struct ArtworkPaintingView: View {
         let session: PaintingSession
         do {
             session = try await PaintingSession.make(
-                template: document.template, progress: document.progress, nicknameSeed: ColorNickname.seed(for: artworkID),
+                template: document.template, progress: document.progress, mosaic: document.mosaic,
+                nicknameSeed: ColorNickname.seed(for: artworkID),
                 nicknameVersion: artwork?.nicknameVersion ?? 1)
         } catch is CancellationError {
             return

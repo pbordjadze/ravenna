@@ -52,8 +52,10 @@
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
-		<string>Paper</string>
+		<string>LaunchGround</string>
 	</dict>
+	<key>UIUserInterfaceStyle</key>
+	<string>Dark</string>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>

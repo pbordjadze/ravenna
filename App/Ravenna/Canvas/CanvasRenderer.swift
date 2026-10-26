@@ -95,6 +95,9 @@ final class CanvasRenderer {
             targets: RenderContext.Targets(color: drawable.texture, multisample: multisample, outlines: outlines),
             content: content)
         commands.addCompletedHandler(Self.signal(inFlight, then: onPresented))
+        #if DEBUG
+        commands.addCompletedHandler(Self.meter())
+        #endif
         commands.present(drawable)
         commands.commit()
         return true
@@ -111,6 +114,13 @@ final class CanvasRenderer {
         }
         pending[k].removeAll(keepingCapacity: true)
     }
+
+    #if DEBUG
+    /// Hands the GPU's time on the frame to `FrameMeter` (built outside the main actor, as `signal`).
+    nonisolated private static func meter() -> MTLCommandBufferHandler {
+        { FrameMeter.shared.finished($0) }
+    }
+    #endif
 
     /// Built outside the main actor: Metal calls it on its own completion thread. A frame whose
     /// presentation is awaited (`onPresented`) is announced here, a tenth of a second after the

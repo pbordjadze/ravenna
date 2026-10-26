@@ -813,7 +813,7 @@ private struct ProgressGroup: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        let percent = PaintSpeech.percent(painted: session.shownPaintedCount, total: session.progress.regionCount)
+        let percent = PaintSpeech.percent(painted: session.shownPaintedCount, total: session.areaCount)
         HStack(spacing: 8) {
             PaintedRing(session: session)
                 .frame(width: 18, height: 18)
@@ -852,7 +852,7 @@ private struct QuietRingButton: View {
     @Environment(\.glassButtonDiameter) private var diameter
 
     var body: some View {
-        let percent = PaintSpeech.percent(painted: session.shownPaintedCount, total: session.progress.regionCount)
+        let percent = PaintSpeech.percent(painted: session.shownPaintedCount, total: session.areaCount)
         Button(action: action) {
             PaintedRing(session: session)
                 .frame(width: diameter * 0.5, height: diameter * 0.5)
@@ -889,7 +889,7 @@ private struct PaintedRing: View {
     }
 
     private var paintedArcs: [(paint: Color, start: Double, end: Double)] {
-        let total = Double(max(session.progress.regionCount, 1))
+        let total = Double(max(session.areaCount, 1))
         let shown = session.shownPaintedByColor
         var start = 0.0
         return (0..<session.paletteCount).compactMap { color -> (paint: Color, start: Double, end: Double)? in

@@ -1,4 +1,5 @@
 import Foundation
+import MosaicKit
 import Observation
 import PaintCore
 import simd
@@ -46,9 +47,9 @@ nonisolated enum OpeningColor {
     #endif
 
     /// The color of `template`'s largest area, ties going to the lower number; nil without areas.
-    static func largestArea(in template: Template) -> Int? {
+    static func largestArea(in template: Template, skipping skipped: Int? = nil) -> Int? {
         var best: (area: Float, color: Int)?
-        for region in template.regions {
+        for (i, region) in template.regions.enumerated() where i != skipped {
             let color = Int(region.colorIndex)
             if let current = best, region.area < current.area || (region.area == current.area && color >= current.color) {
                 continue
@@ -64,6 +65,9 @@ nonisolated enum OpeningColor {
 @Observable
 final class PaintingSession {
     let template: Template
+    /// The mosaic the template was made of, when it is one (`TileWall`): the canvas lays tiles,
+    /// a drag lays a row, and the grout is set from the start.
+    let wall: TileWall?
     private(set) var progress: PaintProgress
     /// Palette index currently loaded on the brush.
     private(set) var selectedColor: Int?
@@ -163,28 +167,31 @@ final class PaintingSession {
 
     /// Prepares immutable counts and palette text off the main actor, then installs the live
     /// session on it. Swatch bodies must not repeatedly resolve every color's localized words.
-    static func make(template: Template, nicknameSeed: UInt64 = 0, nicknameVersion: Int = 1) async -> PaintingSession {
-        let progress = PaintProgress(regionCount: template.regions.count)
+    static func make(template: Template, mosaic: Mosaic? = nil, nicknameSeed: UInt64 = 0, nicknameVersion: Int = 1) async -> PaintingSession {
+        let wall = mosaic.flatMap { TileWall(mosaic: $0, template: template) }
+        let progress = PaintProgress(regionCount: template.regions.count).groutSet(wall)
         let prepared = await Background.run {
-            Prepared(template: template, progress: progress, seed: nicknameSeed, version: nicknameVersion)
+            Prepared(template: template, progress: progress, wall: wall, seed: nicknameSeed, version: nicknameVersion)
         }
         return PaintingSession(
-            checked: template, progress: progress, nicknameSeed: nicknameSeed, nicknameVersion: nicknameVersion,
+            checked: template, progress: progress, wall: wall, nicknameSeed: nicknameSeed, nicknameVersion: nicknameVersion,
             prepared: prepared)
     }
 
     static func make(
-        template: Template, progress: PaintProgress, nicknameSeed: UInt64 = 0, nicknameVersion: Int = 1
+        template: Template, progress: PaintProgress, mosaic: Mosaic? = nil, nicknameSeed: UInt64 = 0, nicknameVersion: Int = 1
     ) async throws -> PaintingSession {
         guard progress.regionCount == template.regions.count else {
             throw ProgressMismatch(templateRegions: template.regions.count, progressRegions: progress.regionCount)
         }
+        let wall = mosaic.flatMap { TileWall(mosaic: $0, template: template) }
+        let progress = progress.groutSet(wall)
         let prepared = await Background.run {
-            Prepared(template: template, progress: progress, seed: nicknameSeed, version: nicknameVersion)
+            Prepared(template: template, progress: progress, wall: wall, seed: nicknameSeed, version: nicknameVersion)
         }
         try Task.checkCancellation()
         return PaintingSession(
-            checked: template, progress: progress, nicknameSeed: nicknameSeed, nicknameVersion: nicknameVersion,
+            checked: template, progress: progress, wall: wall, nicknameSeed: nicknameSeed, nicknameVersion: nicknameVersion,
             prepared: prepared)
     }
 
@@ -200,7 +207,7 @@ final class PaintingSession {
         let opening: Int?
         let opensOnLargestArea: Bool
 
-        init(template: Template, progress: PaintProgress, seed: UInt64, version: Int) {
+        init(template: Template, progress: PaintProgress, wall: TileWall? = nil, seed: UInt64, version: Int) {
             totals = template.regionCountsByColor
             var remaining = totals
             for (i, region) in template.regions.enumerated() where progress.isPainted(i) {
@@ -208,8 +215,10 @@ final class PaintingSession {
             }
             self.remaining = remaining
             completed = Set(remaining.indices.filter { remaining[$0] == 0 })
-            opensOnLargestArea = OpeningColor.isLargestArea && progress.paintedCount == 0
-            opening = opensOnLargestArea ? OpeningColor.largestArea(in: template) : remaining.firstIndex { $0 > 0 }
+            opensOnLargestArea = OpeningColor.isLargestArea && progress.paintedCount == progress.groutCount(wall)
+            // A mosaic's largest area is its grout, set already: its largest tile's paint then.
+            opening = opensOnLargestArea
+                ? OpeningColor.largestArea(in: template, skipping: wall?.groutRegion) : remaining.firstIndex { $0 > 0 }
             let names = template.palette.map(\.colorName)
             let nicknames = ColorNameText.nicknames(for: template.palette, seed: seed, version: version)
             self.names = names
@@ -226,14 +235,16 @@ final class PaintingSession {
 
     private convenience init(checked template: Template, progress: PaintProgress, nicknameSeed: UInt64, nicknameVersion: Int) {
         self.init(
-            checked: template, progress: progress, nicknameSeed: nicknameSeed, nicknameVersion: nicknameVersion,
+            checked: template, progress: progress, wall: nil, nicknameSeed: nicknameSeed, nicknameVersion: nicknameVersion,
             prepared: Prepared(template: template, progress: progress, seed: nicknameSeed, version: nicknameVersion))
     }
 
     private init(
-        checked template: Template, progress: PaintProgress, nicknameSeed: UInt64, nicknameVersion: Int, prepared: Prepared
+        checked template: Template, progress: PaintProgress, wall: TileWall?, nicknameSeed: UInt64, nicknameVersion: Int,
+        prepared: Prepared
     ) {
         self.template = template
+        self.wall = wall
         self.progress = progress
         totalByColor = prepared.totals
         colorNames = prepared.names
@@ -245,7 +256,7 @@ final class PaintingSession {
         self.nicknameVersion = nicknameVersion
         remainingByColor = prepared.remaining
         isComplete = progress.isComplete
-        isStarted = progress.paintedCount > 0
+        isStarted = progress.paintedCount > progress.groutCount(wall)
         completedColors = prepared.completed
         opensOnLargestArea = prepared.opensOnLargestArea
         selectedColor = prepared.opening
@@ -259,8 +270,14 @@ final class PaintingSession {
 
     var paletteCount: Int { template.palette.count }
     var fractionComplete: Double {
-        progress.regionCount == 0 ? 0 : Double(progress.paintedCount) / Double(progress.regionCount)
+        areaCount == 0 ? 0 : Double(progress.paintedCount - ground) / Double(areaCount)
     }
+
+    /// The areas there are to paint: a mosaic's tiles, not its grout, set from the start.
+    var areaCount: Int { progress.regionCount - ground }
+
+    /// 1 for a mosaic's grout, set from the start and counted nowhere the painter sees, else 0.
+    private var ground: Int { progress.groutCount(wall) }
 
     /// The canvas's replay has `count` of the painting's areas on screen (nil: no replay is
     /// playing, the painting shows as it stands).
@@ -273,18 +290,25 @@ final class PaintingSession {
     /// The share of the areas the screen shows painted: the replay's while one plays, else
     /// `fractionComplete`.
     var shownFraction: Double {
-        progress.regionCount == 0 ? 0 : Double(shownPaintedCount) / Double(progress.regionCount)
+        areaCount == 0 ? 0 : Double(shownPaintedCount) / Double(areaCount)
     }
 
-    /// How many areas the screen shows painted: the replay's while one plays.
-    var shownPaintedCount: Int { replayed ?? progress.paintedCount }
+    /// How many areas the screen shows painted: the replay's while one plays. A mosaic's grout,
+    /// which leads its log, isn't one.
+    var shownPaintedCount: Int { max((replayed ?? progress.paintedCount) - ground, 0) }
 
     /// The painted areas of each palette color, as the screen shows them: the first `replayed` of
     /// the stroke log while a replay plays, else what the painting holds.
     var shownPaintedByColor: [Int] {
-        guard let replayed else { return (0..<paletteCount).map { totalByColor[$0] - remainingByColor[$0] } }
+        guard let replayed else {
+            var counts = (0..<paletteCount).map { totalByColor[$0] - remainingByColor[$0] }
+            if let wall, ground > 0 { counts[colorOf(wall.groutRegion)] -= 1 }
+            return counts
+        }
         var counts = [Int](repeating: 0, count: paletteCount)
-        for stroke in progress.log.prefix(replayed) { counts[colorOf(Int(stroke.region))] += 1 }
+        for stroke in progress.log.prefix(replayed) where Int(stroke.region) != wall?.groutRegion {
+            counts[colorOf(Int(stroke.region))] += 1
+        }
         return counts
     }
 
@@ -351,6 +375,12 @@ final class PaintingSession {
     func drag(from a: SIMD2<Float>, to b: SIMD2<Float>, radius: Float) -> PaintEvent? {
         guard let color = brushColor else { return nil }
         let progress = self.progress
+        if let wall {
+            // A row: the tiles the finger passes over, not every one the brush's disc touches.
+            let row = wall.laying(from: a, to: b, radius: min(max(0, radius), Self.maxBrushRadius), paint: color,
+                                  isPainted: progress.isPainted)
+            return row.isEmpty ? nil : paint(row, from: b, animated: true)
+        }
         // Stroke parameter of the first contact per region it touches.
         var enter: [Int: Float] = [:]
         forEachRegion(
@@ -421,6 +451,8 @@ final class PaintingSession {
     /// Unpaints the most recent fill; returns its region.
     @discardableResult
     func undo() -> Int? {
+        // The grout is the ground, set before the first tile: nothing to undo.
+        if let wall, progress.log.last.map({ Int($0.region) }) == wall.groutRegion { return nil }
         guard let region = progress.undo() else { return nil }
         remainingByColor[colorOf(region)] += 1
         revision += 1
@@ -433,14 +465,20 @@ final class PaintingSession {
     }
 
     func reset() {
-        let painted = (0..<progress.regionCount).filter(progress.isPainted)
+        // A mosaic's grout stays set.
+        let painted = (0..<progress.regionCount).filter { progress.isPainted($0) && $0 != wall?.groutRegion }
         progress.reset()
         remainingByColor = totalByColor
+        if let wall {
+            progress = progress.groutSet(wall)
+            remainingByColor[colorOf(wall.groutRegion)] -= 1
+        }
         revision += 1
         updateMilestones(colors: 0..<paletteCount)
         canvas?.session(self, didUnpaint: painted)
         // Started over, the painting is fresh again: it opens as a fresh one does.
-        select(color: OpeningColor.isLargestArea ? OpeningColor.largestArea(in: template) : firstIncompleteColor())
+        select(color: OpeningColor.isLargestArea
+            ? OpeningColor.largestArea(in: template, skipping: wall?.groutRegion) : firstIncompleteColor())
     }
 
     /// Asks the canvas to reveal the unpainted region of the selected color nearest to
@@ -525,7 +563,7 @@ final class PaintingSession {
             if remainingByColor[c] == 0 { completedColors.insert(c) } else { completedColors.remove(c) }
         }
         if isComplete != progress.isComplete { isComplete = progress.isComplete }
-        let started = progress.paintedCount > 0
+        let started = progress.paintedCount > progress.groutCount(wall)
         if isStarted != started { isStarted = started }
     }
 
@@ -635,5 +673,32 @@ final class PaintingSession {
                 }
             }
         }
+    }
+}
+
+nonisolated extension PaintProgress {
+    /// 1 when a mosaic's grout is set (it is from the start), else 0: what the painter has set is
+    /// `paintedCount` less this.
+    func groutCount(_ wall: TileWall?) -> Int {
+        guard let wall, wall.groutRegion < regionCount else { return 0 }
+        return isPainted(wall.groutRegion) ? 1 : 0
+    }
+
+    /// The progress with a mosaic's grout set (`TileWall`): the ground, never painted by hand. It
+    /// leads the log, where undo never reaches it, so progress saved without it, or with it
+    /// elsewhere (v0's carried over paints it last), is laid again after it, each fill at its own
+    /// time.
+    func groutSet(_ wall: TileWall?) -> PaintProgress {
+        guard let wall, wall.groutRegion < regionCount else { return self }
+        if log.first.map({ Int($0.region) }) == wall.groutRegion { return self }
+        var progress = PaintProgress(regionCount: regionCount)
+        progress.activeSeconds = log.first.map { Double($0.time) } ?? activeSeconds
+        progress.paint(wall.groutRegion)
+        for stroke in log where Int(stroke.region) != wall.groutRegion {
+            progress.activeSeconds = Double(stroke.time)
+            progress.paint(Int(stroke.region))
+        }
+        progress.activeSeconds = activeSeconds
+        return progress
     }
 }

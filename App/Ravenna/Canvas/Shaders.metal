@@ -27,6 +27,8 @@ struct FrameUniforms {
     float4 lineWidth;   // line width (px) per layer
     float4 lineMode;    // x: 1 for a coloring book
     float4 lightInk;    // rgb: the tone writing over a dark paint draws in once its region is painted
+    float4 tiles;       // x: 1 for a mosaic, y: finish (0 flat, 1 bed, 2 material), z: 1 with a bed texture, w: motion's pace
+    float4 grout;       // rgb: the joints' colour on light grout (flat finish)
 };
 
 // Must match `RegionState` (CanvasTypes.swift).
@@ -48,6 +50,20 @@ struct GlyphInstance {
     uint digit;
     uint region;
 };
+
+// Must match `TileShape` (TileScene.swift).
+struct TileShape {
+    float2 centre;      // canvas units
+    float2 litCorner;   // the corner the light reaches first
+    float size;         // side of a square of its bounds' area
+    uint cornerStart;
+    uint cornerCount;
+    uint flags;         // kTile, kStone, kGold, kClockwise; 0 for the grout
+    float turn;         // radians a raised tessera is turned at full lift
+    float pad0, pad1, pad2;
+};
+
+constant uint kTile = 1u, kStone = 2u, kGold = 4u, kClockwise = 8u;
 
 constant float kWetSettle = 0.7;
 constant float kLightWriting = 4.0;      // OutlineGeometry.lightWritingMark (CanvasScene's line layers)
@@ -135,6 +151,139 @@ static float pulse(float t, bool still) {
     return wave * (1.0 - t / 2.0);
 }
 
+// MARK: - Tiles
+
+// A mosaic's tiles (MosaicKit's `Hand`, `Finish`; v0's `TileArt`): region i is tile i, the grout the
+// last. The grout is the ground: light grout or the painted bed. An unset tile shows the ground with
+// its number; a set tile is a tessera in its finish. A tile being set is held raised, settles into
+// the bed with a damped spring and catches the light once (`Motion`, mirrored here); while raised
+// it is drawn by the lift pass, above its neighbours, and its place below shows the ground.
+
+constant float kPress = 0.09, kSettle = 0.29, kGlintStart = 0.22, kGlint = 0.54, kLift = 0.14;
+constant float2 kLightFrom = float2(-0.6, -0.8);
+
+static float settled(float t) {
+    float x = saturate((t - kPress) / kSettle);
+    return x >= 1.0 ? 1.0 : 1.0 - exp(-10.0 * x) * cos(9.0 * x);
+}
+
+/// Seconds since a tile began to be set, at the motion's pace (demos slow it).
+static float tileTime(RegionState s, float now, constant FrameUniforms &u) {
+    return (now - s.start) / max(u.tiles.w, 1e-3);
+}
+
+static bool isTile(constant FrameUniforms &u, TileShape shape) {
+    return u.tiles.x > 0.5 && (shape.flags & kTile) != 0u;
+}
+
+/// Whether a tile being set is raised now: the lift pass draws it. One whose setting is still to
+/// come (later in a row, or in a replay) isn't there yet.
+static bool isRaised(RegionState s, float now, constant FrameUniforms &u) {
+    float t = tileTime(s, now, u);
+    return u.numbers.w < 0.5 && s.painted > 0.5 && t >= 0.0 && t < kPress + kSettle;
+}
+
+/// How much of a tile is set, 0…1: 1 once its setting begins (the tessera covers its number at
+/// once), 0 before, easing in over 150 ms under Reduce Motion, easing out over the unpainting's
+/// duration (undo).
+static float tileCoverage(RegionState s, float now, constant FrameUniforms &u) {
+    if (s.painted > 0.5) {
+        float t = tileTime(s, now, u);
+        return t < 0.0 ? 0.0 : u.numbers.w > 0.5 ? saturate(t / 0.15) : 1.0;
+    }
+    return 1.0 - smoothstep(0.0, 1.0, (now - s.start) / max(s.duration, 1e-4));
+}
+
+/// The light crossing a tile as it settles, 0…1, or -1 when it isn't crossing.
+static float glinting(RegionState s, float now, constant FrameUniforms &u) {
+    float x = (tileTime(s, now, u) - kGlintStart) / kGlint;
+    return s.painted > 0.5 && x > 0.0 && x < 1.0 ? x : -1.0;
+}
+
+static float3 encode(float3 c) { return pow(max(c, 0.0), float3(1.0 / 2.2)); }
+static float3 decode(float3 c) { return pow(max(c, 0.0), float3(2.2)); }
+
+/// The ground at `p`: the painted bed, or light grout.
+static float3 groundAt(float2 p, constant FrameUniforms &u, texture2d<float> bed) {
+    if (u.tiles.y > 0.5 && u.tiles.z > 0.5) {
+        constexpr sampler bilinear(filter::linear, address::clamp_to_edge);
+        return bed.sample(bilinear, p / u.viewport.zw).rgb;
+    }
+    return u.grout.rgb;
+}
+
+/// A set tile at `p` in its finish, its body colour `body` (linear); `glint` is the light crossing
+/// it as it settles (-1: none). The edges' light and the glass's glint are worked in gamma-encoded
+/// values, as v0's Core Graphics drew them.
+static float3 tessera(float2 p, TileShape shape, float3 body, const device float2 *corners,
+                      float glint, constant FrameUniforms &u) {
+    int finish = int(u.tiles.y + 0.5);
+    bool stone = (shape.flags & kStone) != 0u;
+    bool gold = (shape.flags & kGold) != 0u;
+    float3 c = encode(body);
+    if (finish != 1) {
+        // The nearest edge, and how lit it is.
+        float nearest = 1e9, lit = 0.0;
+        bool clockwise = (shape.flags & kClockwise) != 0u;
+        for (uint k = 0; k < shape.cornerCount; k++) {
+            float2 a = corners[shape.cornerStart + k];
+            float2 b = corners[shape.cornerStart + (k + 1u) % shape.cornerCount];
+            float2 ab = b - a;
+            float h = saturate(dot(p - a, ab) / max(dot(ab, ab), 1e-6));
+            float d = length(p - a - ab * h);
+            if (d < nearest) {
+                nearest = d;
+                float2 n = float2(b.y - a.y, a.x - b.x) * (clockwise ? 1.0 : -1.0);
+                lit = length(n) > 0.0 ? dot(normalize(n), kLightFrom) : 0.0;
+            }
+        }
+        if (finish == 0) {
+            // Flat: a thin dark edge.
+            float w = shape.size * 0.04;
+            c = mix(float3(0.2, 0.18, 0.17), c, smoothstep(w * 0.5, w, nearest));
+        } else {
+            // Glass and stone: a lit upper-left edge and a shaded lower-right one, glass sharper.
+            float k = stone ? 0.16 : 0.34;
+            float w = shape.size * (stone ? 0.1 : 0.14);
+            float3 edge = c * (1.0 + k * lit) + (lit > 0.0 ? 0.03 * lit : 0.0);
+            c = mix(edge, c, smoothstep(w * 0.75, w, nearest));
+            if (!stone) {
+                // Glass glints toward the corner the light reaches first.
+                float g = 0.16 * saturate(1.0 - length(p - shape.litCorner) / (shape.size * 0.55));
+                c = mix(c, float3(1.0, 0.98, 0.92), g);
+            }
+        }
+    }
+    if (glint >= 0.0) {
+        // A band of warm light crossing it from its lit corner, once: gold catches it brightest.
+        float reach = shape.size * 0.9;
+        float2 from = shape.centre - reach, to = shape.centre + reach;
+        float2 d = to - from;
+        float along = dot(p - from, d) / dot(d, d);
+        float at = 0.12 + 0.76 * glint;
+        float peak = (gold ? 0.75 : stone ? 0.2 : 0.45) * sin(3.14159265 * glint);
+        float3 warm = gold ? float3(1.0, 0.89, 0.59) : float3(1.0, 0.95, 0.84);
+        c = mix(c, warm, peak * saturate(1.0 - abs(along - at) / 0.12));
+        if (gold) c = mix(c, float3(0.79, 0.64, 0.29), 0.35 * (1.0 - glint));
+    }
+    return decode(c);
+}
+
+/// Light raking once across the wall, as a lamp carried past it (v0's finish), or across one
+/// paint's tiles when it is used up: a band of gold light, added.
+static float3 rake(float3 c, float2 p, int colorIndex, bool tile, constant FrameUniforms &u) {
+    bool all = u.shine.y < 0.0;
+    if (!(all || (tile && int(u.shine.y + 0.5) == colorIndex))) return c;
+    float span = all ? 2.4 : 1.2;
+    float t = (u.time.x - u.shine.x) / span;
+    if (t <= 0.0 || t >= 1.0) return c;
+    float2 wall = u.viewport.zw;
+    float along = dot(p, wall) / dot(wall, wall);
+    float at = -0.3 + 1.6 * t;
+    float band = saturate(1.0 - abs(along - at) / 0.18);
+    return c + decode(float3(0.788, 0.635, 0.290)) * 0.32 * sin(3.14159265 * t) * band;
+}
+
 // MARK: - Paper and shadow
 
 struct RectOut {
@@ -202,11 +351,32 @@ vertex FillOut fillVertex(uint vid [[vertex_id]],
 fragment float4 fillFragment(FillOut in [[stage_in]],
                              const device float4 *regionColors [[buffer(0)]],
                              const device RegionState *states [[buffer(1)]],
-                             constant FrameUniforms &u [[buffer(2)]]) {
+                             constant FrameUniforms &u [[buffer(2)]],
+                             const device TileShape *shapes [[buffer(3)]],
+                             const device float2 *corners [[buffer(4)]],
+                             const device float4 *bodies [[buffer(5)]],
+                             texture2d<float> bed [[texture(0)]]) {
     uint r = in.region;
     float4 info = regionColors[r];
     RegionState s = states[r];
     float now = u.time.x;
+    if (u.tiles.x > 0.5) {
+        TileShape shape = shapes[r];
+        int colorIndex = int(info.w + 0.5);
+        float3 base = groundAt(in.canvas, u, bed);
+        if (!isTile(u, shape)) return float4(rake(base, in.canvas, colorIndex, false, u), 1.0);
+        float set = tileCoverage(s, now, u);
+        if (u.selected.a > 0.5 && colorIndex == u.ids.x && set < 1.0) {
+            base = highlightPaper(base, in.position.xy / u.transform.w, u);
+        }
+        if (int(r) == u.ids.y) base = mix(base, u.accent.rgb, 0.3);
+        if (int(r) == u.ids.z) base = mix(base, u.accent.rgb, 0.6 * pulse(now - u.time.z, u.numbers.w > 0.5));
+        // Raised, its place below shows the ground; the lift pass draws the tessera over it.
+        if (isRaised(s, now, u)) return float4(base, 1.0);
+        float3 c = base;
+        if (set > 0.0) c = mix(base, tessera(in.canvas, shape, bodies[r].rgb, corners, glinting(s, now, u), u), set);
+        return float4(rake(c, in.canvas, colorIndex, true, u), 1.0);
+    }
     PaintSample ps = samplePaint(s, in.canvas, now, 1.0 / u.transform.z);
 
     float3 base = u.paper.rgb;
@@ -231,6 +401,68 @@ fragment float4 fillFragment(FillOut in [[stage_in]],
         paint = mix(paint, min(paint * 1.3 + 0.1, float3(1.0)), 0.55 * exp(-x * x));
     }
     float3 c = mix(base, paint, ps.coverage);
+    return float4(c, 1.0);
+}
+
+// MARK: - Lift (tiles being set)
+
+// Every tile still raised, drawn again over the fills and outlines: first its shadow below it
+// (`shadow`), then the tessera, scaled up about its centre and turned a little as it is held, then
+// settling. Every other region's triangles are moved off screen. Positions keep the tile's own
+// canvas coordinates for its colours, so its edges and glint move with it.
+
+struct LiftOut {
+    float4 position [[position]];
+    float2 canvas;
+    uint region [[flat]];
+    float lift [[flat]];
+};
+
+vertex LiftOut liftVertex(uint vid [[vertex_id]],
+                          const device float2 *positions [[buffer(0)]],
+                          const device uint *vertexRegion [[buffer(1)]],
+                          constant FrameUniforms &u [[buffer(2)]],
+                          const device TileShape *shapes [[buffer(3)]],
+                          const device RegionState *states [[buffer(4)]],
+                          constant uint &shadow [[buffer(5)]]) {
+    LiftOut o;
+    uint r = vertexRegion[vid];
+    float2 p = positions[vid];
+    TileShape shape = shapes[r];
+    RegionState s = states[r];
+    float now = u.time.x;
+    o.canvas = p;
+    o.region = r;
+    float lift = 1.0 - settled(tileTime(s, now, u));
+    o.lift = lift;
+    if (!isTile(u, shape) || !isRaised(s, now, u) || (shadow != 0u && lift <= 0.02)) {
+        o.position = float4(-2.0, -2.0, 0.0, 1.0);
+        return o;
+    }
+    float k = 1.0 + kLift * lift;
+    float a = shape.turn * max(lift, 0.0);
+    float2 d = (p - shape.centre) * k;
+    float2 q = shape.centre + float2(d.x * cos(a) - d.y * sin(a), d.x * sin(a) + d.y * cos(a));
+    if (shadow != 0u) q += float2(0.14, 0.2) * shape.size * lift;
+    o.position = toClip(toPixels(q, u), u);
+    return o;
+}
+
+fragment float4 liftFragment(LiftOut in [[stage_in]],
+                             constant FrameUniforms &u [[buffer(0)]],
+                             const device TileShape *shapes [[buffer(1)]],
+                             const device float2 *corners [[buffer(2)]],
+                             const device float4 *bodies [[buffer(3)]],
+                             const device RegionState *states [[buffer(4)]],
+                             constant uint &shadow [[buffer(5)]]) {
+    if (shadow != 0u) {
+        float a = 0.45 * saturate(in.lift);
+        return float4(0.0, 0.0, 0.0, a);    // premultiplied black
+    }
+    uint r = in.region;
+    TileShape shape = shapes[r];
+    RegionState s = states[r];
+    float3 c = tessera(in.canvas, shape, bodies[r].rgb, corners, glinting(s, u.time.x, u), u);
     return float4(c, 1.0);
 }
 
@@ -367,10 +599,12 @@ vertex GlyphOut glyphVertex(uint vid [[vertex_id]],
             fontPx = mix(fontPx, max(fontPx * 1.3, u.labels.w), still ? 1.0 : bump);
         }
     }
-    PaintSample ps = samplePaint(states[g.region], g.center, now, 1.0 / u.transform.z);
+    // A mosaic's grout is set from the start, so its numbers never show.
+    float coverage = u.tiles.x > 0.5 ? tileCoverage(states[g.region], now, u)
+        : samplePaint(states[g.region], g.center, now, 1.0 / u.transform.z).coverage;
     bool selected = u.selected.a > 0.5 && int(regionColors[g.region].w + 0.5) == u.ids.x;
     float visibility = max(legible * u.outline.w, bump);
-    float alpha = visibility * (1.0 - ps.coverage) * (selected || bump > 0.0 ? u.numbers.y : u.numbers.x);
+    float alpha = visibility * (1.0 - coverage) * (selected || bump > 0.0 ? u.numbers.y : u.numbers.x);
 
     float4 rect = digitRects[g.digit];
     float4 uvRect = digitUVs[g.digit];

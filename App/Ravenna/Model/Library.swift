@@ -189,7 +189,7 @@ final class Library {
         let store = self.store
         try await Background.run {
             let progress = draft.progress ?? PaintProgress(regionCount: draft.template.regions.count)
-            let thumbnail = Library.thumbnailPNG(draft.template, painted: progress.painted)
+            let thumbnail = Library.thumbnailPNG(draft.template, painted: progress.painted, mosaic: draft.mosaic)
             let source = draft.photo.flatMap {
                 ImageCodec.jpegData(ImageCodec.downscaled($0, maxPixelSize: ArtworkStore.sourceMaxPixelSize), quality: 0.88)
             }
@@ -387,7 +387,8 @@ final class Library {
         guard let existing = artwork(with: id), !existing.needsNewerApp else { return false }
         let written = await enqueue(id) { store in
             let t = try template ?? store.readTemplate(id)
-            guard let png = Library.thumbnailPNG(t, painted: progress.painted) else { return }
+            let mosaic = try? store.readMosaic(id)
+            guard let png = Library.thumbnailPNG(t, painted: progress.painted, mosaic: mosaic ?? nil) else { return }
             try store.writeThumbnail(png, for: id)
         }.value
         guard written, var artwork = artwork(with: id) else { return written }
@@ -537,7 +538,7 @@ final class Library {
         let (progress, thumbnail) = await Background.run { () -> (PaintProgress, Data?) in
             let progress = old.map { savedProgress.progress.remapped(from: $0, to: template) }
                 ?? PaintProgress(regionCount: template.regions.count)
-            return (progress, Library.thumbnailPNG(template, painted: progress.painted))
+            return (progress, Library.thumbnailPNG(template, painted: progress.painted, mosaic: made.mosaic))
         }
         try Task.checkCancellation()
 
@@ -631,8 +632,13 @@ final class Library {
         }
     }
 
-    private nonisolated static func thumbnailPNG(_ template: Template, painted: [Bool]) -> Data? {
-        TemplateRasterizer.pngData(template, painted: painted, style: .thumbnail, maxPixelSize: ArtworkStore.thumbnailMaxPixelSize)
+    /// The gallery's card: a mosaic's tiles on their ground (`MosaicCard`, Ravenna's seam), else the
+    /// template's thumbnail.
+    private nonisolated static func thumbnailPNG(_ template: Template, painted: [Bool], mosaic: Mosaic? = nil) -> Data? {
+        if let mosaic, let card = MosaicCard.pngData(mosaic, painted: painted, maxPixelSize: ArtworkStore.thumbnailMaxPixelSize) {
+            return card
+        }
+        return TemplateRasterizer.pngData(template, painted: painted, style: .thumbnail, maxPixelSize: ArtworkStore.thumbnailMaxPixelSize)
     }
 
     /// A stable partition: each group keeps the order it came in.

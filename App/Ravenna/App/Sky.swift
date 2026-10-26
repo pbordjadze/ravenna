@@ -3,7 +3,7 @@ import Foundation
 /// The two skies the app keeps, a gentle nod to astrology (Paul, October 17, 2026; decided with
 /// the Lamplit Table, the Lamp's jury for the app's screens and controls): by Sun painting plays a
 /// brighter kalimba, by Moon a celesta-like bell on the same five notes, lower and minor
-/// (`SoundPlayer`), and the fill's two sparkles become stars (`CanvasView.popSparkles`). Only
+/// (Ravenna: the tune in major or minor, `TileSound`), and the fill's two sparkles become stars (`CanvasView.popSparkles`). Only
 /// the sun and the moon keeping the hours: nothing here tells the painter anything about
 /// themselves.
 nonisolated enum Sky: String, Sendable {
@@ -46,12 +46,13 @@ nonisolated enum SkySetting: String, CaseIterable, Identifiable, Sendable {
 
     var name: String {
         switch self {
-        case .sun: String(localized: "sky.sun", defaultValue: "Sun",
-                          comment: "Choice of Settings › Music: the daytime music, a bright kalimba, at every hour")
-        case .moon: String(localized: "sky.moon", defaultValue: "Moon",
-                           comment: "Choice of Settings › Music: the nighttime music, a bell, and stars for sparkles, at every hour")
+        // Ravenna: the Sun's and the Moon's tune in major and minor (`TileSound`).
+        case .sun: String(localized: "sky.sun", defaultValue: "Major",
+                          comment: "Choice of Settings › Music: the tune in a major key, at every hour")
+        case .moon: String(localized: "sky.moon", defaultValue: "Minor",
+                           comment: "Choice of Settings › Music: the tune in a minor key, at every hour")
         case .auto: String(localized: "sky.auto", defaultValue: "Auto",
-                           comment: "Choice of Settings › Music: Sun by day and Moon by night, by the painter's own clock")
+                           comment: "Choice of Settings › Music: major by day and minor by night, by the painter's own clock")
         }
     }
 

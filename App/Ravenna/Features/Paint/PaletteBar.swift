@@ -412,7 +412,7 @@ private struct Swatch: View {
                     .font(.system(size: metrics.checkmarkSize, weight: .heavy))
             } else {
                 Text(verbatim: "\(number)")
-                    .font(.system(size: metrics.numeralSize, weight: .bold, design: .serif))
+                    .font(.numeral(size: metrics.numeralSize))
                     .monospacedDigit()
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)

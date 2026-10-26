@@ -1,6 +1,7 @@
 import CoreGraphics
 import Foundation
 import Metal
+import MosaicKit
 import PaintCore
 import QuartzCore
 import UIKit
@@ -42,6 +43,13 @@ enum PencilAction {
 /// builds night then falls over it for about three seconds (`Nightfall`). A flight to the whole
 /// painting follows layout changes on the way (the completion bar replacing the palette, a
 /// rotation) instead of stopping.
+///
+/// A mosaic (`PaintingSession.wall`, Ravenna's seam) is drawn as tiles (`TileScene`): each tile set
+/// is pressed, settles and catches the light (MosaicKit's `Motion`), the tiles of one stroke
+/// settling `Motion.rowGap` apart, instead of paint spreading and sparkles; finishing it, light
+/// rakes across the wall instead of the shine and the night (v0's finish), and a used-up paint's
+/// tiles catch a lesser light. Under Reduce Motion tiles fade in and nothing rakes. With
+/// `OneFinger.lays` (`TileOptions`) one finger lays a row as it drags, and two move the wall.
 final class CanvasView: UIView, PaintingCanvas {
     override class var layerClass: AnyClass { CAMetalLayer.self }
 
@@ -101,6 +109,8 @@ final class CanvasView: UIView, PaintingCanvas {
     }
 
     private let template: Template
+    /// The mosaic, when the painting is one: drawn as tiles.
+    private let wall: TileWall?
     private let scene: CanvasScene?
     private let renderer: CanvasRenderer?
     private let scrollView = UIScrollView()
@@ -157,8 +167,19 @@ final class CanvasView: UIView, PaintingCanvas {
     private var cameraAnimation: CameraAnimation?
     private var isApplyingCamera = false
 
+    // Tiles (a mosaic)
+    /// The painted bed's texture, once made (`TileScene.bed`).
+    private var bedTexture: (any MTLTexture)?
+    private var bedTask: Task<Void, Never>?
+    /// When the last tile set so far starts settling, and when every one has settled (the lift
+    /// pass draws until then).
+    private var lastSettleStart = CanvasClock.never
+    private var liftUntil = CanvasClock.never
+
     // Gestures
     private var tapRecognizer: UITapGestureRecognizer!
+    /// `OneFinger.lays`' one-finger laying, when it is on.
+    private var layRecognizer: UIPanGestureRecognizer?
     private var tapBeganWhileMoving = false
     private var tapWasFinger = false
     private var lastTap: (time: CFTimeInterval, point: CGPoint, painted: Bool)?
@@ -230,8 +251,9 @@ final class CanvasView: UIView, PaintingCanvas {
         var byColor = [[Int]](repeating: [], count: template.palette.count)
         for (i, region) in template.regions.enumerated() { byColor[Int(region.colorIndex)].append(i) }
         regionsByColor = byColor
+        wall = session.wall
         let context = RenderContext.shared
-        let scene = context.flatMap { CanvasScene(template: session.template, context: $0) }
+        let scene = context.flatMap { CanvasScene(template: session.template, context: $0, wall: session.wall) }
         self.scene = scene
         if let context, let scene {
             renderer = CanvasRenderer(
@@ -254,6 +276,7 @@ final class CanvasView: UIView, PaintingCanvas {
         tracePaper()
         session.canvas = self
         session.onEvent { [weak self] event in self?.celebrate(event) }
+        loadBed()
     }
 
     @available(*, unavailable)
@@ -318,6 +341,18 @@ final class CanvasView: UIView, PaintingCanvas {
         press.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.direct.rawValue)]
         scrollView.addGestureRecognizer(press)
 
+        if wall != nil, TileOptions.oneFinger() == .lays {
+            // One finger lays a row as it drags, at once; two move and zoom the wall.
+            press.isEnabled = false
+            let lay = UIPanGestureRecognizer(target: self, action: #selector(handleLay(_:)))
+            lay.maximumNumberOfTouches = 1
+            lay.allowedTouchTypes = Self.fingerTouches
+            lay.delegate = self
+            scrollView.addGestureRecognizer(lay)
+            layRecognizer = lay
+            followPencilOnlyDrawing()
+        }
+
         let pencil = UILongPressGestureRecognizer(target: self, action: #selector(handlePencil(_:)))
         pencil.minimumPressDuration = 0
         pencil.allowableMovement = .greatestFiniteMagnitude
@@ -326,6 +361,14 @@ final class CanvasView: UIView, PaintingCanvas {
 
         scrollView.addGestureRecognizer(UIHoverGestureRecognizer(target: self, action: #selector(handleHover(_:))))
         addInteraction(UIPencilInteraction(delegate: self))
+    }
+
+    /// With `OneFinger.lays`, one finger lays and two move the wall, unless the system's "Only Draw
+    /// with Apple Pencil" is on: then a finger moves it, as it does everywhere else, and a pointer
+    /// still lays.
+    private func followPencilOnlyDrawing() {
+        guard layRecognizer != nil else { return }
+        scrollView.panGestureRecognizer.minimumNumberOfTouches = UIPencilInteraction.prefersPencilOnlyDrawing ? 1 : 2
     }
 
     /// Fingers navigate; the Pencil paints.
@@ -722,6 +765,9 @@ final class CanvasView: UIView, PaintingCanvas {
         }
         idleTicks = 0
         guard let renderer else { return }
+        #if DEBUG
+        let began = CACurrentMediaTime()
+        #endif
         let palette = canvasPalette
         let uniforms = makeUniforms(time: time, camera: camera, palette: palette)
         let content = RenderContext.Content(
@@ -730,7 +776,8 @@ final class CanvasView: UIView, PaintingCanvas {
             clear: MTLClearColor(
                 red: Double(palette.background.x), green: Double(palette.background.y),
                 blue: Double(palette.background.z), alpha: 1),
-            photo: uniforms.photo.x > 0.001 ? photoTexture : nil)
+            photo: uniforms.photo.x > 0.001 ? photoTexture : nil,
+            bed: bedTexture, lift: time < liftUntil)
         // The first frame that shows the fitted painting: the one the start of a painting is
         // handed over to, announced once it is on screen.
         var presented: (@Sendable () -> Void)?
@@ -742,6 +789,10 @@ final class CanvasView: UIView, PaintingCanvas {
             needsRender = false
             lastCamera = camera
             framesRendered += 1
+            #if DEBUG
+            let drawn = CACurrentMediaTime()
+            FrameMeter.shared.drew(cpu: drawn - began, at: drawn)
+            #endif
             skippedFrames = 0
         } else {
             skippedFrames += 1
@@ -782,6 +833,9 @@ final class CanvasView: UIView, PaintingCanvas {
 
     private func makeUniforms(time: Float, camera: Camera, palette: CanvasPalette) -> CanvasUniforms {
         let s = Float(contentScaleFactor)
+        let finish = TileOptions.finish()
+        let tiles = scene?.tiles.map { TileLook(finish: finish, hasBed: bedTexture != nil, grout: $0.grout, pace: fillDurationScale) }
+        let palette = tiles == nil ? palette : palette.onTiles(finish, hasBed: bedTexture != nil)
         // Line art gets finer and lighter when zoomed out, where regions are small on screen.
         let depth = Float(log2(max(camera.zoom / fitZoom, 1)))
         let widthPt = ClassicLook.widthPoints(depth: depth)
@@ -812,7 +866,7 @@ final class CanvasView: UIView, PaintingCanvas {
             selection: selected.map { (color: $0, paint: paint) },
             hovered: isReplaying ? -1 : hoverRegion, pulsing: pulseRegion, bumped: bumpRegion,
             brush: brush, shine: (start: shineStart, color: shineColor),
-            photoOpacity: photoFade.value(at: time)))
+            photoOpacity: photoFade.value(at: time), tiles: tiles))
     }
 
     private func numbersChanged() {
@@ -867,6 +921,24 @@ final class CanvasView: UIView, PaintingCanvas {
         return UncheckedSendable(texture)
     }
 
+    /// Makes a mosaic's painted bed once, off the main thread; until it arrives the ground is the
+    /// grout's colour.
+    private func loadBed() {
+        guard let wall, let context = renderer?.context, bedTask == nil else { return }
+        bedTask = Task { [weak self] in
+            let texture = await Self.makeBedTexture(wall, context: context)
+            guard let self, let texture else { return }
+            bedTexture = texture.value
+            requestRender()
+        }
+    }
+
+    @concurrent
+    private static func makeBedTexture(_ wall: TileWall, context: RenderContext) async -> UncheckedSendable<any MTLTexture>? {
+        guard let image = TileScene.bed(of: wall), let texture = context.makePhotoTexture(image) else { return nil }
+        return UncheckedSendable(texture)
+    }
+
     private func fadePhoto(to target: Float) {
         let t = now()
         photoFade.retarget(to: target, at: t)
@@ -892,10 +964,14 @@ final class CanvasView: UIView, PaintingCanvas {
         #if UNRELEASED
         endNightfall()
         #endif
-        let painted = session.progress.log.map { Int($0.region) }
+        // A mosaic's grout is the ground, there before the first tile.
+        let painted = session.progress.log.map { Int($0.region) }.filter { wall?.isTile($0) ?? true }
+        guard !painted.isEmpty else { return }
+        // The session counts the log's first entries as shown: a mosaic's grout leads it.
+        let ground = session.progress.log.count - painted.count
         isReplaying = true
         // Undo and the bar's Stop follow at once, not at the replay's first tick.
-        session.showReplayed(painted.count)
+        session.showReplayed(ground + painted.count)
         numbersChanged()
         zoomToFit()
         let reduceMotion = self.reduceMotion
@@ -909,11 +985,11 @@ final class CanvasView: UIView, PaintingCanvas {
         replayTask = Task { [weak self] in
             guard let self, !Task.isCancelled else { return }
             while now() - time < lift {
-                session.showReplayed(ReplayProgress.lifting(total: painted.count, elapsed: now() - time, lift: lift))
+                session.showReplayed(ground + ReplayProgress.lifting(total: painted.count, elapsed: now() - time, lift: lift))
                 try? await Task.sleep(for: Self.replayTick)
                 guard !Task.isCancelled else { return }
             }
-            session.showReplayed(0)
+            session.showReplayed(ground)
             try? await Task.sleep(for: .seconds(0.25))
             guard !Task.isCancelled else { return }
             // About 7 s for a typical painting, never a slog for a large one.
@@ -922,15 +998,20 @@ final class CanvasView: UIView, PaintingCanvas {
             let begin = now()
             for (i, r) in painted.enumerated() {
                 let origin = anchors[r]
+                if wall != nil {
+                    renderer.update(r, Self.setting(at: begin + Float(i) * step, pace: fillDurationScale))
+                    continue
+                }
                 renderer.update(r, RegionState(
                     origin: origin, start: begin + Float(i) * step, duration: reduceMotion ? 0 : 0.5,
                     radius: reduceMotion ? 0 : template.regions[r].bounds.farthestCorner(from: origin), painted: 1,
                     seed: RegionState.frontSeed(forRegion: r)))
             }
+            if wall != nil { liftUntil = max(liftUntil, begin + span + Float(Motion.press + Motion.settle) * fillDurationScale + 0.05) }
             activeUntil = max(activeUntil, begin + span + 1.5)
             requestRender()
             while now() - begin < span + 0.4 {
-                session.showReplayed(ReplayProgress.filling(total: painted.count, elapsed: now() - begin, step: step))
+                session.showReplayed(ground + ReplayProgress.filling(total: painted.count, elapsed: now() - begin, step: step))
                 try? await Task.sleep(for: Self.replayTick)
                 guard !Task.isCancelled else { return }
             }
@@ -947,6 +1028,7 @@ final class CanvasView: UIView, PaintingCanvas {
     func tearDown() {
         replayTask?.cancel()
         replayTask = nil
+        bedTask?.cancel()
         if isReplaying {
             isReplaying = false
             session.showReplayed(nil)
@@ -985,7 +1067,8 @@ final class CanvasView: UIView, PaintingCanvas {
             // The fill that finishes the painting finishes a color too: the painting's shine is
             // the one finale.
             guard !session.isComplete else { return }
-            shine(color: color, after: 0.35)
+            // A mosaic's row that finished the paint may still be going in: its light waits for it.
+            shine(color: color, after: wall == nil ? 0.35 : max(0.35, fillsLand - now()))
         case .artworkCompleted:
             finish()
         case .strokeEnded:
@@ -1003,7 +1086,9 @@ final class CanvasView: UIView, PaintingCanvas {
         guard !reduceMotion else { return }
         shineColor = color
         shineStart = now() + delay
-        activeUntil = max(activeUntil, shineStart + 1.2)
+        // A mosaic's light takes 2.4 s to cross the wall, 1.2 s a paint's tiles (Shaders.metal `rake`).
+        let span: Float = wall == nil ? 1.1 : color < 0 ? 2.4 : 1.2
+        activeUntil = max(activeUntil, shineStart + span + 0.1)
         requestRender()
     }
 
@@ -1071,6 +1156,8 @@ final class CanvasView: UIView, PaintingCanvas {
     /// night falls over it (`Nightfall`).
     private func finale(after delay: Float) {
         shine(color: -1, after: delay)
+        // A mosaic's finish is the light crossing it, not the night.
+        guard wall == nil else { return }
         #if UNRELEASED
         // Once the shine has swept (it takes about a second); without it, a moment after the cut.
         scheduleNightfall(after: Double(delay) + (reduceMotion ? 0.4 : 1.1))
@@ -1135,6 +1222,11 @@ final class CanvasView: UIView, PaintingCanvas {
         if isReplaying { endReplay() }
         accessibilityChanged()
         guard let renderer else { return }
+        if wall != nil {
+            setTiles(regions, animated: animated, renderer: renderer)
+            return
+        }
+        FeedbackEngine.shared.tileContacts = []
         let time = now()
         let zoom = Float(scrollView.zoomScale)
         let animate = animated && !reduceMotion
@@ -1163,6 +1255,40 @@ final class CanvasView: UIView, PaintingCanvas {
         activeUntil = max(activeUntil, time + longest + 0.75)
         if hoverRegion >= 0 && session.isPainted(hoverRegion) { hoverRegion = -1 }
         requestRender()
+    }
+
+    /// Tiles going in: each is pressed, settles and catches the light (`Motion`), a stroke's tiles
+    /// `Motion.rowGap` apart however fast the finger went; under Reduce Motion each fades in, the
+    /// shader's way. The sounds and taps hear when each touches the bed
+    /// (`FeedbackEngine.tileContacts`).
+    private func setTiles(_ regions: [Int], animated: Bool, renderer: CanvasRenderer) {
+        let time = now(), pace = fillDurationScale
+        var contacts: [TimeInterval] = []
+        for r in regions {
+            guard animated else {
+                renderer.update(r, .settled(painted: true))
+                contacts.append(0)
+                continue
+            }
+            let start = session.isStroking ? max(time, lastSettleStart + Float(Motion.rowGap) * pace) : time
+            lastSettleStart = start
+            renderer.update(r, Self.setting(at: start, pace: pace))
+            contacts.append(Double(start - time) + (reduceMotion ? 0 : Motion.contact * Double(pace)))
+        }
+        FeedbackEngine.shared.tileContacts = contacts
+        let settledAt = lastSettleStart + Float(Motion.press + Motion.settle) * pace + 0.05
+        if animated && !reduceMotion { liftUntil = max(liftUntil, settledAt) }
+        // The finish waits for the last tile to settle, not for its light to have crossed it.
+        fillsLand = max(fillsLand, animated ? settledAt : time)
+        activeUntil = max(activeUntil, lastSettleStart + Float(Motion.total) * pace + 0.05)
+        if hoverRegion >= 0 && session.isPainted(hoverRegion) { hoverRegion = -1 }
+        requestRender()
+    }
+
+    /// A tile set at `start` (renderer clock), as the shaders animate it: `painted` with the time it
+    /// began; its place's outline fades over its motion.
+    private static func setting(at start: Float, pace: Float) -> RegionState {
+        RegionState(origin: .zero, start: start, duration: Float(Motion.total) * pace, radius: 0, painted: 1, seed: 0)
     }
 
     /// Two gold sparkles pop at the region's edge (on its label's free circle, which touches the
@@ -1225,7 +1351,9 @@ final class CanvasView: UIView, PaintingCanvas {
         guard let renderer else { return }
         let time = now()
         for r in regions {
-            renderer.update(r, reduceMotion ? .settled(painted: false) : .unpainting(start: time, duration: 0.25))
+            // A tile of a row not yet down (its setting still to come) just isn't there.
+            let due = wall != nil && renderer.states[r].painted > 0.5 && renderer.states[r].start > time
+            renderer.update(r, reduceMotion || due ? .settled(painted: false) : .unpainting(start: time, duration: 0.25))
         }
         activeUntil = max(activeUntil, time + 0.3)
         requestRender()
@@ -1346,6 +1474,34 @@ final class CanvasView: UIView, PaintingCanvas {
             session.endStroke()
         }
         requestRender()
+    }
+
+    /// `OneFinger.lays`: one finger laying a row from where it first touched.
+    @objc private func handleLay(_ g: UIPanGestureRecognizer) {
+        let location = g.location(in: zoomView)
+        let p = canvasPoint(location)
+        let radius = Float(Self.brushRadius / scrollView.zoomScale)
+        switch g.state {
+        case .began:
+            if showsPhoto {
+                onDismissPhoto?()
+                return
+            }
+            guard session.selectedColor != nil else { return }
+            let moved = g.translation(in: zoomView)
+            let first = canvasPoint(CGPoint(x: location.x - moved.x, y: location.y - moved.y))
+            dragLast = p
+            session.beginStroke()
+            session.drag(from: first, to: p, radius: radius)
+        case .changed:
+            guard let last = dragLast else { return }
+            session.drag(from: last, to: p, radius: radius)
+            dragLast = p
+        default:
+            guard dragLast != nil else { return }
+            dragLast = nil
+            session.endStroke()
+        }
     }
 
     @objc private func handlePencil(_ g: UILongPressGestureRecognizer) {
@@ -1736,6 +1892,10 @@ extension CanvasView: UIScrollViewDelegate {
 
 extension CanvasView: UIGestureRecognizerDelegate {
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        if gestureRecognizer === layRecognizer {
+            followPencilOnlyDrawing()
+            return !(touch.type == .direct && UIPencilInteraction.prefersPencilOnlyDrawing)
+        }
         if gestureRecognizer === tapRecognizer {
             // A tap that stops a fling only stops it. One during a camera flight (the hint's, Zen
             // Mode's) lands the flight where it is and paints: the painter is reaching for the

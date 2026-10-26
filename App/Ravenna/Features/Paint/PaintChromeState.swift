@@ -53,7 +53,7 @@ final class PaintChromeState {
         guard observed != ObjectIdentifier(session) else { return }
         observed = ObjectIdentifier(session)
         tipSession = session
-        PaintTips.paintingOpened(hasProgress: session.progress.paintedCount > 0)
+        PaintTips.paintingOpened(hasProgress: session.isStarted)
         passedQuarter = session.fractionComplete >= Self.quarter
         PaintTips.desk.enter(.bench)
         benchOpened(session)
@@ -170,7 +170,7 @@ final class PaintChromeState {
     private func benchOpened(_ session: PaintingSession) {
         restartIdle()
         guard !session.isComplete else { return }
-        let fresh = session.progress.paintedCount == 0
+        let fresh = !session.isStarted
         if passedQuarter { PaintTips.donate(TipEvents.quarters, limit: 2) }
         let due = TipMoments.benchOpened(fresh: fresh, feedbackIsDue: PaintTips.desk.feedbackIsDue, pastQuarter: passedQuarter)
         offer(due, rest: fresh ? .milliseconds(700) : .seconds(2))
