@@ -110,8 +110,9 @@ nonisolated final class TileSound: @unchecked Sendable {
     private func start() -> Bool {
         if !built {
             try? AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default, options: [.mixWithOthers])
-            // Enough voices for the finale's run and chord to ring together.
-            for _ in 0..<16 {
+            // Enough voices for the finale's run and chord (16) to ring together, with the last
+            // tile's own note and a few more beside them, so none is cut off.
+            for _ in 0..<24 {
                 let p = AVAudioPlayerNode()
                 engine.attach(p)
                 engine.connect(p, to: engine.mainMixerNode, format: format)

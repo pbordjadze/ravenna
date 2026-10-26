@@ -122,7 +122,7 @@ jobs:
               for i in $(seq 1 120); do
                 [ -f "$ready" ] && break
                 # Gone (it crashed): no use waiting out the two minutes.
-                if [ "$i" -gt 5 ] && ! xcrun simctl spawn "$dev" launchctl list 2>/dev/null | grep -q "$BUNDLE"; then
+                if [ "$i" -gt 5 ] && ! xcrun simctl spawn "$dev" launchctl list 2>/dev/null | grep "$BUNDLE" >/dev/null; then
                   echo "::warning::$label $shot is no longer running"; break
                 fi
                 sleep 1

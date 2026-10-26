@@ -270,8 +270,14 @@ final class PaintingSession {
 
     var paletteCount: Int { template.palette.count }
     var fractionComplete: Double {
-        progress.regionCount == 0 ? 0 : Double(progress.paintedCount) / Double(progress.regionCount)
+        areaCount == 0 ? 0 : Double(progress.paintedCount - ground) / Double(areaCount)
     }
+
+    /// The areas there are to paint: a mosaic's tiles, not its grout, set from the start.
+    var areaCount: Int { progress.regionCount - ground }
+
+    /// 1 for a mosaic's grout, set from the start and counted nowhere the painter sees, else 0.
+    private var ground: Int { progress.groutCount(wall) }
 
     /// The canvas's replay has `count` of the painting's areas on screen (nil: no replay is
     /// playing, the painting shows as it stands).
@@ -284,18 +290,25 @@ final class PaintingSession {
     /// The share of the areas the screen shows painted: the replay's while one plays, else
     /// `fractionComplete`.
     var shownFraction: Double {
-        progress.regionCount == 0 ? 0 : Double(shownPaintedCount) / Double(progress.regionCount)
+        areaCount == 0 ? 0 : Double(shownPaintedCount) / Double(areaCount)
     }
 
-    /// How many areas the screen shows painted: the replay's while one plays.
-    var shownPaintedCount: Int { replayed ?? progress.paintedCount }
+    /// How many areas the screen shows painted: the replay's while one plays. A mosaic's grout,
+    /// which leads its log, isn't one.
+    var shownPaintedCount: Int { max((replayed ?? progress.paintedCount) - ground, 0) }
 
     /// The painted areas of each palette color, as the screen shows them: the first `replayed` of
     /// the stroke log while a replay plays, else what the painting holds.
     var shownPaintedByColor: [Int] {
-        guard let replayed else { return (0..<paletteCount).map { totalByColor[$0] - remainingByColor[$0] } }
+        guard let replayed else {
+            var counts = (0..<paletteCount).map { totalByColor[$0] - remainingByColor[$0] }
+            if let wall, ground > 0 { counts[colorOf(wall.groutRegion)] -= 1 }
+            return counts
+        }
         var counts = [Int](repeating: 0, count: paletteCount)
-        for stroke in progress.log.prefix(replayed) { counts[colorOf(Int(stroke.region))] += 1 }
+        for stroke in progress.log.prefix(replayed) where Int(stroke.region) != wall?.groutRegion {
+            counts[colorOf(Int(stroke.region))] += 1
+        }
         return counts
     }
 
@@ -672,14 +685,16 @@ nonisolated extension PaintProgress {
     }
 
     /// The progress with a mosaic's grout set (`TileWall`): the ground, never painted by hand. It
-    /// leads the log, where undo never reaches it, so progress saved without it (v0's carried over)
-    /// is laid again after it, each fill at its own time.
+    /// leads the log, where undo never reaches it, so progress saved without it, or with it
+    /// elsewhere (v0's carried over paints it last), is laid again after it, each fill at its own
+    /// time.
     func groutSet(_ wall: TileWall?) -> PaintProgress {
-        guard let wall, wall.groutRegion < regionCount, !isPainted(wall.groutRegion) else { return self }
+        guard let wall, wall.groutRegion < regionCount else { return self }
+        if log.first.map({ Int($0.region) }) == wall.groutRegion { return self }
         var progress = PaintProgress(regionCount: regionCount)
         progress.activeSeconds = log.first.map { Double($0.time) } ?? activeSeconds
         progress.paint(wall.groutRegion)
-        for stroke in log {
+        for stroke in log where Int(stroke.region) != wall.groutRegion {
             progress.activeSeconds = Double(stroke.time)
             progress.paint(Int(stroke.region))
         }

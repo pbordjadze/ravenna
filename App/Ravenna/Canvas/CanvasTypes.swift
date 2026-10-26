@@ -360,10 +360,11 @@ nonisolated struct CanvasPalette: Sendable {
     }
 
     /// The ink a mosaic's numbers and places are drawn in on its ground: lime white on the painted
-    /// bed (`Theme.plaster`), faint for the places' outlines, and v0's dark ink on light grout.
-    func onTiles(_ finish: Finish) -> CanvasPalette {
+    /// bed (`Theme.plaster`), faint for the places' outlines, and v0's dark ink on light grout,
+    /// which is the ground too until the bed is made (`hasBed`).
+    func onTiles(_ finish: Finish, hasBed: Bool) -> CanvasPalette {
         var palette = self
-        if finish.paintedBed {
+        if finish.paintedBed && hasBed {
             palette.ink = CanvasColor.linearP3(sRGB: SIMD3(0.914, 0.886, 0.827))
             palette.outlineOpacity = 0.22
             palette.accentFloor = 0.35
