@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import MosaicEngine
 import MosaicKit
 import os
 import PaintCore
@@ -84,12 +85,16 @@ struct ArtworkPaintingView: View {
         let sample = artwork?.sampleName.flatMap(Sample.named), title = artwork?.title ?? ""
         var makingOf: (@Sendable () async -> MakingOfSource?)?
         // The stored photo, else a library work's own: a show with no photo isn't offered.
-        let bundled = sample?.url
+        let bundled = sample?.url, recipe = artwork?.recipe ?? MosaicEngine.Recipe()
         if let mosaic, library.store.hasSource(artworkID) || bundled != nil {
             makingOf = { [library, artworkID] in
                 var photo = await library.sourcePhoto(for: artworkID)
                 if photo == nil, let bundled {
-                    photo = await Background.run { ImageCodec.image(at: bundled, maxPixelSize: ArtworkStore.sourceMaxPixelSize) }
+                    // Cut to the panel the mosaic was laid from, as the stored photo is.
+                    photo = await Background.run {
+                        ImageCodec.image(at: bundled, maxPixelSize: ArtworkStore.sourceMaxPixelSize)
+                            .map { MosaicMaker.framed($0, panel: recipe.panel, centre: recipe.centre) }
+                    }
                 }
                 guard let photo else { return nil }
                 return MakingOfSource(

@@ -649,8 +649,15 @@ struct PaintView: View {
                 guard !chrome.isShowingMakingOf else { return }
                 chrome.isShowingMakingOf = true
                 Task {
-                    makingOf = await show()
-                    if makingOf != nil { showsMakingOf = true } else { chrome.isShowingMakingOf = false }
+                    let source = await show()
+                    // Not over another sheet (About This Work, opened meanwhile): the cover wouldn't
+                    // present, and its dismissal, which ends the quiet, would never come.
+                    if let source, aboutSample == nil, timelapse == nil {
+                        makingOf = source
+                        showsMakingOf = true
+                    } else {
+                        chrome.isShowingMakingOf = false
+                    }
                 }
             } label: {
                 Label(String(localized: "paint.more.makingOf", defaultValue: "The Making-of",

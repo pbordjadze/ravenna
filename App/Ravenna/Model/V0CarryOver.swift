@@ -71,8 +71,23 @@ nonisolated enum V0CarryOver {
 
     private static func read<Value: Decodable>(_ type: Value.Type, at url: URL) -> FileRead<Value> {
         let data: Data
+        switch bytes(at: url) {
+        case .read(let read): data = read
+        case .absent: return .absent
+        case .damaged: return .damaged
+        case .unreadable: return .unreadable
+        }
         do {
-            data = try Data(contentsOf: url)
+            return .read(try JSONDecoder().decode(Value.self, from: data))
+        } catch {
+            Log.library.error("v0's \(url.lastPathComponent, privacy: .public) doesn't decode: \(String(describing: error), privacy: .public)")
+            return .damaged
+        }
+    }
+
+    private static func bytes(at url: URL) -> FileRead<Data> {
+        do {
+            return .read(try Data(contentsOf: url))
         } catch let error as CocoaError where error.code == .fileReadNoSuchFile || error.code == .fileNoSuchFile {
             return .absent
         } catch let error as CocoaError where Library.isDamage(error) {
@@ -81,12 +96,6 @@ nonisolated enum V0CarryOver {
         } catch {
             Log.library.error("v0's \(url.lastPathComponent, privacy: .public) can't be read now: \(String(describing: error), privacy: .public)")
             return .unreadable
-        }
-        do {
-            return .read(try JSONDecoder().decode(Value.self, from: data))
-        } catch {
-            Log.library.error("v0's \(url.lastPathComponent, privacy: .public) doesn't decode: \(String(describing: error), privacy: .public)")
-            return .damaged
         }
     }
 
@@ -106,7 +115,6 @@ nonisolated enum V0CarryOver {
     /// couldn't be read just now (`failed`: the carry-over isn't done). A damaged file is logged
     /// and passed over; a damaged setting of the painter's own mosaic carries it unset.
     static func works(skipping carried: Set<String>, ground: MosaicEngine.Ground) -> (works: [Work], failed: Bool) {
-        let fm = FileManager.default
         var found: [Work] = [], failed = false
         // The painter's own, setting or none.
         let own = contents(of: ownDirectory)
@@ -123,11 +131,20 @@ nonisolated enum V0CarryOver {
                     failed = true
                     continue
                 }
+                // The photo too: one carried without it can never be laid again.
                 let photo = dir.appending(path: "photo.jpg")
+                let hasPhoto: Bool
+                switch bytes(at: photo) {
+                case .read(let data): hasPhoto = !data.isEmpty
+                case .absent, .damaged: hasPhoto = false
+                case .unreadable:
+                    failed = true
+                    continue
+                }
                 found.append(Work(
                     key: key, title: work.title, date: work.made ?? made(dir) ?? .now, mosaic: mosaic,
                     recipe: MosaicEngine.Recipe(pieces: pieces(of: mosaic), ground: ground), sampleName: nil,
-                    photo: fm.fileExists(atPath: photo.path(percentEncoded: false)) ? photo : nil,
+                    photo: hasPhoto ? photo : nil,
                     setting: setting))
             case (.unreadable, _), (_, .unreadable):
                 failed = true
