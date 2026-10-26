@@ -29,6 +29,10 @@
       "comment" : "Mouth choice: the mouth laid as the photo has it",
       "extractionState" : "manual"
     },
+    "As in the picture" : {
+      "comment" : "Ground choice: the picture's background laid as it is",
+      "extractionState" : "manual"
+    },
     "As they look" : {
       "comment" : "Eyes choice: irises mixed brighter, as an eye catches the light",
       "extractionState" : "manual"
@@ -205,8 +209,20 @@
       "comment" : "Tool Guide: heading of a page's buttons to the pages of tools that go with this one",
       "extractionState" : "manual"
     },
+    "Gold" : {
+      "comment" : "Ground choice: the picture's background laid in gold smalti",
+      "extractionState" : "manual"
+    },
+    "Gold lays the picture’s background in gold smalti, as behind the figures at Ravenna." : {
+      "comment" : "Create preview: the line under the Ground choice",
+      "extractionState" : "manual"
+    },
     "Good to Know" : {
       "comment" : "Tool Guide: heading of a page's notes",
+      "extractionState" : "manual"
+    },
+    "Ground" : {
+      "comment" : "Create preview: the segment and the choice of the picture's background as it is, or laid in gold",
       "extractionState" : "manual"
     },
     "Hexagon" : {

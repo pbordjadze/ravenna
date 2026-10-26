@@ -14,9 +14,10 @@ import PaintCore
 ///     Settings/<work>-<detail>.json                   a bundled work's tiles set at a detail
 ///
 /// and the finish and the gold ground as options for every mosaic (UserDefaults `finish`,
-/// `ground`), which v1 keeps as they are (`MosaicLook`). Each becomes an artwork: its mosaic (a
-/// bundled work's from the bundle), its template made of it, and its set tiles painted
-/// (`Setting.paintedRegions`: region i is tile i, the grout set). Only works with tiles set come over from the
+/// `ground`). v1 keeps the finish as it is (`MosaicLook`) and records the ground with each work,
+/// so it opens as it looked. Each becomes an artwork: its mosaic (a bundled work's from the
+/// bundle) with that ground laid on, which moves no tile, its template made of it, and its set
+/// tiles painted (`Setting.paintedRegions`: region i is tile i, the grout set). Only works with tiles set come over from the
 /// bundled ones; every one of the painter's own does. v0's files are left where they are, and
 /// each work is carried once (`carriedKey`), so a launch that ends half way carries the rest at
 /// the next.
@@ -52,7 +53,7 @@ nonisolated enum V0CarryOver {
 
     /// v0's works not yet carried, as v0's own files and options have them. A file that doesn't
     /// read is logged and passed over.
-    static func works(skipping carried: Set<String>) -> [Work] {
+    static func works(skipping carried: Set<String>, ground: MosaicEngine.Ground) -> [Work] {
         let fm = FileManager.default
         var found: [Work] = []
         // The painter's own, setting or none.
@@ -65,7 +66,7 @@ nonisolated enum V0CarryOver {
                 let photo = dir.appending(path: "photo.jpg")
                 found.append(Work(
                     key: dir.lastPathComponent, title: work.title, date: work.made ?? .now, mosaic: mosaic,
-                    recipe: MosaicEngine.Recipe(), sampleName: nil,
+                    recipe: MosaicEngine.Recipe(ground: ground), sampleName: nil,
                     photo: fm.fileExists(atPath: photo.path(percentEncoded: false)) ? photo : nil,
                     setting: setting(dir.lastPathComponent) ?? Setting()))
             } catch {
@@ -79,8 +80,9 @@ nonisolated enum V0CarryOver {
             guard !carried.contains(key), case let (id, detail?)? = Setting.v0Work(key: key),
                   let saved = setting(key), !saved.set.isEmpty, let sample = Sample.named(id),
                   let pieces = MosaicEngine.Recipe.detailPieces[detail] else { continue }
-            let recipe = MosaicEngine.Recipe(pieces: pieces)
-            guard let mosaic = MosaicMaker.bundled(id, recipe: recipe) else {
+            let recipe = MosaicEngine.Recipe(pieces: pieces, ground: ground)
+            // Its tiles, before the ground: `draft` lays it on.
+            guard let mosaic = MosaicMaker.bundled(id, recipe: MosaicEngine.Recipe(pieces: pieces)) else {
                 Log.library.error("v0's work \(key, privacy: .public) has no bundled mosaic")
                 continue
             }
@@ -97,9 +99,10 @@ nonisolated enum V0CarryOver {
         return try? JSONDecoder().decode(Setting.self, from: data)
     }
 
-    /// The artwork a v0 work becomes: its mosaic, its template, and its set tiles painted.
+    /// The artwork a v0 work becomes: its mosaic with its ground laid on, its template, and its set
+    /// tiles painted.
     static func draft(of work: Work) throws -> ArtworkDraft {
-        let mosaic = work.mosaic
+        let mosaic = work.recipe.laid(work.mosaic)
         let template = try MosaicMaker.template(of: mosaic)
         var progress = PaintProgress(regionCount: template.regions.count)
         for region in work.setting.paintedRegions(tileCount: mosaic.tiles.count) where region < template.regions.count {
@@ -124,8 +127,10 @@ extension Library {
         }
         defaults.set(true, forKey: Self.seededKey)
         let carried = Set(defaults.stringArray(forKey: V0CarryOver.carriedKey) ?? [])
+        // v0's gold ground, an option for every mosaic, becomes each carried work's own.
+        let ground = MosaicEngine.Ground(rawValue: defaults.string(forKey: "ground") ?? "") ?? .picture
         Task(priority: .utility) {
-            let works = await Background.run { V0CarryOver.works(skipping: carried) }
+            let works = await Background.run { V0CarryOver.works(skipping: carried, ground: ground) }
             var done = carried, failed = false
             for work in works {
                 do {

@@ -34,15 +34,15 @@ go back into it (#5).
   (v0's `TileArt`, as `MosaicDrawing`), for the preview and the making-of.
 - **The mosaic kept:** each artwork folder has `mosaic.json` (`ArtworkStore.File.mosaic`, written
   by `create` and `replaceContents`, read by `readMosaic`) and `meta.json` records `recipe`
-  (`Artwork.recipe`, `MosaicEngine.Recipe`: pieces, eyes, mouth, panel; tolerant; GenerationSettings
-  stay written, unread). The finish and the gold ground are the app's, how every mosaic shows
-  (`MosaicLook`, v0's keys `finish` and `ground`), not the recipe's. A mosaic's grout region is
+  (`Artwork.recipe`, `MosaicEngine.Recipe`: pieces, eyes, mouth, ground, panel; tolerant;
+  GenerationSettings stay written, unread). The finish is the app's, how every mosaic shows
+  (`MosaicLook`, v0's key `finish`), not the recipe's. A mosaic's grout region is
   no part of `Artwork.isStarted`, `fractionComplete`, `paintedAreas` and `areaCount`.
   `Library.loadForPainting` and `regenerate` hand it out as `PaintingDocument.mosaic` (nil when
   missing or not one tile a region plus the grout). `ArtworkDraft` carries `mosaic` and `recipe`.
 - **The create flow:** `CreateModel` is Ravenna's (its recipe, drafts at `MosaicMaker.draftLongSide`
   while Pieces moves, the engine's mosaics kept per tile recipe, a panel's analysis once); the
-  preview's card (`TemplatePreviewView`) holds Pieces, Eyes, Mouth and the Panel (its sheet,
+  preview's card (`TemplatePreviewView`) holds Pieces, Eyes, Mouth, Ground and the Panel (its sheet,
   `PanelFramingView`) where the sliders were. Out: Suggested settings (`AutoSettings`, the chip,
   Settings › Painting Length), Settings › Preview and Line Weight, the line-art picture (`CompareView`,
   `LineArtDrawing`), Refine (`Features/Refine`, its button, tips, notes, `TemplateRefinements`,
@@ -57,7 +57,8 @@ go back into it (#5).
   The `MakingOf` package product is unlinked and `making-of.json` is gone. Its demos:
   `making-of`, `-smalti`, `-andamento`, `-dark`, `-long-text`, `-end`, `-reduce-motion`.
 - **v0's mosaics:** `Model/V0CarryOver` carries v0's `Own/` mosaics and `Settings/` progress into
-  the library once at launch (`Library.forLaunch`), a set tile a painted region.
+  the library once at launch (`Library.forLaunch`), a set tile a painted region, v0's app-wide
+  `ground` recorded as each one's.
 - **Demos:** `ShellDemo` has no Refine, draft, line-art or suggestion scenarios; `create-custom`
   moves Pieces so the engine lays a library picture.
 - **Left behind:** Paint by Moonlight's picture library and its line-drawing model

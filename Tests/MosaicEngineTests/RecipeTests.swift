@@ -21,7 +21,7 @@ struct RecipeTests {
     @Test func bundledDetailOnlyForTheBundledChoices() {
         #expect(Recipe().bundledDetail == .standard)
         #expect(Recipe(pieces: 0).bundledDetail == .fewer)
-        #expect(Recipe(pieces: Recipe.detailPieces[.more]!).bundledDetail == .more)
+        #expect(Recipe(pieces: Recipe.detailPieces[.more]!, ground: .gold).bundledDetail == .more)
         #expect(Recipe(pieces: 0.5).bundledDetail == nil)
         #expect(Recipe(eyes: .asInThePhoto).bundledDetail == nil)
         #expect(Recipe(mouth: .byzantine).bundledDetail == nil)
@@ -41,12 +41,13 @@ struct RecipeTests {
     }
 
     @Test func roundTripsAndToleratesWhatItDoesNotKnow() throws {
-        let recipe = Recipe(pieces: 0.8, eyes: .asInThePhoto, mouth: .byzantine, panel: .upright, centre: SIMD2(0.25, 0.75))
+        let recipe = Recipe(pieces: 0.8, eyes: .asInThePhoto, mouth: .byzantine, ground: .gold, panel: .upright,
+                            centre: SIMD2(0.25, 0.75))
         let data = try JSONEncoder().encode(recipe)
         #expect(try JSONDecoder().decode(Recipe.self, from: data) == recipe)
-        let odd = #"{"pieces": 7, "eyes": "glowing", "mouth": "byzantine", "panel": "round", "centre": [0.1], "future": 1}"#
+        let odd = #"{"pieces": 7, "eyes": "glowing", "ground": "gold", "panel": "round", "centre": [0.1], "future": 1}"#
         let read = try JSONDecoder().decode(Recipe.self, from: Data(odd.utf8))
-        #expect(read == Recipe(pieces: 1, mouth: .byzantine))
+        #expect(read == Recipe(pieces: 1, ground: .gold))
         #expect(try JSONDecoder().decode(Recipe.self, from: Data("{}".utf8)) == Recipe())
     }
 
@@ -64,5 +65,12 @@ struct RecipeTests {
         let scaled = face.scaled(by: 2)
         #expect(scaled.box == [20, 40, 60, 80] && scaled.eyes == [[10, 12, 4, 2]] && scaled.lines[0].pts == [[2, 4], [6, 8]])
         #expect(scaled.lines[0].kind == "dark")
+    }
+
+    @Test func goldGroundIsLaidOn() {
+        let m = Mosaic(width: 10, height: 10, grout: SIMD3(1, 1, 1), palette: [SIMD3(0.2, 0.3, 0.8)],
+                       tiles: [.init(corners: [SIMD2(0, 0), SIMD2(4, 0), SIMD2(4, 4)], paint: 0)])
+        #expect(Recipe().laid(m) == m)
+        #expect(Recipe(ground: .gold).laid(m) == m.goldGround())
     }
 }

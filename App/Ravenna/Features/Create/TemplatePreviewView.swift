@@ -12,7 +12,7 @@ import UIKit
 /// then fills the page above that group, Pieces first.
 ///
 /// Ravenna's seam: the card holds Ravenna's recipe (`MosaicEngine.Recipe`: Pieces, Eyes and Mouth,
-/// the Panel, as v0's new-mosaic sheet had them) where Paint by Moonlight's
+/// the Ground, the Panel, as v0's new-mosaic sheet and options had them) where Paint by Moonlight's
 /// Colors, Detail, Smoothness and Lines sliders were, with no suggestion chip, Adjust or Refine.
 struct TemplatePreviewView: View {
     @Bindable var model: CreateModel
@@ -376,14 +376,16 @@ struct TemplatePreviewView: View {
         Picker("Setting", selection: Binding(get: { shownSetting }, set: { tunedSetting = $0 })) {
             Text("Pieces").tag(Setting.pieces)
             Text("Face").tag(Setting.face)
+            Text("Ground").tag(Setting.ground)
             Text("Panel").tag(Setting.panel)
         }
         .pickerStyle(.segmented)
         .accessibilityIdentifier("tuned-setting")
     }
 
-    /// The recipe's groups: how many pieces; the eyes and the mouth; how much of the photo is laid.
-    private enum Setting: Hashable, CaseIterable { case pieces, face, panel }
+    /// The recipe's groups: how many pieces; the eyes and the mouth; the background; how much of
+    /// the photo is laid.
+    private enum Setting: Hashable, CaseIterable { case pieces, face, ground, panel }
 
     /// Locked while Start Painting makes the painting (a change then would lay the mosaic again
     /// under it), and while the photo's contours and faces are found.
@@ -415,6 +417,13 @@ struct TemplatePreviewView: View {
                         Text("As in the photo").tag(MosaicEngine.Mouth.asInThePhoto)
                         Text("Byzantine").tag(MosaicEngine.Mouth.byzantine)
                     }
+                }
+            }
+        case .ground:
+            ChoiceRow(title: "Ground", caption: "Gold lays the picture’s background in gold smalti, as behind the figures at Ravenna.") {
+                Picker("Ground", selection: choice(\.ground)) {
+                    Text("As in the picture").tag(MosaicEngine.Ground.picture)
+                    Text("Gold").tag(MosaicEngine.Ground.gold)
                 }
             }
         case .panel:

@@ -54,8 +54,8 @@ nonisolated enum ArtworkFactory {
         } else {
             let framed = MosaicMaker.framed(photo, panel: recipe.panel, centre: recipe.centre)
             let analysis = try await MosaicMaker.analyze(framed)
-            mosaic = try MosaicMaker.make(framed, analysis: analysis, recipe: recipe, side: recipe.longSide,
-                                          progress: { progress?($0) })
+            mosaic = recipe.laid(try MosaicMaker.make(framed, analysis: analysis, recipe: recipe, side: recipe.longSide,
+                                                      progress: { progress?($0) }))
         }
         try Task.checkCancellation()
         return MosaicMaker.Made(mosaic: mosaic, template: try MosaicMaker.template(of: mosaic))
