@@ -144,15 +144,14 @@ jobs:
           ALL="gallery-first-run create-samples create-preview create-custom making-of making-of-end paint paint-progress paint-complete"
           # The painting screen's tiles, at the default text size only.
           TILES="paint-zoom paint-setting paint-setting-flat paint-setting-bed paint-finish paint-replay paint-mosaic-measure"
-          # Diagnostic run (canvas track): the scenarios that died and one that worked, on iPhone.
-          ALL="create-samples paint paint-setting"; TILES="paint-mosaic-measure"
-          for kind in "iPhone 17 Pro:iphone"; do
+          for kind in "iPhone 17 Pro:iphone" "iPad Pro 11:ipad"; do
             dev=$(pick "${kind%%:*}") label=${kind##*:}
             xcrun simctl boot "$dev"; xcrun simctl bootstatus "$dev" -b >/dev/null
             xcrun simctl status_bar "$dev" override --time 9:41 --batteryLevel 100 || true
             xcrun simctl ui "$dev" appearance dark
             xcrun simctl install "$dev" "$APP"
             shoot "$dev" "$label" large $ALL $TILES
+            if [ "$label" = iphone ]; then shoot "$dev" "$label-ax5" accessibility-extra-extra-extra-large $ALL; fi
             xcrun simctl shutdown "$dev"
           done
           # Crash reports of the app, if any scenario crashed.
