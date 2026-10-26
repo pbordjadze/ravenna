@@ -133,7 +133,8 @@ nonisolated enum CanvasSnapshot {
             time: SIMD4(0, CanvasClock.never, CanvasClock.never, CanvasClock.never),
             selection: highlight.map { (color: $0, paint: scene.paletteLinear[$0]) },
             hovered: -1, pulsing: -1, bumped: -1, brush: nil, shine: (start: CanvasClock.never, color: -1),
-            photoOpacity: 0))
+            photoOpacity: 0,
+            tiles: scene.tiles.map { TileLook(finish: TileOptions.finish(), hasBed: false, grout: $0.grout, pace: 1) }))
     }
 
     /// Output size for a template fitted into `longSide` pixels.

@@ -3,7 +3,7 @@ import Foundation
 /// The two skies the app keeps, a gentle nod to astrology (Paul, October 17, 2026; decided with
 /// the Lamplit Table, the Lamp's jury for the app's screens and controls): by Sun painting plays a
 /// brighter kalimba, by Moon a celesta-like bell on the same five notes, lower and minor
-/// (`SoundPlayer`), and the fill's two sparkles become stars (`CanvasView.popSparkles`). Only
+/// (Ravenna: the tune in major or minor, `TileSound`), and the fill's two sparkles become stars (`CanvasView.popSparkles`). Only
 /// the sun and the moon keeping the hours: nothing here tells the painter anything about
 /// themselves.
 nonisolated enum Sky: String, Sendable {

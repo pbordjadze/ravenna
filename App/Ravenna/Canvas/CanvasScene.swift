@@ -36,14 +36,23 @@ nonisolated final class CanvasScene: @unchecked Sendable {
     /// Linear P3 per palette color.
     let paletteLinear: [SIMD3<Float>]
 
+    /// A mosaic's tiles (`TileWall`), drawn as tesserae on their ground; nil for paint.
+    let tiles: TileScene?
+
     /// Font size (canvas units) of each region's primary number, 0 without one.
     let labelSizes: [Float]
     /// A small-but-typical number size (10th percentile), or a detail area's smallest when that
     /// is smaller (`Template.detailRegions`, read zoomed in): the max zoom makes these legible.
     let smallLabelSize: Float
 
-    init?(template t: Template, context: RenderContext) {
+    init?(template t: Template, context: RenderContext, wall: TileWall? = nil) {
         let device = context.device
+        if let wall {
+            guard let tiles = TileScene(wall: wall, device: device) else { return nil }
+            self.tiles = tiles
+        } else {
+            tiles = nil
+        }
         canvasSize = SIMD2(Float(t.width), Float(t.height))
         regionCount = t.regions.count
 

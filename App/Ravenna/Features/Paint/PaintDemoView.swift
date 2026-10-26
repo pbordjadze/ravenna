@@ -1,5 +1,8 @@
 #if DEBUG
 import CoreGraphics
+import Foundation
+import MosaicCore
+import MosaicKit
 import PaintCore
 import PencilKit
 import QuartzCore
@@ -7,9 +10,20 @@ import SwiftUI
 import os
 import simd
 
-/// Demo scenarios for the painting screen, deterministic for CI screenshots. The template is
-/// generated from a library picture, which the canvas's photo loader also gets, so the top bar
-/// is the one users see. Classic lines, from Delicate Arch:
+/// Demo scenarios for the painting screen, deterministic for CI screenshots. Ravenna's seam: the
+/// scenarios below (all but `paint-book*`) set a bundled mosaic, Young Woman with a Gilded Wreath
+/// at standard detail (`Resources/Mosaics`), its photo the canvas's photo loader's; and three are
+/// Ravenna's own:
+/// - `paint-setting`: ~40 % set, zoomed 4× onto the paint in hand, then a row of its tiles laid in
+///   one stroke and slowed twelvefold, so the shot catches them raised, settling and catching the
+///   light
+/// - `paint-setting-flat`, `paint-setting-bed`: `paint-setting` in the other finishes
+/// - `paint-mosaic-measure`: a mosaic of about 9,500 tiles (the Pieces slider's top; a jittered
+///   grid, `measureMosaic`), fitted; once ready, rows are laid for eight seconds while
+///   `FrameMeter` measures the frames, and its report goes to the log and to
+///   `tmp/canvas-measure.txt` in the app's container, which the shots job keeps
+///
+/// Paint by Moonlight's, from its classic Delicate Arch:
 ///
 /// - `paint`: fresh canvas, fit to screen
 /// - `paint-progress`: ~55 % painted color by color, the color in progress selected
@@ -91,22 +105,25 @@ struct PaintDemoView: View {
         }
         .task {
             let book = scenario.hasPrefix("paint-book")
-            let photo = book ? "young-woman-in-red-photo" : "william-photo"
+            let photo = book ? "young-woman-in-red-photo" : "young-woman-gilded-wreath-photo"
             let template: Template?
+            var mosaic: Mosaic?
             if book {
                 template = await Self.bookTemplate(photo: photo)
             } else {
-                template = await Self.template(photo: photo)
+                mosaic = scenario == "paint-mosaic-measure" ? Self.measureMosaic() : await Self.mosaic("young-woman-gilded-wreath-standard")
+                if let made = mosaic { template = await Self.template(of: made) } else { template = nil }
+                if template == nil { mosaic = nil }
             }
             // The canvas needs it, made off the main thread (`ArtworkPaintingView` waits too).
             _ = await RenderContext.ready()
             // Titles are the person's own words, which pseudo-localization doesn't lengthen.
             let title = scenario.hasSuffix("-long-text")
-                ? "Delicate Arch on Our Spring Trip Through Utah"
-                : (template == nil ? "Mosaic" : (book ? "Red Fox" : "Delicate Arch"))
+                ? "A Young Woman with a Gilded Wreath, from the Fayum, Painted in Encaustic"
+                : (template == nil ? "Mosaic" : (book ? "Red Fox" : "Young Woman with a Gilded Wreath"))
             demo = await Demo(
-                scenario: scenario, template: template ?? SyntheticTemplate.make(), title: title,
-                photo: template == nil ? nil : photo)
+                scenario: scenario, template: template ?? SyntheticTemplate.make(), mosaic: mosaic, title: title,
+                photo: template == nil || scenario == "paint-mosaic-measure" ? nil : photo)
         }
     }
 
@@ -117,15 +134,53 @@ struct PaintDemoView: View {
         return ImageCodec.image(at: url, maxPixelSize: maxPixelSize)
     }
 
-    /// The photo's classic template: the classic demos show the original look.
+    /// A bundled mosaic (`Resources/Mosaics/<name>.json`).
     @concurrent
-    private static func template(photo: String) async -> Template? {
-        let settings = GenerationSettings(lineArt: LineArtSettings(style: .classic))
-        guard let url = Bundle.main.url(forResource: photo, withExtension: "jpg"),
-              let image = try? PhotoLoader.load(url: url, maxPixelSize: 2048),
-              let output = try? TemplateGenerator(settings: settings).generate(from: image)
-        else { return nil }
-        return output.template.mesh.indices.isEmpty ? nil : output.template
+    private static func mosaic(_ name: String) async -> Mosaic? {
+        guard let url = Bundle.main.url(forResource: name, withExtension: "json"), let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONDecoder().decode(Mosaic.self, from: data)
+    }
+
+    /// The mosaic as a template: region i is tile i, the last the grout.
+    @concurrent
+    private static func template(of mosaic: Mosaic) async -> Template? {
+        let template = try? MosaicCore.template(of: mosaic)
+        if template == nil { Log.demo.error("demo: the mosaic made no template") }
+        return template
+    }
+
+    /// About 9,500 tiles, the Pieces slider's top: a grid with each corner moved a little, in
+    /// colours that drift over the wall, stone in an oval face in the middle and gold across the top
+    /// (deterministic, `TileColor.wobble`).
+    nonisolated private static func measureMosaic() -> Mosaic {
+        let columns = 87, rows = 109, cell: Float = 10, joint: Float = 1.2
+        func jitter(_ i: Int, _ salt: UInt64) -> Float { TileColor.wobble(i, salt: salt) * cell * 0.12 }
+        func corner(_ x: Int, _ y: Int) -> SIMD2<Float> {
+            let k = y * (columns + 1) + x
+            let edge = x == 0 || y == 0 || x == columns || y == rows
+            return SIMD2(Float(x) * cell + (edge ? 0 : jitter(k, 11)), Float(y) * cell + (edge ? 0 : jitter(k, 12)))
+        }
+        let palette: [SIMD3<Float>] = (0..<20).map { i in
+            let t = Float(i) / 19
+            return SIMD3(0.18 + 0.6 * t, 0.22 + 0.35 * (1 - abs(t - 0.5) * 2), 0.45 - 0.3 * t)
+        } + [Mosaic.groundGold, SIMD3(0.78, 0.6, 0.5), SIMD3(0.55, 0.38, 0.3)]
+        var tiles: [Mosaic.Tile] = []
+        for y in 0..<rows {
+            for x in 0..<columns {
+                let quad = [corner(x, y), corner(x + 1, y), corner(x + 1, y + 1), corner(x, y + 1)]
+                let centre = quad.reduce(SIMD2<Float>(0, 0), +) / 4
+                let inset = quad.map { centre + ($0 - centre) * (1 - joint / cell) }
+                let u = Float(x) / Float(columns), v = Float(y) / Float(rows)
+                let face = pow((u - 0.5) / 0.22, 2) + pow((v - 0.45) / 0.28, 2) < 1
+                let i = tiles.count
+                let paint = face ? (TileColor.wobble(i, salt: 3) > 0 ? 21 : 22)
+                    : v < 0.12 ? 20
+                    : min(19, max(0, Int((u * 0.6 + v * 0.4) * 19 + TileColor.wobble(i, salt: 4) * 1.5)))
+                tiles.append(Mosaic.Tile(corners: inset, paint: paint, stone: face))
+            }
+        }
+        return Mosaic(width: Float(columns) * cell, height: Float(rows) * cell, grout: SIMD3(0.86, 0.83, 0.77),
+                      palette: palette, tiles: tiles)
     }
 
     /// The photo's coloring book from the real pipeline: from the real detector
@@ -166,13 +221,17 @@ private final class Demo {
     var feedbackSource: FeedbackSource?
     /// `paint-finish`: the area left to paint; `paint-book-moon-dark`: the area its stars pop on.
     private var lastArea: Int?
+    /// `paint-setting`: the row of tiles laid once the canvas shows.
+    private var laying: [Int] = []
     private let scenario: String
 
-    init(scenario: String, template t: Template, title: String, photo: String?) async {
+    init(scenario: String, template t: Template, mosaic: Mosaic?, title: String, photo: String?) async {
         self.scenario = scenario
         self.title = title
         self.photo = photo
-        session = await PaintingSession.make(template: t)
+        session = await PaintingSession.make(template: t, mosaic: mosaic)
+        // A mosaic's grout is set already, and is no area to aim at.
+        let tile = { (r: Int) in session.wall?.isTile(r) ?? true }
 
         // Paint colors in palette order (how people tend to work), each color top to bottom.
         let order = t.regions.indices.sorted {
@@ -229,7 +288,7 @@ private final class Demo {
             }
             // Everything but a mid-sized area near the middle, zoomed in on it.
             let middle = SIMD2(Float(t.width), Float(t.height)) * 0.5
-            let last = t.regions.indices.filter { t.regions[$0].inscribedRadius > 6 }
+            let last = t.regions.indices.filter { tile($0) && t.regions[$0].inscribedRadius > 6 }
                 .min { simd_distance(Self.center(t, $0), middle) < simd_distance(Self.center(t, $1), middle) }
             if let last {
                 session.paint(order.filter { $0 != last }, from: .zero, animated: false)
@@ -237,6 +296,24 @@ private final class Demo {
                 camera = CanvasCamera(zoom: 3, center: Self.center(t, last))
                 lastArea = last
             }
+        case "paint-setting", "paint-setting-flat", "paint-setting-bed":
+            paint(fraction: 0.4)
+            if scenario != "paint-setting" {
+                let finish: Finish = scenario.hasSuffix("-flat") ? .flat : .bed
+                UserDefaults.standard.register(defaults: [TileOptions.finishKey: finish.rawValue])
+            }
+            fillDurationScale = 12
+            let color = session.selectedColor ?? 0
+            let middle = SIMD2(Float(t.width), Float(t.height)) * 0.5
+            let row = t.regions.indices.filter { tile($0) && session.colorOf($0) == color && !session.isPainted($0) }
+                .sorted { simd_distance(Self.center(t, $0), middle) < simd_distance(Self.center(t, $1), middle) }
+                .prefix(6)
+            if let first = row.first {
+                camera = CanvasCamera(zoom: 4, center: Self.center(t, first))
+                laying = Array(row)
+            }
+        case "paint-mosaic-measure":
+            paint(fraction: 0.3)
         case "paint-replay":
             paint(fraction: 1)
             // Slowed so the CI screenshot lands mid-replay.
@@ -360,6 +437,18 @@ private final class Demo {
 
     /// Scenario actions that need the canvas on screen.
     func run() async {
+        if scenario.hasPrefix("paint-setting"), !laying.isEmpty {
+            try? await Task.sleep(for: .seconds(1.5))
+            // One stroke: its tiles settle a row's gap apart.
+            session.beginStroke()
+            session.paint(laying, from: Self.center(session.template, laying[0]), animated: true)
+            session.endStroke()
+            return
+        }
+        if scenario == "paint-mosaic-measure" {
+            await measure()
+            return
+        }
         if let feedback {
             // Ready once the ink is down and, for the review, the sheet's pictures are drawn.
             let clock = ContinuousClock()
@@ -495,6 +584,31 @@ private final class Demo {
         let canvas = session.canvas as? CanvasView
         Log.demo.notice(
             "demo paint-fill: painted \(Array(targets), privacy: .public) of color \(color, privacy: .public); frames \(canvas?.framesRendered ?? -1, privacy: .public)")
+    }
+
+    /// Lays rows of the paint in hand for eight seconds, a tile every 45 ms as a quick finger does,
+    /// moving on to the next paint as one runs out, while `FrameMeter` measures; then reports.
+    private func measure() async {
+        try? await Task.sleep(for: .seconds(1.5))
+        let t = session.template
+        let tiles = t.regions.count - 1
+        Log.demo.notice("demo paint-mosaic-measure: \(tiles, privacy: .public) tiles; \(FrameMeter.memory(), privacy: .public)")
+        FrameMeter.shared.start()
+        let clock = ContinuousClock()
+        let end = clock.now + .seconds(8)
+        session.beginStroke()
+        while clock.now < end {
+            guard let color = session.selectedColor,
+                  let next = t.regions.indices.first(where: { session.colorOf($0) == color && !session.isPainted($0) })
+            else { break }
+            session.paint([next], from: Self.center(t, next), animated: true)
+            try? await Task.sleep(for: .milliseconds(45))
+        }
+        session.endStroke()
+        try? await Task.sleep(for: .seconds(1))
+        let report = FrameMeter.shared.report("paint-mosaic-measure: \(tiles) tiles, \(session.progress.paintedCount - 1) set, fitted")
+        Log.demo.notice("\(report, privacy: .public)")
+        try? report.write(to: URL(fileURLWithPath: NSTemporaryDirectory()).appending(path: "canvas-measure.txt"), atomically: true, encoding: .utf8)
     }
 
     private static func center(_ t: Template, _ region: Int) -> SIMD2<Float> {

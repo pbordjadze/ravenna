@@ -1,6 +1,7 @@
 import CoreGraphics
 import Foundation
 import Metal
+import MosaicKit
 import os
 import PaintCore
 
@@ -30,6 +31,9 @@ nonisolated final class RenderContext: @unchecked Sendable {
     let glyphPipeline: any MTLRenderPipelineState
     let brushPipeline: any MTLRenderPipelineState
     let photoPipeline: any MTLRenderPipelineState
+    let liftPipeline: any MTLRenderPipelineState
+    /// What a scene that isn't a mosaic binds for the tile passes' buffers, which it never reads.
+    let noTiles: TileScene
 
     /// Warms up the device, pipelines and atlas off the main thread so the first canvas
     /// opens instantly.
@@ -95,6 +99,8 @@ nonisolated final class RenderContext: @unchecked Sendable {
               let glyph = pipeline("glyphVertex", "glyphFragment", format: f, samples: n, blend: .premultiplied),
               let brush = pipeline("brushVertex", "brushFragment", format: f, samples: n, blend: .premultiplied),
               let photo = pipeline("canvasRectVertex", "photoFragment", format: f, samples: n, blend: .premultiplied),
+              let lift = pipeline("liftVertex", "liftFragment", format: f, samples: n, blend: .premultiplied),
+              let noTiles = TileScene.empty(device),
               let texture = RenderContext.upload(atlas: atlas, device: device, queue: queue)
         else { return nil }
         paperPipeline = paper
@@ -104,6 +110,8 @@ nonisolated final class RenderContext: @unchecked Sendable {
         glyphPipeline = glyph
         brushPipeline = brush
         photoPipeline = photo
+        liftPipeline = lift
+        self.noTiles = noTiles
         atlasTexture = texture
     }
 
@@ -169,6 +177,15 @@ nonisolated final class RenderContext: @unchecked Sendable {
         return commands.status == .completed ? texture : nil
     }
 
+    /// The finish a frame's tiles are drawn in (`CanvasUniforms.tiles.y`).
+    private static func finish(of u: CanvasUniforms) -> Finish {
+        switch Int(u.tiles.y.rounded()) {
+        case 0: .flat
+        case 1: .bed
+        default: .material
+        }
+    }
+
     // MARK: Render targets
 
     func makeColorTarget(width: Int, height: Int) -> (any MTLTexture)? {
@@ -218,11 +235,16 @@ nonisolated final class RenderContext: @unchecked Sendable {
         var clear = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
         /// The source photo, drawn over everything but the brush at `uniforms.photo.x`.
         var photo: (any MTLTexture)? = nil
+        /// A mosaic's painted bed (`TileScene.bed`), its ground under the bed finishes.
+        var bed: (any MTLTexture)? = nil
+        /// Tiles are being set: the lift pass draws them raised over their neighbours.
+        var lift = false
     }
 
     /// Encodes one frame: outline coverage (RG16F, max blending), then a single multisampled
-    /// pass with paper + shadow, all fills in one indexed draw, the outline composite, the
-    /// numbers, the source photo while it shows and the brush.
+    /// pass with paper + shadow, all fills in one indexed draw, the outline composite, a mosaic's
+    /// tiles still raised as they are set (their shadows, then the tiles), the numbers, the
+    /// source photo while it shows and the brush.
     func encode(
         _ commands: any MTLCommandBuffer, scene: CanvasScene, states: any MTLBuffer,
         uniforms: CanvasUniforms, targets: Targets, content: Content
@@ -274,6 +296,10 @@ nonisolated final class RenderContext: @unchecked Sendable {
         enc.setFragmentBytes(&u, length: uniformSize, index: 0)
         enc.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
 
+        let tiles = scene.tiles ?? noTiles
+        let bodies = tiles.bodies(Self.finish(of: u))
+        // Sampled only with `uniforms.tiles.z` set; something is bound either way.
+        let bed = content.bed ?? atlasTexture
         if scene.indexCount > 0 {
             enc.setRenderPipelineState(fillPipeline)
             enc.setVertexBuffer(scene.positions, offset: 0, index: 0)
@@ -282,6 +308,10 @@ nonisolated final class RenderContext: @unchecked Sendable {
             enc.setFragmentBuffer(scene.regionColors, offset: 0, index: 0)
             enc.setFragmentBuffer(states, offset: 0, index: 1)
             enc.setFragmentBytes(&u, length: uniformSize, index: 2)
+            enc.setFragmentBuffer(tiles.shapes, offset: 0, index: 3)
+            enc.setFragmentBuffer(tiles.corners, offset: 0, index: 4)
+            enc.setFragmentBuffer(bodies, offset: 0, index: 5)
+            enc.setFragmentTexture(bed, index: 0)
             enc.drawIndexedPrimitives(
                 type: .triangle, indexCount: scene.indexCount, indexType: .uint32,
                 indexBuffer: scene.indices, indexBufferOffset: 0)
@@ -296,6 +326,28 @@ nonisolated final class RenderContext: @unchecked Sendable {
             enc.setFragmentTexture(targets.outlines, index: 0)
             enc.setFragmentBytes(&u, length: uniformSize, index: 0)
             enc.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+        }
+
+        if content.lift, scene.tiles != nil, scene.indexCount > 0 {
+            enc.setRenderPipelineState(liftPipeline)
+            enc.setVertexBuffer(scene.positions, offset: 0, index: 0)
+            enc.setVertexBuffer(scene.vertexRegions, offset: 0, index: 1)
+            enc.setVertexBytes(&u, length: uniformSize, index: 2)
+            enc.setVertexBuffer(tiles.shapes, offset: 0, index: 3)
+            enc.setVertexBuffer(states, offset: 0, index: 4)
+            enc.setFragmentBytes(&u, length: uniformSize, index: 0)
+            enc.setFragmentBuffer(tiles.shapes, offset: 0, index: 1)
+            enc.setFragmentBuffer(tiles.corners, offset: 0, index: 2)
+            enc.setFragmentBuffer(bodies, offset: 0, index: 3)
+            enc.setFragmentBuffer(states, offset: 0, index: 4)
+            for shadow: UInt32 in [1, 0] {
+                var pass = shadow
+                enc.setVertexBytes(&pass, length: MemoryLayout<UInt32>.size, index: 5)
+                enc.setFragmentBytes(&pass, length: MemoryLayout<UInt32>.size, index: 5)
+                enc.drawIndexedPrimitives(
+                    type: .triangle, indexCount: scene.indexCount, indexType: .uint32,
+                    indexBuffer: scene.indices, indexBufferOffset: 0)
+            }
         }
 
         if content.numbers && scene.glyphCount > 0 {

@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import MosaicKit
 import PaintCore
 import simd
 
@@ -81,6 +82,12 @@ nonisolated struct CanvasUniforms {
     /// rgb: the tone writing over a dark paint is drawn in once its region is painted
     /// (`CanvasPalette.lightTone`).
     var lightInk: SIMD4<Float> = .zero
+    /// x: 1 for a mosaic (`TileScene`), y: its finish (0 flat, 1 bed, 2 material), z: 1 with the
+    /// painted bed's texture bound, w: the pace of tiles' motion (1; demos slow it). For a mosaic, `shine` is the light crossing the wall (or one
+    /// paint's tiles), not a gloss.
+    var tiles: SIMD4<Float> = .zero
+    /// rgb: the joints' colour on light grout (the flat finish).
+    var grout: SIMD4<Float> = .zero
 }
 
 nonisolated extension CanvasUniforms {
@@ -139,7 +146,27 @@ nonisolated extension CanvasUniforms {
         shine = SIMD4(frame.shine.start, Float(frame.shine.color), 0, 0)
         ids = SIMD4(Int32(frame.selection?.color ?? -1), Int32(frame.hovered), Int32(frame.pulsing), Int32(frame.bumped))
         photo = SIMD4(frame.photoOpacity, 0, 0, 0)
+        if let look = frame.tiles {
+            let finish: Float = switch look.finish {
+            case .flat: 0
+            case .bed: 1
+            case .material: 2
+            }
+            tiles = SIMD4(1, finish, look.hasBed ? 1 : 0, look.pace)
+            grout = SIMD4(look.grout, 1)
+        }
     }
+}
+
+/// How a mosaic's frame draws its tiles (`CanvasUniforms.tiles`, `.grout`).
+nonisolated struct TileLook {
+    var finish: Finish
+    /// The painted bed's texture is bound (`RenderContext.Content.bed`).
+    var hasBed: Bool
+    /// The joints' colour on light grout, linear P3.
+    var grout: SIMD3<Float>
+    /// How slowly tiles move: 1, or more to catch them mid-way (demos).
+    var pace: Float
 }
 
 /// What a frame shows, from which `CanvasUniforms(_:)` makes its shader constants. No field has
@@ -180,6 +207,8 @@ nonisolated struct CanvasFrame {
     /// A light sweep over finished paint: its start and palette color (-1 = everything).
     var shine: (start: Float, color: Int)
     var photoOpacity: Float
+    /// A mosaic's tiles (nil: the template is drawn as paint).
+    var tiles: TileLook?
 
     enum Lines {
         /// Every layer the classic line (`setClassicLines`).
@@ -324,6 +353,24 @@ nonisolated struct CanvasPalette: Sendable {
     /// The palette for the Paper preference under the system appearance.
     static func resolve(_ paper: PaperAppearance, interfaceIsDark: Bool) -> CanvasPalette {
         paper.usesDarkPaper(interfaceIsDark: interfaceIsDark) ? .darkPaper : interfaceIsDark ? .dark : .light
+    }
+
+    /// The ink a mosaic's numbers and places are drawn in on its ground: lime white on the painted
+    /// bed (`Theme.plaster`), faint for the places' outlines, and v0's dark ink on light grout.
+    func onTiles(_ finish: Finish) -> CanvasPalette {
+        var palette = self
+        if finish.paintedBed {
+            palette.ink = CanvasColor.linearP3(sRGB: SIMD3(0.914, 0.886, 0.827))
+            palette.outlineOpacity = 0.3
+            palette.accentFloor = 0.35
+            palette.hatchCeiling = 1
+        } else {
+            palette.ink = CanvasColor.linearP3(sRGB: SIMD3(0.25, 0.23, 0.21))
+            palette.outlineOpacity = 0.55
+            palette.accentFloor = 0
+            palette.hatchCeiling = 0.4
+        }
+        return palette
     }
 
     /// The lighter of the paper and the ink: what writing over a dark paint is drawn in
