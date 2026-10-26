@@ -55,12 +55,17 @@ nonisolated struct Artwork: Identifiable, Hashable, Codable, Sendable {
     /// regenerates with the recipe's defaults. Ravenna's seam: Paint by Moonlight's `settings` stay
     /// written as they were, unread by the engine.
     var recipe: MosaicEngine.Recipe?
+    /// Whether its `mosaic.json` is there to set tiles from (the painting then has a wall, and its
+    /// grout region is set, not painted): false once `Library.loadForPainting` found it missing or
+    /// damaged, true again when `regenerate` makes a new one. Absent from artworks written before
+    /// it, which have one when they have a recipe (`isMosaic`).
+    var hasMosaic: Bool?
 
     init(
         id: UUID = UUID(), title: String, createdAt: Date = .now, modifiedAt: Date? = nil,
         template: Template, settings: GenerationSettings, settingsOrigin: SettingsOrigin? = nil,
         paintingLength: PaintingLength? = nil, progress: PaintProgress? = nil, sampleName: String? = nil,
-        recipe: MosaicEngine.Recipe? = nil
+        recipe: MosaicEngine.Recipe? = nil, hasMosaic: Bool? = nil
     ) {
         self.id = id
         self.title = title
@@ -81,12 +86,15 @@ nonisolated struct Artwork: Identifiable, Hashable, Codable, Sendable {
         thumbnailVersion = 1
         self.sampleName = sampleName
         self.recipe = recipe
+        self.hasMosaic = hasMosaic
         format = Self.currentFormat
     }
 
     /// A mosaic's grout region, which its session sets first (`PaintProgress.groutSet`), is no
-    /// part of how far it is painted (Ravenna's seam): the recipe marks an artwork made a mosaic.
-    private var groutRegions: Int { recipe != nil && regionCount > 1 ? 1 : 0 }
+    /// part of how far it is painted (Ravenna's seam), while it has its mosaic to set tiles from:
+    /// without one, the canvas paints the grout as any area, and it counts.
+    var isMosaic: Bool { hasMosaic ?? (recipe != nil) }
+    private var groutRegions: Int { isMosaic && regionCount > 1 ? 1 : 0 }
     /// The areas painted and to paint, the grout aside.
     var paintedAreas: Int { max(0, paintedCount - (paintedCount > 0 ? groutRegions : 0)) }
     var areaCount: Int { regionCount - groutRegions }
@@ -128,6 +136,7 @@ nonisolated struct Artwork: Identifiable, Hashable, Codable, Sendable {
         case id, title, createdAt, modifiedAt, completedAt, settings, width, height
         case colorCount, regionCount, paintedCount, activeSeconds, thumbnailVersion, sampleName, format
         case pipelineVersion, isFavorite, settingsOrigin, paintingLength, nicknameVersion, recipe
+        case hasMosaic
     }
 
     /// What an artwork saved without settings was made with: classic lines, the only kind
@@ -163,6 +172,7 @@ nonisolated struct Artwork: Identifiable, Hashable, Codable, Sendable {
             settingsOrigin = try? c.decodeIfPresent(String.self, forKey: .settingsOrigin)
             paintingLength = try? c.decodeIfPresent(String.self, forKey: .paintingLength)
             recipe = try? c.decodeIfPresent(MosaicEngine.Recipe.self, forKey: .recipe)
+            hasMosaic = try? c.decodeIfPresent(Bool.self, forKey: .hasMosaic)
             return
         }
         id = try c.decode(UUID.self, forKey: .id)
@@ -184,6 +194,7 @@ nonisolated struct Artwork: Identifiable, Hashable, Codable, Sendable {
         settingsOrigin = try? c.decodeIfPresent(String.self, forKey: .settingsOrigin)
         paintingLength = try? c.decodeIfPresent(String.self, forKey: .paintingLength)
         recipe = try? c.decodeIfPresent(MosaicEngine.Recipe.self, forKey: .recipe)
+        hasMosaic = try? c.decodeIfPresent(Bool.self, forKey: .hasMosaic)
         guard width > 0, height > 0, regionCount >= 0, paintedCount >= 0 else {
             throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "invalid artwork dimensions"))
         }
