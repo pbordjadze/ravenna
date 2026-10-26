@@ -57,7 +57,6 @@ nonisolated enum V0CarryOver {
         let fm = FileManager.default
         var found: [Work] = []
         // The painter's own, setting or none.
-        struct OwnWork: Decodable { var id: String; var title: String; var made: Date? }
         let own = (try? fm.contentsOfDirectory(at: ownDirectory, includingPropertiesForKeys: nil)) ?? []
         for dir in own where !carried.contains(dir.lastPathComponent) {
             do {
@@ -93,6 +92,13 @@ nonisolated enum V0CarryOver {
         return found
     }
 
+    /// v0's record of one of the painter's own mosaics (`work.json`), as much of it as is carried.
+    private struct OwnWork: Decodable {
+        var id: String
+        var title: String
+        var made: Date?
+    }
+
     private static func setting(_ key: String) -> Setting? {
         let url = settingsDirectory.appending(path: "\(key).json")
         guard let data = try? Data(contentsOf: url) else { return nil }
@@ -104,6 +110,9 @@ nonisolated enum V0CarryOver {
     static func draft(of work: Work) throws -> ArtworkDraft {
         let mosaic = work.recipe.laid(work.mosaic)
         let template = try MosaicMaker.template(of: mosaic)
+        if let last = work.setting.set.max(), last >= mosaic.tiles.count {
+            Log.library.error("v0's \(work.key, privacy: .public) sets tile \(last) of \(mosaic.tiles.count): an older mosaic's")
+        }
         var progress = PaintProgress(regionCount: template.regions.count)
         for region in work.setting.paintedRegions(tileCount: mosaic.tiles.count) where region < template.regions.count {
             progress.paint(region)
@@ -133,6 +142,12 @@ extension Library {
             let works = await Background.run { V0CarryOver.works(skipping: carried, ground: ground) }
             var done = carried, failed = false
             for work in works {
+                // Made by a launch that ended before it could note it: carried already.
+                if artworks.contains(where: { $0.title == work.title && $0.createdAt == work.date && $0.sampleName == work.sampleName }) {
+                    done.insert(work.key)
+                    defaults.set(Array(done).sorted(), forKey: V0CarryOver.carriedKey)
+                    continue
+                }
                 do {
                     let draft = try await Background.run { try V0CarryOver.draft(of: work) }
                     try await create(draft)

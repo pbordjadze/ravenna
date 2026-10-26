@@ -298,7 +298,7 @@ final class CreateModel {
                 framedKey = PanelKey(MosaicEngine.Recipe())
                 // The controls wait while its contours and faces are found (the first draft says
                 // they are: `generate`), unless a bundled mosaic stands for the recipe.
-                phase = MosaicMaker.bundled(sampleName, recipe: recipe) == nil ? .analyzing : .ready
+                phase = MosaicMaker.hasBundled(sampleName, recipe: recipe) ? .ready : .analyzing
                 startGeneration(draftFirst: true)
             } catch is CancellationError {
             } catch {
@@ -409,7 +409,7 @@ final class CreateModel {
         fullTask?.cancel()
         stopDrafts()
         let recipe = self.recipe
-        let bundled = MosaicMaker.bundled(source?.sampleName, recipe: recipe) != nil
+        let bundled = MosaicMaker.hasBundled(source?.sampleName, recipe: recipe)
         fullTask = Task {
             if draftFirst, !bundled, !made.contains(where: { $0.key == TileKey(recipe) }) {
                 await generate(draft: true, recipe: recipe)
@@ -485,7 +485,7 @@ final class CreateModel {
             let photo = source.preview, sample = source.sampleName
             let earlier = draft ? nil : made.first(where: { $0.key == TileKey(recipe) })?.mosaic
             var analysis: MosaicMaker.Analysis?
-            if earlier == nil, MosaicMaker.bundled(sample, recipe: recipe) == nil {
+            if earlier == nil, !MosaicMaker.hasBundled(sample, recipe: recipe) {
                 analysis = try await analysisOf(recipe, photo: photo, load: load)
             }
             try Task.checkCancellation()

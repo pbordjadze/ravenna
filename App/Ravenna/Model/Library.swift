@@ -471,7 +471,7 @@ final class Library {
                 throw OpenError.damaged(canRegenerate: ArtworkFactory.canRegenerate(artwork, store: store))
             }
             return (template, try Library.readProgress(id, regionCount: template.regions.count, from: store),
-                    try Library.readMosaic(id, fitting: template, from: store))
+                    Library.readMosaic(id, fitting: template, from: store))
         }
 
         let reset: Bool
@@ -616,9 +616,8 @@ final class Library {
     }
 
     /// An artwork's mosaic when it fits its template (a tile a region, and the grout), else nil:
-    /// a file missing or damaged costs the canvas its tiles, never the painting. One that can't be
-    /// read now (an I/O or protection error) throws `OpenError.unreadable`.
-    private nonisolated static func readMosaic(_ id: UUID, fitting template: Template, from store: ArtworkStore) throws -> Mosaic? {
+    /// a file missing, damaged or unreadable just now costs the canvas its tiles, never the painting.
+    private nonisolated static func readMosaic(_ id: UUID, fitting template: Template, from store: ArtworkStore) -> Mosaic? {
         do {
             guard let mosaic = try store.readMosaic(id) else { return nil }
             guard mosaic.tiles.count + 1 == template.regions.count else {
@@ -628,7 +627,7 @@ final class Library {
             return mosaic
         } catch {
             Log.library.error("The mosaic of \(id.uuidString, privacy: .public) can't be read: \(String(describing: error), privacy: .public)")
-            throw OpenError.unreadable
+            return nil
         }
     }
 

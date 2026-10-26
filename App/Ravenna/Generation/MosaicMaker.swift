@@ -60,6 +60,13 @@ nonisolated enum MosaicMaker {
         return Analysis(contours: contours, faces: faces)
     }
 
+    /// Whether a bundled mosaic stands for `recipe` of library picture `sample`, without reading it
+    /// (a mosaic's JSON is half a megabyte: on the main actor, only this).
+    static func hasBundled(_ sample: String?, recipe: MosaicEngine.Recipe) -> Bool {
+        guard let sample, let detail = recipe.bundledDetail else { return false }
+        return Bundle.main.url(forResource: "\(sample)-\(detail.rawValue)", withExtension: "json") != nil
+    }
+
     /// The bundled mosaic of library picture `sample` that `recipe` is (`Recipe.bundledDetail`),
     /// with the recipe's ground laid on; nil when there is none.
     static func bundled(_ sample: String?, recipe: MosaicEngine.Recipe) -> Mosaic? {

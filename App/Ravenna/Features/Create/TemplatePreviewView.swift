@@ -819,21 +819,6 @@ private struct SettingSlider: View {
     }
 }
 
-private extension View {
-    /// The origin chip's shape: a capsule on one line, a rounded card when long text wraps.
-    func chipBackground(_ style: some ShapeStyle) -> some View {
-        font(.footnote.weight(.semibold))
-            .multilineTextAlignment(.leading)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(style, in: .rect(cornerRadius: 15, style: .continuous))
-            // A comfortable target without making the chip itself taller.
-            .frame(minHeight: 44)
-            .contentShape(.rect)
-    }
-}
-
 /// Where the preview's picture is on screen: the preview writes it as it is laid out and the create
 /// flow reads it when Start Painting is tapped, to move the picture from there (`StartHandoff`). A
 /// reference, so that neither invalidates the other.

@@ -205,10 +205,10 @@ struct MakingOfView: View {
 
     /// The show's time now (held in demos, and once it has finished).
     private func time(at date: Date, _ show: MakingOf.Show) -> Double {
+        var t = min(date.timeIntervalSince(origin), show.duration)
         #if DEBUG
-        if let heldAt { return min(heldAt, show.duration) }
+        if let heldAt { t = min(heldAt, show.duration) }
         #endif
-        let t = min(date.timeIntervalSince(origin), show.duration)
         return reduceMotion ? Self.still(t, show) : t
     }
 
