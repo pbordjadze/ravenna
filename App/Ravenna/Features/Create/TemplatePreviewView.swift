@@ -399,7 +399,7 @@ struct TemplatePreviewView: View {
         switch setting {
         case .pieces:
             SettingSlider(
-                title: "Pieces", value: model.recipe.pieces, onChange: setPieces,
+                title: "Pieces", value: model.recipe.pieces, onChange: { setPieces($0) },
                 valueText: Self.piecesText(model.recipe.pieces), isPending: model.isChoosingSettings,
                 detent: MosaicEngine.Recipe.standardPieces, onEditing: model.setAdjusting)
                 // Fewer or More Areas: over the slider, clear of the preview's picture.
@@ -438,7 +438,7 @@ struct TemplatePreviewView: View {
                             .accessibilityIdentifier("move-panel")
                     }
                 }
-                Picker("Panel", selection: Binding(get: { model.recipe.panel }, set: choosePanel)) {
+                Picker("Panel", selection: Binding(get: { model.recipe.panel }, set: { choosePanel($0) })) {
                     Text("Whole").tag(MosaicEngine.Panel.whole)
                     Text("Square").tag(MosaicEngine.Panel.square)
                     Text("Upright").tag(MosaicEngine.Panel.upright)
