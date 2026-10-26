@@ -37,7 +37,10 @@ go back into it (#5).
   (`Artwork.recipe`, `MosaicEngine.Recipe`: pieces, eyes, mouth, ground, panel; tolerant;
   GenerationSettings stay written, unread). The finish is the app's, how every mosaic shows
   (`MosaicLook`, v0's key `finish`), not the recipe's. A mosaic's grout region is
-  no part of `Artwork.isStarted`, `fractionComplete`, `paintedAreas` and `areaCount`.
+  no part of `Artwork.isStarted`, `fractionComplete`, `paintedAreas` and `areaCount` while it has
+  its mosaic (`Artwork.isMosaic`: `meta.json`'s `hasMosaic`, else a recipe); `loadForPainting`
+  records a `mosaic.json` missing or damaged (`hasMosaic` false: the grout is painted and counts)
+  and `regenerate` its return.
   `Library.loadForPainting` and `regenerate` hand it out as `PaintingDocument.mosaic` (nil when
   missing or not one tile a region plus the grout). `ArtworkDraft` carries `mosaic` and `recipe`.
 - **The create flow:** `CreateModel` is Ravenna's (its recipe, drafts at `MosaicMaker.draftLongSide`

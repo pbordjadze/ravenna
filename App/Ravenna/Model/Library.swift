@@ -185,7 +185,7 @@ final class Library {
         let artwork = Artwork(
             title: draft.title, createdAt: draft.date, template: draft.template, settings: draft.settings,
             settingsOrigin: draft.settingsOrigin, paintingLength: draft.paintingLength,
-            progress: draft.progress, sampleName: draft.sampleName, recipe: draft.recipe)
+            progress: draft.progress, sampleName: draft.sampleName, recipe: draft.recipe, hasMosaic: draft.mosaic != nil)
         let store = self.store
         try await Background.run {
             let progress = draft.progress ?? PaintProgress(regionCount: draft.template.regions.count)
@@ -466,7 +466,8 @@ final class Library {
         guard !artwork.needsNewerApp else { throw OpenError.needsNewerApp }
         _ = await writes[id]?.value
         let store = self.store
-        let (template, saved, mosaic) = try await Background.run { () throws -> (Template, ArtworkStore.SavedProgress, Mosaic?) in
+        let (template, saved, found) = try await Background.run {
+            () throws -> (Template, ArtworkStore.SavedProgress, (mosaic: Mosaic?, gone: Bool)) in
             guard let template = try Library.readTemplate(id, from: store) else {
                 throw OpenError.damaged(canRegenerate: ArtworkFactory.canRegenerate(artwork, store: store))
             }
@@ -481,11 +482,15 @@ final class Library {
         case .missing?: reset = artwork.paintedCount > 0
         case nil: reset = false
         }
+        let mosaic = found.mosaic
         // Keep the metadata true to what is on disk (the gallery and saveProgress rely on it),
-        // without moving the painting in the gallery's order.
+        // without moving the painting in the gallery's order: whether it has its mosaic too, which
+        // decides whether the grout counts (a file that can't be read just now changes nothing).
         if let current = self.artwork(with: id) {
             var updated = current
             updated.adopt(template, settings: current.settings)
+            if found.gone, current.isMosaic { updated.hasMosaic = false }
+            if mosaic != nil, !current.isMosaic { updated.hasMosaic = true }
             if reset || updated.paintedCount != saved.progress.paintedCount {
                 updated.record(saved.progress, at: updated.modifiedAt)
             }
@@ -543,6 +548,7 @@ final class Library {
 
         var updated = self.artwork(with: id) ?? artwork
         updated.adopt(template, settings: updated.settings)
+        updated.hasMosaic = true
         updated.format = Artwork.currentFormat
         updated.record(progress)
         updated.thumbnailVersion += 1
@@ -616,18 +622,22 @@ final class Library {
     }
 
     /// An artwork's mosaic when it fits its template (a tile a region, and the grout), else nil:
-    /// a file missing, damaged or unreadable just now costs the canvas its tiles, never the painting.
-    private nonisolated static func readMosaic(_ id: UUID, fitting template: Template, from store: ArtworkStore) -> Mosaic? {
+    /// a file missing, damaged or unreadable just now costs the canvas its tiles, never the
+    /// painting. `gone` is true for a file missing, damaged or not fitting (not for one that
+    /// can't be read just now, an I/O or protection error): the artwork has no mosaic.
+    private nonisolated static func readMosaic(
+        _ id: UUID, fitting template: Template, from store: ArtworkStore
+    ) -> (mosaic: Mosaic?, gone: Bool) {
         do {
-            guard let mosaic = try store.readMosaic(id) else { return nil }
+            guard let mosaic = try store.readMosaic(id) else { return (nil, true) }
             guard mosaic.tiles.count + 1 == template.regions.count else {
                 Log.library.error("The mosaic of \(id.uuidString, privacy: .public) has \(mosaic.tiles.count) tiles for \(template.regions.count) regions")
-                return nil
+                return (nil, true)
             }
-            return mosaic
+            return (mosaic, false)
         } catch {
             Log.library.error("The mosaic of \(id.uuidString, privacy: .public) can't be read: \(String(describing: error), privacy: .public)")
-            return nil
+            return (nil, false)
         }
     }
 
