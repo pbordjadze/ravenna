@@ -83,9 +83,15 @@ struct ArtworkPaintingView: View {
     private func makePaintingWork(mosaic: Mosaic?) -> PaintingWork {
         let sample = artwork?.sampleName.flatMap(Sample.named), title = artwork?.title ?? ""
         var makingOf: (@Sendable () async -> MakingOfSource?)?
-        if let mosaic {
+        // The stored photo, else a library work's own: a show with no photo isn't offered.
+        let bundled = sample?.url
+        if let mosaic, library.store.hasSource(artworkID) || bundled != nil {
             makingOf = { [library, artworkID] in
-                guard let photo = await library.sourcePhoto(for: artworkID) else { return nil }
+                var photo = await library.sourcePhoto(for: artworkID)
+                if photo == nil, let bundled {
+                    photo = await Background.run { ImageCodec.image(at: bundled, maxPixelSize: ArtworkStore.sourceMaxPixelSize) }
+                }
+                guard let photo else { return nil }
                 return MakingOfSource(
                     mosaic: mosaic, photo: photo, finish: MosaicLook.current.finish, title: title,
                     credit: sample.map { MakingOfSource.credit(of: $0) } ?? MakingOfSource.ownPhotoCredit)

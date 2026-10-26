@@ -10,7 +10,7 @@ nonisolated struct PaintingWork: Sendable {
     /// The library work the painting was laid from; nil for the painter's own photo.
     let sample: Sample?
     /// Makes the show (its mosaic, photo, finish and card); nil for a painting without a mosaic, or
-    /// whose photo is gone.
+    /// without a photo to show (its stored one, else a library work's own).
     let makingOf: (@Sendable () async -> MakingOfSource?)?
 }
 
@@ -79,7 +79,8 @@ struct SampleAboutView: View {
         .pageSizedOnPad()
         .task {
             guard let url = sample.url else { return }
-            picture = await Task.detached(priority: .userInitiated) { UIImage(contentsOfFile: url.path) }.value
+            let image = await Task.detached(priority: .userInitiated) { ImageCodec.image(at: url, maxPixelSize: 1200) }.value
+            picture = image.map { UIImage(cgImage: $0) }
         }
     }
 

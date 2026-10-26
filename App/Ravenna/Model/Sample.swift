@@ -114,7 +114,7 @@ nonisolated struct Sample: Identifiable, Hashable, Sendable {
             provenance = try Provenance(from: decoder)
             place = (try? container.decodeIfPresent(String.self, forKey: .place)) ?? nil
             medium = (try? container.decodeIfPresent(String.self, forKey: .medium)) ?? nil
-            source = ((try? container.decodeIfPresent(String.self, forKey: .source)) ?? nil).flatMap(URL.init(string:))
+            source = ((try? container.decodeIfPresent(String.self, forKey: .source)) ?? nil).flatMap { URL(string: $0) }
         }
     }
 }

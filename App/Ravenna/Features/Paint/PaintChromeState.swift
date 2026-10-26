@@ -22,6 +22,8 @@ final class PaintChromeState {
     @ObservationIgnored private weak var tipSession: PaintingSession?
     /// Give Feedback is on: no hint speaks.
     @ObservationIgnored var isGivingFeedback = false
+    /// More › The Making-of is playing over the bench: no hint speaks (Ravenna's seam).
+    @ObservationIgnored var isShowingMakingOf = false
     /// Since when a finger has been moving or zooming the page (the canvas reports it).
     @ObservationIgnored private var handDownSince: ContinuousClock.Instant?
     @ObservationIgnored private var lastFill: ContinuousClock.Instant?
@@ -238,6 +240,7 @@ final class PaintChromeState {
         if let lastFill, session.flowsToNextArea, now - lastFill < Self.zenDrift { quiet.insert(.zenDrifting) }
         if session.replayed != nil { quiet.insert(.replay) }
         if isGivingFeedback { quiet.insert(.feedback) }
+        if isShowingMakingOf { quiet.insert(.makingOf) }
         if session.isComplete {
             quiet.insert(.pageFinished)
             let shine = UIAccessibility.isReduceMotionEnabled ? Duration.milliseconds(1200) : Self.shine

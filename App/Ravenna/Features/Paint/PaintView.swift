@@ -57,7 +57,9 @@ struct PaintView: View {
     @Environment(\.sourcePhotoLoader) private var photoLoader
     /// Ravenna's seam: the open mosaic's making-of and record, for the More menu.
     @Environment(\.paintingWork) private var work
+    /// The show playing, kept until its cover has gone so the cover never empties as it leaves.
     @State private var makingOf: MakingOfSource?
+    @State private var showsMakingOf = false
     @State private var aboutSample: Sample?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -189,9 +191,13 @@ struct PaintView: View {
         .sheet(item: $aboutSample) { sample in
             SampleAboutView(sample: sample)
         }
-        .fullScreenCover(isPresented: Binding(get: { makingOf != nil }, set: { if !$0 { makingOf = nil } })) {
+        .fullScreenCover(isPresented: $showsMakingOf, onDismiss: {
+            makingOf = nil
+            chrome.isShowingMakingOf = false
+            chrome.activity()
+        }) {
             if let makingOf {
-                MakingOfView(source: makingOf, onFinish: { self.makingOf = nil })
+                MakingOfView(source: makingOf, onFinish: { showsMakingOf = false })
             }
         }
         .sheet(isPresented: reviewsFeedback, onDismiss: thankForFeedback) {
@@ -640,7 +646,12 @@ struct PaintView: View {
     private var workItems: some View {
         if let show = work?.makingOf {
             Button {
-                Task { makingOf = await show() }
+                guard !chrome.isShowingMakingOf else { return }
+                chrome.isShowingMakingOf = true
+                Task {
+                    makingOf = await show()
+                    if makingOf != nil { showsMakingOf = true } else { chrome.isShowingMakingOf = false }
+                }
             } label: {
                 Label(String(localized: "paint.more.makingOf", defaultValue: "The Making-of",
                              comment: "Item of the mosaic's More menu: plays the show of how the mosaic was made again"),
