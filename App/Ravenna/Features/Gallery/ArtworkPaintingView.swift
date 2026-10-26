@@ -169,7 +169,8 @@ struct ArtworkPaintingView: View {
         let session: PaintingSession
         do {
             session = try await PaintingSession.make(
-                template: document.template, progress: document.progress, nicknameSeed: ColorNickname.seed(for: artworkID),
+                template: document.template, progress: document.progress, mosaic: document.mosaic,
+                nicknameSeed: ColorNickname.seed(for: artworkID),
                 nicknameVersion: artwork?.nicknameVersion ?? 1)
         } catch is CancellationError {
             return
@@ -225,11 +226,11 @@ struct ArtworkPaintingView: View {
     }
 
     private func regenerate() {
-        guard let artwork, regeneration == nil else { return }
+        guard artwork != nil, regeneration == nil else { return }
         regenerationFailed = false
         regeneration = Task {
             do {
-                let document = try await library.regenerate(artwork: artworkID, settings: artwork.settings)
+                let document = try await library.regenerate(artwork: artworkID)
                 _ = await RenderContext.ready()
                 await present(document)
             } catch is CancellationError {

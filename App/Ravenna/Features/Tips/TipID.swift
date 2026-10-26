@@ -1,13 +1,13 @@
 import Foundation
 
 /// Where in the app a tip lives. The words are the design's (October 17): the shelf is the gallery,
-/// New Painting the create flow's picking of a photo, its preview, Refine, the bench the painting
-/// screen and the drawer Settings.
+/// New Painting the create flow's picking of a photo, its preview, the bench the painting screen
+/// and the drawer Settings. (Ravenna's seam: Refine and its tips are left out.)
 nonisolated enum TipPlace: String, CaseIterable, Codable, Sendable {
-    case shelf, newPainting, preview, refine, bench, drawer
+    case shelf, newPainting, preview, bench, drawer
 
     /// How far in front of the others the screen is when several are up at once (the shelf under the
-    /// create flow, Settings or a painting; Refine over the preview). Whichever is most in front is
+    /// create flow, Settings or a painting). Whichever is most in front is
     /// the one whose tips may speak, however the screens' appearing happened to be ordered.
     var depth: Int {
         switch self {
@@ -15,20 +15,17 @@ nonisolated enum TipPlace: String, CaseIterable, Codable, Sendable {
         case .bench, .drawer: 1
         case .newPainting: 2
         case .preview: 3
-        case .refine: 4
         }
     }
 }
 
-/// The 23 tips, by the design's ids (22, and Refine's Draw Your Own Lines, which took the place of
-/// the line under Refine's tools: Paul's calmer menus, October 18). Pure data: the tips themselves (TipKit) are made from these in
+/// The tips, by the design's ids (Paint by Moonlight's 23 but Refine's three). Pure data: the tips themselves (TipKit) are made from these in
 /// `TipID.tip`, and everything that decides when one may appear (`TipPacing`, `TipMoments`) speaks
 /// of ids alone.
 nonisolated enum TipID: String, CaseIterable, Codable, Sendable {
     case shelfStarter, shelfNewPainting, shelfHold, shelfTimeLapse, shelfSettings
     case newPaintingSamples
-    case newPaintingDivider, newPaintingSuggested, newPaintingReset, newPaintingSliders, newPaintingRefine
-    case refineDraw, refineFill
+    case newPaintingDivider, newPaintingSuggested, newPaintingReset, newPaintingSliders
     case benchTap, benchZoom, benchFind, benchDrag, benchPencil, benchShowPhoto, benchReplay, benchZen, benchFeedback
     case drawerWorthALook
 
@@ -36,7 +33,7 @@ nonisolated enum TipID: String, CaseIterable, Codable, Sendable {
     /// (`barTips`), or atop the gallery's pages (`barTipsInline`).
     var liesUnderTheBar: Bool {
         switch self {
-        case .shelfSettings, .shelfNewPainting, .newPaintingRefine: true
+        case .shelfSettings, .shelfNewPainting: true
         default: false
         }
     }
@@ -56,15 +53,14 @@ nonisolated enum TipID: String, CaseIterable, Codable, Sendable {
     var isDrawnByTheApp: Bool { liesUnderTheBar || hangsFromCard || liesOnThePage }
 
     /// How to use a screen at all, so it waits for neither the gap nor something done
-    /// (`TipPacing`): Tap to Paint, and Refine's Draw Your Own Lines.
-    var isHowTo: Bool { self == .benchTap || self == .refineDraw }
+    /// (`TipPacing`): Tap to Paint.
+    var isHowTo: Bool { self == .benchTap }
 
     var place: TipPlace {
         switch self {
         case .shelfStarter, .shelfNewPainting, .shelfHold, .shelfTimeLapse, .shelfSettings: .shelf
         case .newPaintingSamples: .newPainting
-        case .newPaintingDivider, .newPaintingSuggested, .newPaintingReset, .newPaintingSliders, .newPaintingRefine: .preview
-        case .refineDraw, .refineFill: .refine
+        case .newPaintingDivider, .newPaintingSuggested, .newPaintingReset, .newPaintingSliders: .preview
         case .benchTap, .benchZoom, .benchFind, .benchDrag, .benchPencil, .benchShowPhoto, .benchReplay, .benchZen,
              .benchFeedback: .bench
         case .drawerWorthALook: .drawer

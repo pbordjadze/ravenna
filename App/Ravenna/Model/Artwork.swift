@@ -1,5 +1,7 @@
 import CoreGraphics
 import Foundation
+import MosaicEngine
+import MosaicKit
 import PaintCore
 
 /// Metadata of one artwork in the library (its `meta.json`). Holds everything the gallery
@@ -48,11 +50,17 @@ nonisolated struct Artwork: Identifiable, Hashable, Codable, Sendable {
     /// metadata means v1; keep unknown future versions as written, even if this build uses
     /// its newest known vocabulary to display them.
     var nicknameVersion: Int
+    /// What Ravenna's engine made the mosaic with (`MosaicEngine.Recipe`): what regeneration
+    /// makes it with again. Nil for an artwork without one (none is written by this app), which
+    /// regenerates with the recipe's defaults. Ravenna's seam: Paint by Moonlight's `settings` stay
+    /// written as they were, unread by the engine.
+    var recipe: MosaicEngine.Recipe?
 
     init(
         id: UUID = UUID(), title: String, createdAt: Date = .now, modifiedAt: Date? = nil,
         template: Template, settings: GenerationSettings, settingsOrigin: SettingsOrigin? = nil,
-        paintingLength: PaintingLength? = nil, progress: PaintProgress? = nil, sampleName: String? = nil
+        paintingLength: PaintingLength? = nil, progress: PaintProgress? = nil, sampleName: String? = nil,
+        recipe: MosaicEngine.Recipe? = nil
     ) {
         self.id = id
         self.title = title
@@ -72,15 +80,23 @@ nonisolated struct Artwork: Identifiable, Hashable, Codable, Sendable {
         completedAt = progress?.isComplete == true ? self.modifiedAt : nil
         thumbnailVersion = 1
         self.sampleName = sampleName
+        self.recipe = recipe
         format = Self.currentFormat
     }
 
+    /// A mosaic's grout region, which its session sets first (`PaintProgress.groutSet`), is no
+    /// part of how far it is painted (Ravenna's seam): the recipe marks an artwork made a mosaic.
+    private var groutRegions: Int { recipe != nil && regionCount > 1 ? 1 : 0 }
+    /// The areas painted and to paint, the grout aside.
+    var paintedAreas: Int { max(0, paintedCount - (paintedCount > 0 ? groutRegions : 0)) }
+    var areaCount: Int { regionCount - groutRegions }
+
     var fractionComplete: Double {
-        regionCount == 0 ? 0 : min(1, Double(paintedCount) / Double(regionCount))
+        areaCount <= 0 ? 0 : min(1, Double(paintedAreas) / Double(areaCount))
     }
 
     var isComplete: Bool { regionCount > 0 && paintedCount >= regionCount }
-    var isStarted: Bool { paintedCount > 0 }
+    var isStarted: Bool { paintedAreas > 0 }
     var aspectRatio: CGFloat { height == 0 ? 1 : CGFloat(width) / CGFloat(height) }
     /// Written by a newer app: listed and deletable, but never opened or rewritten here.
     var needsNewerApp: Bool { format > Self.currentFormat }
@@ -111,7 +127,7 @@ nonisolated struct Artwork: Identifiable, Hashable, Codable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case id, title, createdAt, modifiedAt, completedAt, settings, width, height
         case colorCount, regionCount, paintedCount, activeSeconds, thumbnailVersion, sampleName, format
-        case pipelineVersion, isFavorite, settingsOrigin, paintingLength, nicknameVersion
+        case pipelineVersion, isFavorite, settingsOrigin, paintingLength, nicknameVersion, recipe
     }
 
     /// What an artwork saved without settings was made with: classic lines, the only kind
@@ -146,6 +162,7 @@ nonisolated struct Artwork: Identifiable, Hashable, Codable, Sendable {
             isFavorite = field(.isFavorite, false)
             settingsOrigin = try? c.decodeIfPresent(String.self, forKey: .settingsOrigin)
             paintingLength = try? c.decodeIfPresent(String.self, forKey: .paintingLength)
+            recipe = try? c.decodeIfPresent(MosaicEngine.Recipe.self, forKey: .recipe)
             return
         }
         id = try c.decode(UUID.self, forKey: .id)
@@ -166,6 +183,7 @@ nonisolated struct Artwork: Identifiable, Hashable, Codable, Sendable {
         isFavorite = try c.decodeIfPresent(Bool.self, forKey: .isFavorite) ?? false
         settingsOrigin = try? c.decodeIfPresent(String.self, forKey: .settingsOrigin)
         paintingLength = try? c.decodeIfPresent(String.self, forKey: .paintingLength)
+        recipe = try? c.decodeIfPresent(MosaicEngine.Recipe.self, forKey: .recipe)
         guard width > 0, height > 0, regionCount >= 0, paintedCount >= 0 else {
             throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "invalid artwork dimensions"))
         }
@@ -192,7 +210,7 @@ nonisolated struct ArtworkDraft: Sendable {
     var sampleName: String?
     var progress: PaintProgress?
     var date: Date = .now
-    /// What the painter refined before painting (the create flow's Refine step); kept with the
-    /// painting so regenerating it reproduces them.
-    var refinements = TemplateRefinements()
+    /// The mosaic the template is of, kept beside it (`mosaic.json`), and what made it.
+    var mosaic: Mosaic?
+    var recipe: MosaicEngine.Recipe?
 }

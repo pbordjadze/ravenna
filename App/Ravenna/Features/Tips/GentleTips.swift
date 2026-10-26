@@ -37,7 +37,7 @@ nonisolated enum TipEvents {
     static var pagesMade: Tips.Event<Tips.EmptyDonation> { event("pageMade") }
     /// A preview slider let go.
     static var sliderReleases: Tips.Event<Tips.EmptyDonation> { event("sliderReleased") }
-    /// A line drawn in Refine.
+    /// A line drawn in Refine (Paint by Moonlight's: Ravenna has no Refine; the tips' reset still clears it).
     static var linesDrawn: Tips.Event<Tips.EmptyDonation> { event("lineDrawn") }
 
     private static func event(_ name: String) -> Tips.Event<Tips.EmptyDonation> {
@@ -173,46 +173,6 @@ nonisolated struct NewPaintingSlidersTip: Tip {
     var options: [any TipOption] { Tips.MaxDisplayCount(1) }
 }
 
-/// The third page made, once its preview is up: Refine, which is optional. At the Refine button.
-nonisolated struct NewPaintingRefineTip: Tip {
-    var id: String { PaintTips.scoped("tip.newPaintingRefine") }
-    var title: Text { Text("Shape the Lines Yourself") }
-    var message: Text? { Text("Refine, top right, lets you draw or erase lines and fill shapes. It is optional.") }
-    var image: Image? { Image(systemName: "pencil.tip") }
-    var rules: [Tips.Rule] {
-        #Rule(TipSwitch.$tipsOn) { $0 == true }
-        #Rule(TipEvents.pagesMade) { $0.donations.count >= 2 }
-    }
-}
-
-// MARK: Refine
-
-/// Refine opened: how its canvas works, said once (it was a line under the tools until Paul's calmer
-/// menus, October 18). At the Pen. Stops at the first change made.
-nonisolated struct RefineDrawTip: Tip {
-    var id: String { PaintTips.scoped("tip.refineDraw") }
-    var title: Text { Text("Draw Your Own Lines") }
-    var message: Text? { Text("Draw lines exactly as you draw them. Two fingers zoom and move, and a two‑finger tap undoes.") }
-    var image: Image? { Image(systemName: "pencil.tip") }
-    var rules: [Tips.Rule] {
-        #Rule(TipSwitch.$tipsOn) { $0 == true }
-    }
-    var options: [any TipOption] { Tips.MaxDisplayCount(1) }
-}
-
-/// The first line drawn inside Refine: filling a closed shape. At Fill. Stops when a fill is made.
-nonisolated struct RefineFillTip: Tip {
-    var id: String { PaintTips.scoped("tip.refineFill") }
-    var title: Text { Text("Make a Shape Its Own") }
-    var message: Text? { Text("Draw a closed shape, then fill it to make it an area with its own number.") }
-    var image: Image? { Image(systemName: "drop.fill") }
-    var rules: [Tips.Rule] {
-        #Rule(TipSwitch.$tipsOn) { $0 == true }
-        #Rule(TipEvents.linesDrawn) { $0.donations.count >= 1 }
-    }
-    var options: [any TipOption] { Tips.MaxDisplayCount(1) }
-}
-
 // MARK: The bench
 
 /// About a quarter of a page painted: the photo, held or kept showing. At the Photo control.
@@ -298,9 +258,6 @@ extension TipID {
         case .newPaintingSuggested: NewPaintingSuggestedTip()
         case .newPaintingReset: NewPaintingResetTip()
         case .newPaintingSliders: NewPaintingSlidersTip()
-        case .newPaintingRefine: NewPaintingRefineTip()
-        case .refineDraw: RefineDrawTip()
-        case .refineFill: RefineFillTip()
         case .benchTap: FirstPaintTip()
         case .benchZoom: ZoomTip()
         case .benchFind: HintTip()

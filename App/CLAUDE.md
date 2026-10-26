@@ -24,9 +24,46 @@ go back into it (#5).
 - **The library:** `Resources/Samples/library.json` lists the ancient works of
   `Resources/Mosaics/catalog.json`; `Sample.url` reads their `<id>-photo.jpg`; the starters and
   the demos' pictures (`ShellDemo.fixedPictures`, `PaintDemoView`) are theirs.
+- **The engine:** templates are mosaics. `Generation/MosaicMaker` (photo cut to its panel → HED
+  contours from `EdgeDetector`, faces from `SubjectVision`'s Vision pass mapped by `MosaicFaces` as
+  v0 did → `MosaicEngine.make` → `MosaicCore.template(of:)`) stands where `TemplateGenerator` was,
+  in `ArtworkFactory` (`draft`, `made`, `source`), `CreateModel` and `Library.regenerate` (now
+  `regenerate(artwork:)`, from the artwork's recipe). A library picture whose recipe matches a
+  bundled mosaic (`Recipe.bundledDetail`) is laid from it. `SubjectVision` runs only face landmarks
+  and animals; `EdgeDetector` only HED. `Generation/MosaicPicture` draws a mosaic in its finish
+  (v0's `TileArt`, as `MosaicDrawing`), for the preview and the making-of.
+- **The mosaic kept:** each artwork folder has `mosaic.json` (`ArtworkStore.File.mosaic`, written
+  by `create` and `replaceContents`, read by `readMosaic`) and `meta.json` records `recipe`
+  (`Artwork.recipe`, `MosaicEngine.Recipe`: pieces, eyes, mouth, ground, panel; tolerant;
+  GenerationSettings stay written, unread). The finish is the app's, how every mosaic shows
+  (`MosaicLook`, v0's key `finish`), not the recipe's. A mosaic's grout region is
+  no part of `Artwork.isStarted`, `fractionComplete`, `paintedAreas` and `areaCount`.
+  `Library.loadForPainting` and `regenerate` hand it out as `PaintingDocument.mosaic` (nil when
+  missing or not one tile a region plus the grout). `ArtworkDraft` carries `mosaic` and `recipe`.
+- **The create flow:** `CreateModel` is Ravenna's (its recipe, drafts at `MosaicMaker.draftLongSide`
+  while Pieces moves, the engine's mosaics kept per tile recipe, a panel's analysis once); the
+  preview's card (`TemplatePreviewView`) holds Pieces, Eyes, Mouth, Ground and the Panel (its sheet,
+  `PanelFramingView`) where the sliders were. Out: Suggested settings (`AutoSettings`, the chip,
+  Settings › Painting Length), Settings › Preview and Line Weight, the line-art picture (`CompareView`,
+  `LineArtDrawing`), Refine (`Features/Refine`, its button, tips, notes, `TemplateRefinements`,
+  `refinements.json`), drafts (`Drafts`, `CreateDraft`, `DraftRow`, `DraftSaveToast`), the
+  line-art inputs (`LineArtInputs`, `LineArtMapsCache`, `TextFinder`, `ObjectFinder`, `EyeFinder`,
+  `SubjectImportance`) and `DemoTemplateCache`. Their settings keys are retired
+  (`Preferences.retiredKeys`); `PaintDemoView`'s book demo runs HED alone.
+- **The making-of:** `Features/MakingOf` is v0's show (MosaicKit's `MakingOf.Show`, its cards and
+  sources from docs/making-of.md) behind Paint by Moonlight's `MakingOfView` interface and hand-off
+  (`StartHandoff`), with v0's options in a menu; always on (`SettingsDefault.playsMakingOf`, its
+  Settings switch gone; Skip ends it).
+  The `MakingOf` package product is unlinked and `making-of.json` is gone. Its demos:
+  `making-of`, `-smalti`, `-andamento`, `-dark`, `-long-text`, `-end`, `-reduce-motion`.
+- **v0's mosaics:** `Model/V0CarryOver` carries v0's `Own/` mosaics and `Settings/` progress into
+  the library once at launch (`Library.forLaunch`), a set tile a painted region, v0's app-wide
+  `ground` recorded as each one's.
+- **Demos:** `ShellDemo` has no Refine, draft, line-art or suggestion scenarios; `create-custom`
+  moves Pieces so the engine lays a library picture. `[shots]` takes `create-custom`, `making-of`
+  and `making-of-end` beside Paint by Moonlight's (ci.yml's `ALL`).
 - **Left behind:** Paint by Moonlight's picture library and its line-drawing model
-  (`LineArt.mlpackage`): without it, generation falls back to classic lines until the engine is
-  Ravenna's (phase 2). The HED model is the same file in both apps. No test targets: Ravenna's
+  (`LineArt.mlpackage`). The HED model is the same file in both apps. No test targets: Ravenna's
   checks are its package's tests on Linux, `[compile]` and `[shots]`.
 - **Tiles on the canvas** (issue #13, phase 3): a painting whose session has a mosaic
   (`PaintingSession.make(template:…mosaic:)`, `TileWall`) is drawn as tiles. `TileScene` puts the

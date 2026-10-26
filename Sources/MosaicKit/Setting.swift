@@ -38,3 +38,27 @@ nonisolated public struct Setting: Sendable, Equatable, Codable {
         return nil
     }
 }
+
+/// v0's saved work, as v1 carries it over (issue #13): region i of a mosaic's template is tile i
+/// (`MosaicCore.template(of:)`), and the grout, the last region, is one more.
+nonisolated extension Setting {
+    /// The template regions this setting has painted, for a mosaic of `tileCount` tiles, ascending:
+    /// each set tile's own (indices outside the mosaic dropped), and the grout, which a mosaic's
+    /// painting sets first (the canvas's `PaintProgress.groutSet`), so a finished wall is finished.
+    public func paintedRegions(tileCount: Int) -> [Int] {
+        guard tileCount > 0 else { return [] }
+        return set.filter { $0 >= 0 && $0 < tileCount }.sorted() + [tileCount]
+    }
+
+    /// What v0 named a setting's file (`Settings/<key>.json`): one of the painter's own mosaics by its
+    /// id (`own-…`), or a bundled work at a detail (`<work>-<detail>`); nil for a name that is
+    /// neither.
+    public static func v0Work(key: String) -> (work: String, detail: Detail?)? {
+        if key.hasPrefix("own-") { return (key, nil) }
+        for detail in Detail.allCases where key.hasSuffix("-" + detail.rawValue) {
+            let work = String(key.dropLast(detail.rawValue.count + 1))
+            return work.isEmpty ? nil : (work, detail)
+        }
+        return nil
+    }
+}

@@ -10,13 +10,9 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.haptics) private var haptics = SettingsDefault.haptics
     @AppStorage(SettingsKey.sounds) private var sounds = SettingsDefault.sounds
     @AppStorage(SettingsKey.sky) private var sky = SkySetting.default
-    @AppStorage(SettingsKey.paintingLength) private var paintingLength = PaintingLength.default
     @AppStorage(SettingsKey.paperAppearance) private var paperAppearance = PaperAppearance.default
-    @AppStorage(SettingsKey.lineWeight) private var lineWeight = LineWeight.default
-    @AppStorage(SettingsKey.previewStyle) private var previewStyle = PreviewStyle.default
     /// On until switched off here (`TipPreference`).
     @AppStorage(SettingsKey.tipsEnabled) private var tipsEnabled = SettingsDefault.tipsEnabled
-    @AppStorage(SettingsKey.playsMakingOf) private var playsMakingOf = SettingsDefault.playsMakingOf
     // Ravenna's options (`TileOptions`, `Typeface`), until Paul narrows them.
     @AppStorage(TileOptions.finishKey) private var finish = Finish.material
     @AppStorage(TileOptions.oneFingerKey) private var oneFinger = OneFinger.lays
@@ -31,7 +27,7 @@ struct SettingsView: View {
     private let supportsHaptics = CHHapticEngine.capabilitiesForHardware().supportsHaptics
 
     private enum Destination: Hashable { case acknowledgements }
-    private static let paintingLengthRow = "painting-length"
+    private static let tipRow = "settings-music"
     @State private var tipsReset = false
 
     init() {
@@ -56,14 +52,6 @@ struct SettingsView: View {
                             SwiftUI.Label("Paper", systemImage: "circle.lefthalf.filled")
                         }
                         .accessibilityIdentifier("paper-appearance")
-                        Picker(selection: $lineWeight) {
-                            ForEach(LineWeight.allCases) { weight in
-                                Text(weight.name).tag(weight)
-                            }
-                        } label: {
-                            SwiftUI.Label("Line Weight", systemImage: "lineweight")
-                        }
-                        .accessibilityIdentifier("settings-line-weight")
                         Picker(selection: $finish) {
                             ForEach(Finish.allCases, id: \.self) { choice in
                                 Text(choice.title).tag(choice)
@@ -135,6 +123,11 @@ struct SettingsView: View {
                             SwiftUI.Label("Music", systemImage: "music.note")
                         }
                         .accessibilityIdentifier("settings-music")
+                        .id(Self.tipRow)
+                        // Worth a Look Here, the first time Settings opens, once the row is there to point at
+                        // (Ravenna's seam: Painting Length, which it pointed at, is gone with the suggestions).
+                        .gentleTip(.drawerWorthALook, arrowEdge: .top)
+                        .onAppear { PaintTips.drawerRowReached() }
                         Picker(selection: $rowSound) {
                             ForEach(RowSound.allCases, id: \.self) { choice in
                                 Text(choice.name).tag(choice)
@@ -157,44 +150,6 @@ struct SettingsView: View {
                                         defaultValue: "Auto plays the tune in major from \(Sky.clockText(Sky.sunrise)) and in minor from \(Sky.clockText(Sky.nightfall)), your time.",
                                         comment: "Footer of Settings › Sound, under its Music row while it is set to Auto (the other choices are Major and Minor). The arguments are the hours, as the painter's clock writes them: when major begins (6 AM) and when minor begins (7 PM)"))
                         }
-                    }
-
-                    // Painting Length last, so its footer sits under it.
-                    Section {
-                        Picker(selection: $previewStyle) {
-                            ForEach(PreviewStyle.allCases) { style in
-                                Text(style.name).tag(style)
-                            }
-                        } label: {
-                            SwiftUI.Label("Preview", systemImage: "rectangle.split.2x1")
-                        }
-                        .accessibilityIdentifier("settings-preview")
-                        Picker(selection: $paintingLength) {
-                            ForEach(PaintingLength.allCases, id: \.self) { length in
-                                Text(length.name).tag(length)
-                            }
-                        } label: {
-                            SwiftUI.Label("Painting Length", systemImage: "hourglass")
-                        }
-                        .accessibilityIdentifier("painting-length")
-                        .id(Self.paintingLengthRow)
-                        // Worth a Look Here, the first time Settings opens, once the row is there to point at.
-                        .gentleTip(.drawerWorthALook, arrowEdge: .top)
-                        .onAppear { PaintTips.drawerRowReached() }
-                    } header: {
-                        Text("New Paintings")
-                    } footer: {
-                        Text(paintingLength.footer)
-                            .accessibilityIdentifier("painting-length-footer")
-                    }
-
-                    Section {
-                        Toggle(isOn: $playsMakingOf) {
-                            SwiftUI.Label("The Making-of", systemImage: "film")
-                        }
-                        .accessibilityIdentifier("settings-making-of")
-                    } footer: {
-                        Text("After Start Painting, watch your photo become its painting, step by step. It takes about 20 seconds, and a tap skips it.")
                     }
 
                     if paintings.isSold { unlimitedPaintings }
@@ -222,7 +177,7 @@ struct SettingsView: View {
                 .task {
                     guard ShellDemo.current == .settingsTip else { return }
                     try? await Task.sleep(for: .seconds(1))
-                    withAnimation { proxy.scrollTo(Self.paintingLengthRow, anchor: .center) }
+                    withAnimation { proxy.scrollTo(Self.tipRow, anchor: .center) }
                 }
                 #endif
             }

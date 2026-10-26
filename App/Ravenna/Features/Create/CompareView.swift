@@ -2,7 +2,8 @@ import Foundation
 import SwiftUI
 
 /// Before/after: the photo on the leading side of a draggable divider, the template's picture
-/// (the painting, or its line art: Settings › Preview) on the trailing side. New pictures
+/// (Ravenna's seam: the mosaic, its tiles set; Paint by Moonlight's line art is left out) on the
+/// trailing side. New pictures
 /// crossfade in, a photo's first with the divider sweeping in from the trailing edge
 /// (`sweepIn`). Pinch or double-tap zooms both layers alike (up to `maxZoom`) to check an eye or
 /// a line of writing, and the zoom holds while the sliders change the template; zoomed in, a drag
@@ -226,14 +227,6 @@ struct CompareView: View {
         return CGSize(width: min(max(offset.width, -x), x), height: min(max(offset.height, -y), y))
     }
 
-    /// How large the picture shows relative to the painting fitted on its canvas.
-    private func canvasScale(of picture: CGRect) -> CGFloat {
-        let canvas = Self.fitted(aspectRatio, in: canvasSize)
-        let long = max(canvas.width, canvas.height)
-        guard long > 0 else { return shownZoom }
-        return max(picture.width, picture.height) / long
-    }
-
     // MARK: Layers
 
     /// An image fitted in a frame of `size` (cropped to the photo's shape), zoomed and moved as
@@ -257,10 +250,6 @@ struct CompareView: View {
         switch after {
         case .painting(let image):
             imageLayer(image, size: size)
-        case .lineArt(let drawing):
-            LineArtLayer(drawing: drawing, picture: picture, scale: canvasScale(of: picture))
-                .equatable()
-                .frame(width: size.width, height: size.height)
         }
     }
 
@@ -372,65 +361,5 @@ private struct CompareFrame: Layout {
         for subview in subviews {
             subview.place(at: bounds.origin, proposal: ProposedViewSize(bounds.size))
         }
-    }
-}
-
-/// Line art on the canvas sheet's paper filling `picture` (frame coordinates), its lines stroked
-/// for the size they show at, so they stay crisp however far the comparison (or Refine) zooms.
-/// Over a photo (Refine's), there is no paper and a light halo keeps the lines clear on dark
-/// ground. Equatable: dragging the divider leaves it alone instead of stroking every line again
-/// each frame.
-struct LineArtLayer: View, Equatable {
-    let drawing: LineArtDrawing
-    let picture: CGRect
-    /// The picture's size relative to the painting fitted on its canvas.
-    let scale: CGFloat
-    var overPhoto = false
-    /// Over a painting (Refine's): no paper and no white edge.
-    var overPaint = false
-    @AppStorage(SettingsKey.lineWeight) private var lineWeight = LineWeight.default
-
-    nonisolated static func == (a: LineArtLayer, b: LineArtLayer) -> Bool {
-        a.drawing.id == b.drawing.id && a.picture == b.picture && a.scale == b.scale && a.overPhoto == b.overPhoto
-            && a.overPaint == b.overPaint
-    }
-
-    var body: some View {
-        let drawing = drawing, picture = picture, scale = scale, lineWeight = lineWeight, overPhoto = overPhoto
-        let overPaint = overPaint
-        Canvas { context, size in
-            if !overPhoto && !overPaint { context.fill(Path(picture), with: .color(LineArtDrawing.paper)) }
-            let units = drawing.size
-            let shown = picture.intersection(CGRect(origin: .zero, size: size))
-            guard units.width > 0, units.height > 0, !shown.isNull, !shown.isEmpty else { return }
-            // Filled into the picture as the photo and the painting are: centred, cropped to it.
-            let s = max(picture.width / units.width, picture.height / units.height)
-            let origin = CGPoint(x: picture.midX - units.width * s / 2, y: picture.midY - units.height * s / 2)
-            let width = drawing.lineWidth(scale: scale, weight: lineWeight)
-            let inView = CGRect(
-                x: (shown.minX - origin.x) / s, y: (shown.minY - origin.y) / s, width: shown.width / s,
-                height: shown.height / s
-            ).insetBy(dx: -width / s, dy: -width / s)
-            var lines = context
-            lines.clip(to: Path(picture))
-            lines.translateBy(x: origin.x, y: origin.y)
-            lines.scaleBy(x: s, y: s)
-            let (path, light) = drawing.paths(within: inView, overPaint: overPaint)
-            if overPhoto {
-                lines.stroke(
-                    path, with: .color(.white.opacity(0.75)),
-                    style: StrokeStyle(lineWidth: (width + 2.5) / s, lineCap: .round, lineJoin: .round))
-            }
-            lines.stroke(
-                path, with: .color(LineArtDrawing.ink.opacity(drawing.inkOpacity(scale: scale))),
-                style: StrokeStyle(lineWidth: width / s, lineCap: .round, lineJoin: .round))
-            // Writing over a dark paint, over the painting: in the paper's tone, so it reads.
-            if !light.isEmpty {
-                lines.stroke(
-                    light, with: .color(LineArtDrawing.paper),
-                    style: StrokeStyle(lineWidth: width / s, lineCap: .round, lineJoin: .round))
-            }
-        }
-        .allowsHitTesting(false)
     }
 }

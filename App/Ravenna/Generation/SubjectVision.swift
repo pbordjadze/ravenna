@@ -1,25 +1,17 @@
 import CoreGraphics
-import CoreVideo
 import Foundation
 import os
-import PaintCore
 import Vision
 
-/// What Vision finds of a photo's subjects, from one pass of requests, for each of its readers:
-/// `SubjectImportance` (the saliency heat map, the foreground mask, faces and animals),
-/// `ObjectFinder` (the foreground mask, at its own size) and `EyeFinder` (the faces, whose
-/// landmarks it asks for). The create flow and `ArtworkFactory` ask for a photo's importance and
-/// its coloring-book inputs side by side, so callers asking for the same photo (the same `CGImage`
-/// instance) while its pass runs share that pass. Nothing is kept once it ends: the photo itself
-/// takes no place in memory beyond its callers' (`LineArtInputs` keeps the create flow's).
+/// What Vision finds of a photo's subjects, from one pass of requests: its faces, with their
+/// landmarks, and its animals, which Ravenna's engine lays as faces (`MosaicFaces`). Callers asking
+/// for the same photo (the same `CGImage` instance) while its pass runs share that pass. Nothing is
+/// kept once it ends.
+///
+/// Ravenna's seam: Paint by Moonlight's pass also made the saliency map and the foreground mask for
+/// its generator's importance and its line art's subjects, which the engine doesn't read.
 nonisolated enum SubjectVision {
     struct Findings: Sendable {
-        /// The attention-based saliency heat map and the foreground mask (every instance), each
-        /// box-sampled to `SubjectImportance.mapSize`; nil when Vision gave none.
-        var saliency: Grid<Float>?
-        var foreground: Grid<Float>?
-        /// The foreground mask cut at half (`ObjectFinder.mask(from:)`); nil without a subject.
-        var subjects: (inside: [Bool], width: Int, height: Int)?
         var faces = Faces()
         /// Normalized, with Vision's bottom-left origin.
         var animals: [CGRect] = []
@@ -39,13 +31,10 @@ nonisolated enum SubjectVision {
     /// (common on simulators) doesn't sink the rest; every failure is logged.
     @concurrent
     static func find(in image: CGImage) async -> Findings {
-        let size = SubjectImportance.mapSize(width: image.width, height: image.height)
         let handler = VNImageRequestHandler(cgImage: image, options: [:])
-        let foreground = VNGenerateForegroundInstanceMaskRequest()
-        let faces = VNDetectFaceRectanglesRequest()
+        let faces = VNDetectFaceLandmarksRequest()
         let animals = VNRecognizeAnimalsRequest()
-        let saliency = VNGenerateAttentionBasedSaliencyImageRequest()
-        let requests: [VNRequest] = [foreground, faces, animals, saliency]
+        let requests: [VNRequest] = [faces, animals]
         for request in requests {
             do {
                 try handler.perform([request])
@@ -54,22 +43,7 @@ nonisolated enum SubjectVision {
                 Log.create.error("\(name, privacy: .public) failed: \(String(describing: error), privacy: .public)")
             }
         }
-
-        var found = Findings(
-            faces: Faces(observations: faces.results ?? []), animals: (animals.results ?? []).map(\.boundingBox))
-        if let heat = saliency.results?.first?.pixelBuffer {
-            found.saliency = SubjectImportance.sample(heat, width: size.width, height: size.height)
-        }
-        if let observation = foreground.results?.first {
-            do {
-                let mask = try observation.generateScaledMaskForImage(forInstances: observation.allInstances, from: handler)
-                found.foreground = SubjectImportance.sample(mask, width: size.width, height: size.height)
-                if !observation.allInstances.isEmpty { found.subjects = ObjectFinder.mask(from: mask) }
-            } catch {
-                Log.create.error("The subjects' mask failed: \(String(describing: error), privacy: .public)")
-            }
-        }
-        return found
+        return Findings(faces: Faces(observations: faces.results ?? []), animals: (animals.results ?? []).map(\.boundingBox))
     }
 
     private static let running = RunningPasses()
