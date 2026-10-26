@@ -21,6 +21,66 @@
       "comment" : "Settings row, and the title of the screen it opens, crediting the sample pictures, artwork, and the code, models and methods behind the template engine",
       "extractionState" : "manual"
     },
+    "acknowledgements.alegreya.usage" : {
+      "comment" : "What a credited typeface is used for in Ravenna (Alegreya); shown in Settings under Acknowledgements",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The typeface Ravenna’s titles and words are set in."
+          }
+        }
+      }
+    },
+    "acknowledgements.faceLandmarks.usage" : {
+      "comment" : "What a credited third-party method or library is used for in Ravenna's mosaic engine (face landmarks); shown in Settings under Acknowledgements",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finds a face’s eyes, brows, nose and lips, which are set first, as pieces of their own."
+          }
+        }
+      }
+    },
+    "acknowledgements.hedModel.mosaic.usage" : {
+      "comment" : "What a credited machine-learning model is used for (ControlNet's HED edge detector) in Ravenna; shown in Settings under Acknowledgements",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finds the outlines of a photo, which the mosaic’s strands of tiles follow."
+          }
+        }
+      }
+    },
+    "acknowledgements.skeletonize.usage" : {
+      "comment" : "What a credited third-party method or library is used for in Ravenna's mosaic engine (scikit-image's thinning table); shown in Settings under Acknowledgements",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thins a photo’s outlines to the single rows its strands of tiles are laid along."
+          }
+        }
+      }
+    },
+    "acknowledgements.zhangSuen.usage" : {
+      "comment" : "What a credited third-party method or library is used for in Ravenna's mosaic engine (Zhang–Suen thinning); shown in Settings under Acknowledgements",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thins the outlines to single rows, so a strand of tiles runs along each."
+          }
+        }
+      }
+    },
     "All of the photo is laid." : {
       "comment" : "Create preview: the line under the Panel choice when it is Whole",
       "extractionState" : "manual"
@@ -321,42 +381,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Combines edges found at five scales into one map of a photo’s lines."
-          }
-        }
-      }
-    },
-    "acknowledgements.hedModel.usage" : {
-      "comment" : "What a credited machine-learning model is used for (ControlNet's HED edge detector); shown in Settings under Acknowledgements",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Finds the outlines of a photo, for coloring books."
-          }
-        }
-      }
-    },
-    "acknowledgements.informativeDrawings.usage" : {
-      "comment" : "What a credited third-party method or library is used for in the template engine (Informative drawings); shown in Settings under Acknowledgements",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Turns a photo into a line drawing that keeps its geometry and meaning."
-          }
-        }
-      }
-    },
-    "acknowledgements.lineArtModel.usage" : {
-      "comment" : "What a credited machine-learning model is used for (the Informative Drawings line-drawing generator); shown in Settings under Acknowledgements",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Draws a photo’s lines, fur, petals and glass, for coloring books."
           }
         }
       }
@@ -2039,6 +2063,10 @@
     },
     "Touch and hold, then drag across areas with this number to fill them in one stroke." : {
       "comment" : "Message of the tip titled Paint Several Areas",
+      "extractionState" : "manual"
+    },
+    "Type" : {
+      "comment" : "Header of the Acknowledgements section crediting the typeface the app is set in (Alegreya)",
       "extractionState" : "manual"
     },
     "Upright" : {
