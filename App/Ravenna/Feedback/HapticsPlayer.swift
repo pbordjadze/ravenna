@@ -10,7 +10,7 @@ import Foundation
 /// player for every fill is work the painting screen's main thread, which also draws the
 /// canvas, is better without (as `SoundPlayer` does for sounds).
 nonisolated final class HapticsPlayer: @unchecked Sendable {
-    private let queue = DispatchQueue(label: "com.pbordjadze.paintbynumber.haptics", qos: .userInitiated)
+    private let queue = DispatchQueue(label: "com.pbordjadze.ravenna.haptics", qos: .userInitiated)
     private var engine: CHHapticEngine?
     private let isSupported: Bool
     private var lastPaint: ContinuousClock.Instant?

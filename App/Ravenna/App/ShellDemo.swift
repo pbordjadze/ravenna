@@ -154,7 +154,7 @@ enum ShellDemo: Equatable {
     /// and sixth matching `searchText`. A picture the library drops is replaced here and in the
     /// UI tests.
     private static let fixedPictures: [Sample] =
-        ["great-wave", "delicate-arch", "earthrise", "red-fox", "milkmaid", "red-fuji"].compactMap(Sample.named)
+        ["young-woman-in-red", "william", "hodegetria", "boy-eutyches", "elderly-lady", "mother-and-child-gold-glass"].compactMap(Sample.named)
 
     /// The pictures the gallery scenarios paint, by position.
     private var pictures: [Sample] { showsLibrary ? Sample.all : Self.fixedPictures }

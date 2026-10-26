@@ -59,19 +59,10 @@ final class UnlimitedPaintings {
         self.free = free ?? Self.stored(in: defaults)
     }
 
-    /// The running app's: the App Store, or nothing to sell in SideStore builds (Debug builds: the
-    /// stub for demos and the test host).
+    /// The running app's: nothing to sell. Ravenna ships only through SideStore, whose apps can't
+    /// buy from the App Store, so every build is unlocked and none of it shows.
     static func forLaunch() -> UnlimitedPaintings {
-        #if UNRELEASED && !DEBUG
-        return UnlimitedPaintings(store: nil, defaults: nil)
-        #else
-        #if DEBUG
-        if DemoMode.isActive || DemoMode.isTestHost { return UnlockStoreStub.paintingsForLaunch() }
-        #endif
-        let paintings = UnlimitedPaintings(store: StoreKitUnlock(), defaults: .standard)
-        paintings.follow()
-        return paintings
-        #endif
+        UnlimitedPaintings(store: nil, defaults: nil)
     }
 
     /// Free paintings left now.

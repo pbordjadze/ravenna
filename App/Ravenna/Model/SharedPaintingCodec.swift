@@ -3,15 +3,16 @@ import PaintCore
 import UniformTypeIdentifiers
 
 extension UTType {
-    /// A painting sent to someone else to paint (`SharedPainting`), a `.moonlight` file: the type
-    /// `Config/Info.plist` exports and opens.
-    nonisolated static let moonlightPainting = UTType(exportedAs: "com.pbordjadze.paintbynumber.painting")
+    /// A mosaic sent to someone else to set (`SharedPainting`), a `.ravenna` file: the type
+    /// `Config/Info.plist` exports and opens. Paint by Moonlight's `.moonlight` is its own, so the
+    /// two apps never claim each other's files.
+    nonisolated static let moonlightPainting = UTType(exportedAs: "com.pbordjadze.ravenna.mosaic")
 }
 
 /// The app's side of `SharedPainting`: the template compressed with LZFSE, and how an opened file
 /// is told from a photo.
 nonisolated enum SharedPaintingCodec {
-    static let fileExtension = "moonlight"
+    static let fileExtension = "ravenna"
 
     /// Whether `data` is a shared painting rather than a photo, by its first bytes ("PBMS"),
     /// whatever the file was called on the way.

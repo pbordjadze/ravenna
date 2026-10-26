@@ -1,0 +1,110 @@
+[
+ {
+  "id": "young-woman-in-red",
+  "kind": "painting",
+  "title": "Young Woman in Red",
+  "creator": "Unknown artist",
+  "year": "90–120 CE",
+  "credit": "The Metropolitan Museum of Art, Rogers Fund, 1909 (09.181.6).",
+  "license": "Public domain (The Met Open Access, CC0)",
+  "source": "https://www.metmuseum.org/art/collection/search/547860",
+  "place": "Roman Egypt",
+  "medium": "Encaustic on limewood with gold leaf"
+ },
+ {
+  "id": "young-woman-gilded-wreath",
+  "kind": "painting",
+  "title": "Young Woman with a Gilded Wreath",
+  "creator": "Unknown artist",
+  "year": "120–140 CE",
+  "credit": "The Metropolitan Museum of Art, Rogers Fund, 1909 (09.181.7).",
+  "license": "Public domain (The Met Open Access, CC0)",
+  "source": "https://www.metmuseum.org/art/collection/search/547861",
+  "place": "Roman Egypt",
+  "medium": "Encaustic on wood with gold leaf"
+ },
+ {
+  "id": "boy-eutyches",
+  "kind": "painting",
+  "title": "The Boy Eutyches",
+  "creator": "Unknown artist",
+  "year": "100–150 CE",
+  "credit": "The Metropolitan Museum of Art, Gift of Edward S. Harkness, 1918 (18.9.2).",
+  "license": "Public domain (The Met Open Access, CC0)",
+  "source": "https://www.metmuseum.org/art/collection/search/547951",
+  "place": "Roman Egypt",
+  "medium": "Encaustic on wood"
+ },
+ {
+  "id": "bearded-man",
+  "kind": "painting",
+  "title": "A Thin-Faced, Bearded Man",
+  "creator": "Unknown artist",
+  "year": "160–180 CE",
+  "credit": "The Metropolitan Museum of Art, Rogers Fund, 1909 (09.181.1).",
+  "license": "Public domain (The Met Open Access, CC0)",
+  "source": "https://www.metmuseum.org/art/collection/search/547856",
+  "place": "Roman Egypt",
+  "medium": "Encaustic on limewood"
+ },
+ {
+  "id": "william",
+  "kind": "painting",
+  "title": "William the Hippopotamus",
+  "creator": "Unknown artist",
+  "year": "ca. 1961–1878 BCE",
+  "credit": "The Metropolitan Museum of Art, Gift of Edward S. Harkness, 1917 (17.9.1).",
+  "license": "Public domain (The Met Open Access, CC0)",
+  "source": "https://www.metmuseum.org/art/collection/search/544227",
+  "place": "Middle Kingdom Egypt",
+  "medium": "Faience"
+ },
+ {
+  "id": "man-with-a-mole",
+  "kind": "painting",
+  "title": "A Man with a Mole on His Nose",
+  "creator": "Unknown artist",
+  "year": "130–150 CE",
+  "credit": "The Metropolitan Museum of Art, Rogers Fund, 1909 (09.181.2).",
+  "license": "Public domain (The Met Open Access, CC0)",
+  "source": "https://www.metmuseum.org/art/collection/search/547857",
+  "place": "Roman Egypt",
+  "medium": "Encaustic on limewood"
+ },
+ {
+  "id": "elderly-lady",
+  "kind": "painting",
+  "title": "An Elderly Lady with a Gold Wreath",
+  "creator": "Unknown artist",
+  "year": "100–125 CE",
+  "credit": "The Metropolitan Museum of Art, Rogers Fund, 1909 (09.181.5).",
+  "license": "Public domain (The Met Open Access, CC0)",
+  "source": "https://www.metmuseum.org/art/collection/search/547859",
+  "place": "Roman Egypt",
+  "medium": "Encaustic on limewood"
+ },
+ {
+  "id": "mother-and-child-gold-glass",
+  "kind": "painting",
+  "title": "A Mother and Child in Gold Glass",
+  "creator": "Unknown artist",
+  "year": "early 4th century",
+  "credit": "The Metropolitan Museum of Art, Gift of J. Pierpont Morgan, 1917 (17.190.109a).",
+  "license": "Public domain (The Met Open Access, CC0)",
+  "source": "https://www.metmuseum.org/art/collection/search/463989",
+  "place": "Roman, probably Alexandria",
+  "medium": "Glass, gold  leaf"
+ },
+ {
+  "id": "hodegetria",
+  "kind": "painting",
+  "title": "The Virgin and Child, a Hodegetria Icon",
+  "creator": "Unknown artist",
+  "year": "13th century",
+  "credit": "The Metropolitan Museum of Art, Purchase, Mary and Kathryn Jaharis Gift, in honor of Helen C. Evans, 2020 (2020.401).",
+  "license": "Public domain (The Met Open Access, CC0)",
+  "source": "https://www.metmuseum.org/art/collection/search/831188",
+  "place": "Byzantine or Crusader, Egypt",
+  "medium": "Tempera on wood"
+ }
+]

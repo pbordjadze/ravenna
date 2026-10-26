@@ -91,7 +91,7 @@ struct PaintDemoView: View {
         }
         .task {
             let book = scenario.hasPrefix("paint-book")
-            let photo = book ? "red-fox" : "delicate-arch"
+            let photo = book ? "young-woman-in-red-photo" : "william-photo"
             let template: Template?
             if book {
                 template = await Self.bookTemplate(photo: photo)

@@ -17,7 +17,7 @@ import os
 /// asked for: starting the engine blocks its caller, on CI's simulator long enough that a
 /// painting screen starting it on the main thread stopped answering.
 nonisolated final class SoundPlayer: @unchecked Sendable {
-    private let queue = DispatchQueue(label: "com.pbordjadze.paintbynumber.sounds", qos: .userInitiated)
+    private let queue = DispatchQueue(label: "com.pbordjadze.ravenna.sounds", qos: .userInitiated)
     private let engine = AVAudioEngine()
     private let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
     private var voices: [AVAudioPlayerNode] = []

@@ -10,18 +10,18 @@ Not announced. Built on Paint by Moonlight's engine
 - `docs/brief.md`: what this is, Paul's words and decisions, and the plan.
 - `prototype/`: the Python prototype the engine is ported from.
 - `Sources/MosaicCore`: a mosaic as a PaintCore template (`MosaicCore.template(of:)`: a numbered
-  area per tile, the grout one more), on PaintCore pinned by revision, tested on Linux:
-  `tools/paintcore-mirror.sh && swift test` (the script fetches only the pinned PaintCore commit;
+  area per tile, the grout one more), on PaintCore at a pinned commit, tested on Linux:
+  `tools/paintcore.sh && swift test` (the script checks out only that commit of paint-by-number;
   `tools/swift.sh` runs SwiftPM in the swift:6.2 image where no toolchain is installed).
 - `Sources/MosaicEngine`: the mosaic generator in Swift (photo, contours and faces in; a `Mosaic`
-  out), ported from `prototype/mosaic_faces.py`, with no dependencies so the app compiles it
-  directly. `swift run mosaic` runs it on a PPM and its contour map, for the bench.
+  out), ported from `prototype/mosaic_faces.py`, with no dependencies. `swift run mosaic` runs it
+  on a PPM and its contour map, for the bench.
 - `sketchbook/`: how the faces-first rounds are made, and `bundle.py`, which makes the app's mosaics
   with the Swift engine.
-- `App/`: the app (iOS 26, SwiftUI, bundle `com.pbordjadze.ravenna`), v0: five public-domain
-  ancient works from the Met, laid as mosaics on the bench, set tile by tile. It compiles
-  `Sources/MosaicKit` directly. Builds on macOS only when asked (`[compile]`) or on `main` when it
-  changed, as an unsigned IPA for SideStore: add
+- `App/`: the app (iOS 26, SwiftUI, bundle `com.pbordjadze.ravenna`). v1, in the making (issue
+  #13): Paint by Moonlight's app with Ravenna's engine, making-of and look (`App/CLAUDE.md`); v0's
+  code waits in `App/v0/` until v1 replaces it. Builds on macOS only when asked (`[compile]`) or on
+  `main` when it changed, as an unsigned IPA for SideStore: add
   `https://raw.githubusercontent.com/pbordjadze/ravenna/sidestore/source.json` in SideStore.
 - `CLAUDE.md`: the rules for the agents working here.
 

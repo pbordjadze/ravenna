@@ -85,7 +85,7 @@ extension FeedbackCapture {
             paper: paper, darkInterface: darkInterface, lineWeight: lineWeight,
             visibleRect: controller.visibleCanvasRect ?? CGRect(x: 0, y: 0, width: template.width, height: template.height),
             pointsPerUnit: controller.pointsPerUnit ?? 1, displayScale: displayScale,
-            relativeZoom: controller.relativeZoom ?? 1, app: AppInfo().summary, device: Self.deviceModel,
+            relativeZoom: controller.relativeZoom ?? 1, app: "Ravenna \(AppInfo().summary)", device: Self.deviceModel,
             system: "\(UIDevice.current.systemName) \(UIDevice.current.systemVersion)", source: source)
     }
 

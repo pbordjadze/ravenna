@@ -36,7 +36,8 @@ nonisolated struct Sample: Identifiable, Hashable, Sendable {
         self.provenance = provenance
     }
 
-    var url: URL? { Bundle.main.url(forResource: id, withExtension: "jpg") }
+    /// Ravenna's ancient works are bundled as `<id>-photo.jpg`, beside their mosaics.
+    var url: URL? { Bundle.main.url(forResource: "\(id)-photo", withExtension: "jpg") }
 
     /// The pictures the Samples pane offers, in the order of `library.json` (which is
     /// authoritative: curating the library reorders the file, not this code).
@@ -53,9 +54,9 @@ nonisolated struct Sample: Identifiable, Hashable, Sendable {
     /// The pictures of one kind, in the library's order: a section of the Samples pane.
     static func all(of kind: Kind) -> [Sample] { all.filter { $0.provenance?.kind == kind } }
 
-    /// Prepared on first launch so the gallery starts with something to paint: a painting and
-    /// a photograph, the library's best first impression.
-    static let starters: [Sample] = ["great-wave", "delicate-arch"].compactMap(Sample.named)
+    /// Prepared on first launch so the gallery starts with something to set: a face and the
+    /// hippopotamus, which has none.
+    static let starters: [Sample] = ["young-woman-in-red", "william"].compactMap(Sample.named)
 
     /// The library picture `id` names. Saved paintings name theirs (`Artwork.sampleName`) and
     /// regenerate from it when they have no stored photo; one the library no longer offers

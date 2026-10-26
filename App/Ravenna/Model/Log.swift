@@ -2,7 +2,7 @@ import os
 
 /// The app's loggers, a category per area.
 nonisolated enum Log {
-    private static let subsystem = "com.pbordjadze.paintbynumber"
+    private static let subsystem = "com.pbordjadze.ravenna"
 
     static let library = Logger(subsystem: subsystem, category: "library")
     static let create = Logger(subsystem: subsystem, category: "create")
