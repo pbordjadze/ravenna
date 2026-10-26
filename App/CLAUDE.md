@@ -60,7 +60,8 @@ go back into it (#5).
   the library once at launch (`Library.forLaunch`), a set tile a painted region, v0's app-wide
   `ground` recorded as each one's.
 - **Demos:** `ShellDemo` has no Refine, draft, line-art or suggestion scenarios; `create-custom`
-  moves Pieces so the engine lays a library picture.
+  moves Pieces so the engine lays a library picture. `[shots]` takes `create-custom`, `making-of`
+  and `making-of-end` beside Paint by Moonlight's (ci.yml's `ALL`).
 - **Left behind:** Paint by Moonlight's picture library and its line-drawing model
   (`LineArt.mlpackage`). The HED model is the same file in both apps. No test targets: Ravenna's
   checks are its package's tests on Linux, `[compile]` and `[shots]`.
