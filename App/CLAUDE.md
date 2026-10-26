@@ -43,3 +43,9 @@ go back into it (#5).
 - **Sound and haptics:** `FeedbackEngine` plays `TileSound` (v0's clinks of Paint by Moonlight's
   tune, major by Sun and minor by Moon) and `TileTouch` (v0's taps); `SoundPlayer`, `ToneSynth`,
   `PaintingMelody` and `HapticsPlayer` are gone.
+- **The look** (phase 5): `Theme`'s tokens and the asset catalog's `Paper`, `Surface`, `Outline`
+  and `AccentColor` are Ravenna's (apse, bench, joint, lime; lapis as `signature`; gold only where
+  a tile sets), from the design page linked in `Theme`; Alegreya SC in `Font.display`, the
+  navigation titles and the swatch numerals (`Font.numeral`), or the system serif (`Typeface`, an
+  option until Paul chooses); `CanvasPalette`'s sheet, ink and backdrop; the launch screen is
+  `LaunchGround`, and the app is dark only (`UIUserInterfaceStyle`).

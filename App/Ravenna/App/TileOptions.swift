@@ -18,7 +18,7 @@ nonisolated enum TileOptions {
     }
 
     static func oneFinger(in defaults: UserDefaults = .standard) -> OneFinger {
-        defaults.string(forKey: oneFingerKey).flatMap(OneFinger.init(rawValue:)) ?? .moves
+        defaults.string(forKey: oneFingerKey).flatMap(OneFinger.init(rawValue:)) ?? .lays
     }
 
     static func rowSound(in defaults: UserDefaults = .standard) -> RowSound {
@@ -28,11 +28,12 @@ nonisolated enum TileOptions {
 
 /// What one finger does on the canvas.
 nonisolated enum OneFinger: String, CaseIterable, Sendable {
-    /// Paint by Moonlight's way, the default: one finger moves the wall, a tap sets a tile, and a
-    /// press then a drag lays a row.
-    case moves
-    /// v0's way: a drag lays a row at once, and two fingers move and zoom.
+    /// v0's way, the default (the design page): a drag lays a row at once, and two fingers move
+    /// and zoom.
     case lays
+    /// Paint by Moonlight's way: one finger moves the wall, a tap sets a tile, and a press then a
+    /// drag lays a row.
+    case moves
 }
 
 /// What a row laid with a drag sounds like.

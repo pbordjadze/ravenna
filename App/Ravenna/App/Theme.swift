@@ -1,47 +1,105 @@
+import CoreText
 import SwiftUI
 import UIKit
 
-/// Shared visual language, the Paint by Moonlight design system (working name Pipo): native iOS
-/// with a darker, slightly witchy personality. Night surfaces (cool grey by day), New York for
-/// titles and numerals, Nightshade and antique gold. The asset catalog's colors carry its tokens.
+/// Shared visual language. Ravenna's seam: Paint by Moonlight's design system (native iOS, its
+/// tokens in the asset catalog) dressed in Ravenna's design language
+/// (https://claude.ai/artifact/8F7FXLE2aSLQ2Vb5XArJR6, v0's `Theme`): the dark of an apse,
+/// lime-plaster white for words and the tint, lapis under prominent labels, Alegreya for titles
+/// and numerals, and gold only where a tile is setting. Dark only, as v0 (`UIUserInterfaceStyle`).
 enum Theme {
-    /// `surface-base`: screen background.
+    /// `surface-base`: screen background. Apse, #15130F.
     static let paper = Color("Paper")
-    /// `surface-elevated`: cards, sheets, grouped rows.
+    /// `surface-elevated`: cards, sheets, grouped rows. Bench, #1E1B16.
     static let surface = Color("Surface")
     /// `radius-lg`: media cards.
     static let cardRadius: CGFloat = 20
     static let hairline = Color.primary.opacity(0.08)
-    /// `tint`: Nightshade by day, antique gold at night (Nightshade would be too dark to read
-    /// there).
+    /// `tint`: lime-plaster white, #E9E2D3: buttons, the held paint's ring, progress. Not gold.
     static let accent = Color("AccentColor")
-    /// `nightshade`, the signature, in both appearances: under the labels of primary buttons
-    /// and tinted badges.
-    static let signature = Color(red: 0.482, green: 0.247, blue: 0.494)
-    /// `pot-3-gold`, the only color of stars, sparkles and the crescent.
+    /// Lapis, #1F2A52, the signature: under the labels of primary buttons and tinted badges.
+    static let signature = Color(red: 0.122, green: 0.165, blue: 0.322)
+    /// Smalti gold, #C9A24A: a tile settling and catching the light, and a work that is set (and
+    /// Paint by Moonlight's stars, sparkles and crescent, where they still show).
     static let gold = Color(red: 0.788, green: 0.635, blue: 0.290)
-    /// `outline`: line work of unpainted outlines, hairlines.
+    /// `outline`: rules and hairlines. Joint, #3A342A.
     static let outline = Color("Outline")
 
-    /// Navigation titles in New York, like the identity's headings.
+    /// Navigation titles in Alegreya SC (`Typeface`), like the identity's headings.
     static func styleNavigationTitles() {
         let bar = UINavigationBar.appearance()
-        bar.largeTitleTextAttributes = [.font: serifFont(.largeTitle, size: 34, weight: .bold)]
-        bar.titleTextAttributes = [.font: serifFont(.headline, size: 17, weight: .semibold)]
+        bar.largeTitleTextAttributes = [.font: displayFont(.largeTitle, size: 34, weight: .bold)]
+        bar.titleTextAttributes = [.font: displayFont(.headline, size: 17, weight: .semibold)]
     }
 
     /// `size` is the style's size at the default text size; the font scales from it.
-    private static func serifFont(_ style: UIFont.TextStyle, size: CGFloat, weight: UIFont.Weight) -> UIFont {
+    private static func displayFont(_ style: UIFont.TextStyle, size: CGFloat, weight: UIFont.Weight) -> UIFont {
         let system = UIFont.systemFont(ofSize: size, weight: weight)
-        let serif = system.fontDescriptor.withDesign(.serif).map { UIFont(descriptor: $0, size: size) } ?? system
-        return UIFontMetrics(forTextStyle: style).scaledFont(for: serif)
+        let face: UIFont
+        if Typeface.stored() == .alegreya, let alegreya = UIFont(name: Typeface.smallCaps(heavy: weight.rawValue >= UIFont.Weight.semibold.rawValue), size: size) {
+            face = alegreya
+        } else {
+            face = system.fontDescriptor.withDesign(.serif).map { UIFont(descriptor: $0, size: size) } ?? system
+        }
+        return UIFontMetrics(forTextStyle: style).scaledFont(for: face)
+    }
+
+    /// A text style's size at the default text size, which a custom font scales from.
+    static func defaultSize(of style: Font.TextStyle) -> CGFloat {
+        switch style {
+        case .largeTitle: 34
+        case .title: 28
+        case .title2: 22
+        case .title3: 20
+        case .callout: 16
+        case .subheadline: 15
+        case .footnote: 13
+        case .caption: 12
+        case .caption2: 11
+        default: 17
+        }
     }
 }
 
+/// The face of titles and numerals, an option until Paul chooses (the design page): Alegreya
+/// (Juan Pablo del Peral, Huerta Tipográfica; SIL Open Font License, bundled) or the system serif,
+/// New York, as Paint by Moonlight and v0 had. Read as each title is drawn; navigation titles take
+/// a change at the next launch.
+nonisolated enum Typeface: String, CaseIterable, Sendable {
+    case alegreya, systemSerif
+
+    static let key = "typeface"
+
+    static func stored(in defaults: UserDefaults = .standard) -> Typeface {
+        defaults.string(forKey: key).flatMap(Typeface.init(rawValue:)) ?? .alegreya
+    }
+
+    /// Alegreya SC's PostScript name, bold or medium.
+    static func smallCaps(heavy: Bool) -> String { heavy ? "AlegreyaSC-Bold" : "AlegreyaSC-Medium" }
+}
+
 extension Font {
-    /// New York (the system serif) at a Dynamic Type style: titles and numerals.
+    /// Alegreya SC at a Dynamic Type style (New York under `Typeface.systemSerif`): titles and
+    /// numerals. Ravenna's seam; New York in Paint by Moonlight.
     static func display(_ style: Font.TextStyle, weight: Font.Weight = .bold) -> Font {
-        .system(style, design: .serif, weight: weight)
+        guard Typeface.stored() == .alegreya else { return .system(style, design: .serif, weight: weight) }
+        return .custom(Typeface.smallCaps(heavy: Self.isHeavy(weight)), size: Theme.defaultSize(of: style), relativeTo: style)
+    }
+
+    /// A numeral of `size` points (a swatch's) in the display face, its figures lining rather than
+    /// Alegreya's old-style ones, so every number stands the same height in its swatch.
+    static func numeral(size: CGFloat, weight: Font.Weight = .bold) -> Font {
+        guard Typeface.stored() == .alegreya,
+              let face = UIFont(name: Typeface.smallCaps(heavy: Self.isHeavy(weight)), size: size)
+        else { return .system(size: size, weight: weight, design: .serif) }
+        let lining = face.fontDescriptor.addingAttributes([.featureSettings: [[
+            UIFontDescriptor.FeatureKey.type: kNumberCaseType, UIFontDescriptor.FeatureKey.selector: kUpperCaseNumbersSelector,
+        ]]])
+        return Font(UIFont(descriptor: lining, size: size))
+    }
+
+    private static func isHeavy(_ weight: Font.Weight) -> Bool {
+        [.semibold, .bold, .heavy, .black].contains(weight)
     }
 }
 

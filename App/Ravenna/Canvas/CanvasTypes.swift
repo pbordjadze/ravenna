@@ -324,30 +324,34 @@ nonisolated struct CanvasPalette: Sendable {
     /// on light paper (Shaders.metal `highlightPaper`).
     var hatchCeiling: Float = 0.4
 
-    /// The canvas sheet (design token `paper`, #F4EFE6) and its ink, sRGB-encoded.
-    static let sheetPaperSRGB = SIMD3<Float>(0.957, 0.937, 0.902)
-    static let sheetInkSRGB = SIMD3<Float>(0.118, 0.102, 0.133)
+    /// The canvas sheet and its ink, sRGB-encoded. Ravenna's seam: lime plaster (#E9E2D3) and the
+    /// apse's dark for words on it (Paint by Moonlight's `paper` #F4EFE6 and its ink).
+    static let sheetPaperSRGB = SIMD3<Float>(0.914, 0.886, 0.827)
+    static let sheetInkSRGB = SIMD3<Float>(0.15, 0.135, 0.11)
+    /// Round the sheet: the dark of an apse (#15130F), whatever the system's appearance (Ravenna
+    /// is dark only).
+    static let apseSRGB = SIMD3<Float>(0.082, 0.075, 0.059)
 
     static let light = CanvasPalette(
-        background: CanvasColor.linearP3(sRGB: SIMD3(0.949, 0.945, 0.957)),
-        paper: CanvasColor.linearP3(sRGB: sheetPaperSRGB),
-        ink: CanvasColor.linearP3(sRGB: sheetInkSRGB),
-        shadowOpacity: 0.16, outlineOpacity: 0.62)
-
-    /// Light paper on a dark backdrop (dark system appearance, Paper set to Light).
-    static let dark = CanvasPalette(
-        background: CanvasColor.linearP3(sRGB: SIMD3(0.078, 0.067, 0.090)),
+        background: CanvasColor.linearP3(sRGB: apseSRGB),
         paper: CanvasColor.linearP3(sRGB: sheetPaperSRGB),
         ink: CanvasColor.linearP3(sRGB: sheetInkSRGB),
         shadowOpacity: 0.55, outlineOpacity: 0.62)
 
-    /// A deep warm grey sheet with a hint of violet and light ink, for painting in the evening.
+    /// Light paper on a dark backdrop (dark system appearance, Paper set to Light).
+    static let dark = CanvasPalette(
+        background: CanvasColor.linearP3(sRGB: apseSRGB),
+        paper: CanvasColor.linearP3(sRGB: sheetPaperSRGB),
+        ink: CanvasColor.linearP3(sRGB: sheetInkSRGB),
+        shadowOpacity: 0.55, outlineOpacity: 0.62)
+
+    /// The bench's dark (#1E1B16) as the sheet, with lime-white ink, for painting in the evening.
     static let darkPaper = CanvasPalette(
-        background: CanvasColor.linearP3(sRGB: SIMD3(0.055, 0.047, 0.063)),
-        paper: CanvasColor.linearP3(sRGB: SIMD3(0.137, 0.118, 0.133)),
-        ink: CanvasColor.linearP3(sRGB: SIMD3(0.812, 0.780, 0.827)),
+        background: CanvasColor.linearP3(sRGB: SIMD3(0.055, 0.05, 0.04)),
+        paper: CanvasColor.linearP3(sRGB: SIMD3(0.118, 0.106, 0.086)),
+        ink: CanvasColor.linearP3(sRGB: SIMD3(0.914, 0.886, 0.827)),
         shadowOpacity: 0, outlineOpacity: 0.5,
-        rim: CanvasColor.linearP3(sRGB: SIMD3(0.812, 0.780, 0.827)), rimOpacity: 0.3,
+        rim: CanvasColor.linearP3(sRGB: SIMD3(0.914, 0.886, 0.827)), rimOpacity: 0.3,
         accentFloor: 0.35, hatchCeiling: 1)
 
     /// The palette for the Paper preference under the system appearance.
@@ -361,7 +365,7 @@ nonisolated struct CanvasPalette: Sendable {
         var palette = self
         if finish.paintedBed {
             palette.ink = CanvasColor.linearP3(sRGB: SIMD3(0.914, 0.886, 0.827))
-            palette.outlineOpacity = 0.3
+            palette.outlineOpacity = 0.22
             palette.accentFloor = 0.35
             palette.hatchCeiling = 1
         } else {
