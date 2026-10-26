@@ -16,9 +16,13 @@ nonisolated struct Acknowledgement: Identifiable, Hashable, Sendable {
     var id: String { name }
 }
 
-/// Credits shown in Settings › Acknowledgements and repeated in `ACKNOWLEDGEMENTS.md`
-/// (`AboutTests` keeps the two in step): the sample pictures (`Sample.all`, as `library.json`
-/// records them), then the template engine's code, models and methods.
+/// Credits shown in Settings › Acknowledgements and repeated in `ACKNOWLEDGEMENTS.md`: the ancient
+/// works (`Sample.all`, as `library.json` records them), then the code, models, type and methods
+/// of Ravenna's engine and the PaintCore it builds on.
+///
+/// Ravenna's seam: no line-drawing model or method (Informative Drawings: not shipped); the HED
+/// model's use is the mosaic's; scikit-image's thinning table, Alegreya, Zhang–Suen thinning and
+/// the face landmarks added.
 nonisolated enum Acknowledgements {
     /// "Katsushika Hokusai, c. 1830–32": who made a picture, and when.
     static func byline(_ provenance: Sample.Provenance) -> String {
@@ -44,6 +48,14 @@ nonisolated enum Acknowledgements {
                 comment: "What a credited third-party method or library is used for in the template engine (Polylabel); shown in Settings under Acknowledgements"),
             copyright: "Copyright (c) 2016 Mapbox",
             license: .isc),
+        Acknowledgement(
+            name: "scikit-image skeletonize",
+            credit: "scikit-image: the lookup table of _fast_skeletonize (skimage/morphology/_skeletonize.py)",
+            usage: String(
+                localized: "acknowledgements.skeletonize.usage", defaultValue: "Thins a photo’s outlines to the single rows its strands of tiles are laid along.",
+                comment: "What a credited third-party method or library is used for in Ravenna's mosaic engine (scikit-image's thinning table); shown in Settings under Acknowledgements"),
+            copyright: "Copyright (C) 2003-2009 Massachusetts Institute of Technology, 2009-2011 Broad Institute, 2003 Lee Kamentsky, 2003-2005 Peter J. Verveer",
+            license: .bsd3),
     ]
 
     /// The footer under the open-source code credits.
@@ -59,16 +71,21 @@ nonisolated enum Acknowledgements {
             name: "ControlNet HED",
             credit: "Lvmin Zhang (lllyasviel), ControlNet: ControlNetHED.pth from lllyasviel/Annotators",
             usage: String(
-                localized: "acknowledgements.hedModel.usage", defaultValue: "Finds the outlines of a photo, for coloring books.",
-                comment: "What a credited machine-learning model is used for (ControlNet's HED edge detector); shown in Settings under Acknowledgements"),
+                localized: "acknowledgements.hedModel.mosaic.usage", defaultValue: "Finds the outlines of a photo, which the mosaic’s strands of tiles follow.",
+                comment: "What a credited machine-learning model is used for (ControlNet's HED edge detector) in Ravenna; shown in Settings under Acknowledgements"),
             license: .apache2),
+    ]
+
+    /// The typefaces the app is set in (`Resources/Fonts`).
+    static let typefaces: [Acknowledgement] = [
         Acknowledgement(
-            name: "Informative Drawings",
-            credit: "Caroline Chan, Frédo Durand and Phillip Isola, Informative Drawings: sk_model.pth (contour style) from lllyasviel/Annotators",
+            name: "Alegreya and Alegreya SC",
+            credit: "Juan Pablo del Peral, Huerta Tipográfica (github.com/huertatipografica/Alegreya), from Google Fonts",
             usage: String(
-                localized: "acknowledgements.lineArtModel.usage", defaultValue: "Draws a photo’s lines, fur, petals and glass, for coloring books.",
-                comment: "What a credited machine-learning model is used for (the Informative Drawings line-drawing generator); shown in Settings under Acknowledgements"),
-            license: .mit),
+                localized: "acknowledgements.alegreya.usage", defaultValue: "The typeface Ravenna’s titles and words are set in.",
+                comment: "What a credited typeface is used for in Ravenna (Alegreya); shown in Settings under Acknowledgements"),
+            copyright: "Copyright 2011 The Alegreya Project Authors",
+            license: .ofl),
     ]
 
     /// The footer under the model credits.
@@ -129,11 +146,17 @@ nonisolated enum Acknowledgements {
                 localized: "acknowledgements.hed.usage", defaultValue: "Combines edges found at five scales into one map of a photo’s lines.",
                 comment: "What a credited third-party method or library is used for in the template engine (Holistically-nested edge detection); shown in Settings under Acknowledgements")),
         Acknowledgement(
-            name: "Informative drawings",
-            credit: "Caroline Chan, Frédo Durand and Phillip Isola, \"Learning to generate line drawings that convey geometry and semantics\", 2022",
+            name: "Zhang–Suen thinning",
+            credit: "T. Y. Zhang and C. Y. Suen, \"A fast parallel algorithm for thinning digital patterns\", 1984",
             usage: String(
-                localized: "acknowledgements.informativeDrawings.usage", defaultValue: "Turns a photo into a line drawing that keeps its geometry and meaning.",
-                comment: "What a credited third-party method or library is used for in the template engine (Informative drawings); shown in Settings under Acknowledgements")),
+                localized: "acknowledgements.zhangSuen.usage", defaultValue: "Thins the outlines to single rows, so a strand of tiles runs along each.",
+                comment: "What a credited third-party method or library is used for in Ravenna's mosaic engine (Zhang–Suen thinning); shown in Settings under Acknowledgements")),
+        Acknowledgement(
+            name: "Face landmarks",
+            credit: "Apple's Vision framework on your device; Google's MediaPipe face landmarker (Apache-2.0) for the ancient works' bundled mosaics, never shipped",
+            usage: String(
+                localized: "acknowledgements.faceLandmarks.usage", defaultValue: "Finds a face’s eyes, brows, nose and lips, which are set first, as pieces of their own.",
+                comment: "What a credited third-party method or library is used for in Ravenna's mosaic engine (face landmarks); shown in Settings under Acknowledgements")),
         Acknowledgement(
             name: "SplitMix64",
             credit: "Guy Steele, Doug Lea and Christine Flood, \"Fast Splittable Pseudorandom Number Generators\", 2014",
