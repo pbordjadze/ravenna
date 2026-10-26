@@ -1,5 +1,6 @@
 import CoreHaptics
 import Foundation
+import MosaicKit
 import PaintCore
 import SwiftUI
 
@@ -16,6 +17,11 @@ struct SettingsView: View {
     /// On until switched off here (`TipPreference`).
     @AppStorage(SettingsKey.tipsEnabled) private var tipsEnabled = SettingsDefault.tipsEnabled
     @AppStorage(SettingsKey.playsMakingOf) private var playsMakingOf = SettingsDefault.playsMakingOf
+    // Ravenna's options (`TileOptions`, `Typeface`), until Paul narrows them.
+    @AppStorage(TileOptions.finishKey) private var finish = Finish.material
+    @AppStorage(TileOptions.oneFingerKey) private var oneFinger = OneFinger.lays
+    @AppStorage(TileOptions.rowSoundKey) private var rowSound = RowSound.run
+    @AppStorage(Typeface.key) private var typeface = Typeface.alegreya
     @Environment(UnlimitedPaintings.self) private var paintings
     @State private var path: [Destination] = []
     @State private var isUnlocking = false
@@ -58,6 +64,30 @@ struct SettingsView: View {
                             SwiftUI.Label("Line Weight", systemImage: "lineweight")
                         }
                         .accessibilityIdentifier("settings-line-weight")
+                        Picker(selection: $finish) {
+                            ForEach(Finish.allCases, id: \.self) { choice in
+                                Text(choice.title).tag(choice)
+                            }
+                        } label: {
+                            SwiftUI.Label("Finish", systemImage: "square.grid.3x3.fill")
+                        }
+                        .accessibilityIdentifier("settings-finish")
+                        Picker(selection: $oneFinger) {
+                            ForEach(OneFinger.allCases, id: \.self) { choice in
+                                Text(choice.name).tag(choice)
+                            }
+                        } label: {
+                            SwiftUI.Label("One Finger", systemImage: "hand.point.up")
+                        }
+                        .accessibilityIdentifier("settings-one-finger")
+                        Picker(selection: $typeface) {
+                            ForEach(Typeface.allCases, id: \.self) { choice in
+                                Text(choice.name).tag(choice)
+                            }
+                        } label: {
+                            SwiftUI.Label("Typeface", systemImage: "textformat")
+                        }
+                        .accessibilityIdentifier("settings-typeface")
                     } header: {
                         // Not the "Painting" key: that one names a picture, this one the activity.
                         Text(String(localized: "settings.section.painting", defaultValue: "Painting",
@@ -105,6 +135,14 @@ struct SettingsView: View {
                             SwiftUI.Label("Music", systemImage: "music.note")
                         }
                         .accessibilityIdentifier("settings-music")
+                        Picker(selection: $rowSound) {
+                            ForEach(RowSound.allCases, id: \.self) { choice in
+                                Text(choice.name).tag(choice)
+                            }
+                        } label: {
+                            SwiftUI.Label("Row Sound", systemImage: "music.note.list")
+                        }
+                        .accessibilityIdentifier("settings-row-sound")
                     } header: {
                         if supportsHaptics {
                             Text("Sound & Haptics")
@@ -116,8 +154,8 @@ struct SettingsView: View {
                         // choice not made.
                         if sky == .auto {
                             Text(String(localized: "settings.sky.footer",
-                                        defaultValue: "Auto plays Sun from \(Sky.clockText(Sky.sunrise)) and Moon from \(Sky.clockText(Sky.nightfall)), your time.",
-                                        comment: "Footer of Settings › Sound, under its Music row while it is set to Auto (the other choices are Sun and Moon). The arguments are the hours, as the painter's clock writes them: when Sun begins (6 AM) and when Moon begins (7 PM)"))
+                                        defaultValue: "Auto plays the tune in major from \(Sky.clockText(Sky.sunrise)) and in minor from \(Sky.clockText(Sky.nightfall)), your time.",
+                                        comment: "Footer of Settings › Sound, under its Music row while it is set to Auto (the other choices are Major and Minor). The arguments are the hours, as the painter's clock writes them: when major begins (6 AM) and when minor begins (7 PM)"))
                         }
                     }
 

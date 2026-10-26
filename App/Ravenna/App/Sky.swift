@@ -46,12 +46,13 @@ nonisolated enum SkySetting: String, CaseIterable, Identifiable, Sendable {
 
     var name: String {
         switch self {
-        case .sun: String(localized: "sky.sun", defaultValue: "Sun",
-                          comment: "Choice of Settings › Music: the daytime music, a bright kalimba, at every hour")
-        case .moon: String(localized: "sky.moon", defaultValue: "Moon",
-                           comment: "Choice of Settings › Music: the nighttime music, a bell, and stars for sparkles, at every hour")
+        // Ravenna: the Sun's and the Moon's tune in major and minor (`TileSound`).
+        case .sun: String(localized: "sky.sun", defaultValue: "Major",
+                          comment: "Choice of Settings › Music: the tune in a major key, at every hour")
+        case .moon: String(localized: "sky.moon", defaultValue: "Minor",
+                           comment: "Choice of Settings › Music: the tune in a minor key, at every hour")
         case .auto: String(localized: "sky.auto", defaultValue: "Auto",
-                           comment: "Choice of Settings › Music: Sun by day and Moon by night, by the painter's own clock")
+                           comment: "Choice of Settings › Music: major by day and minor by night, by the painter's own clock")
         }
     }
 

@@ -37,7 +37,8 @@ go back into it (#5).
   apart; the finish is the light raking across the wall (no `Nightfall`, no sparkles). The grout is
   the ground: set before the first tile (`PaintProgress.groutSet`), never undone, not counted as
   started. A drag lays a row (`TileWall.laying`, MosaicKit's `Laying`). Options in
-  `TileOptions` (finish, one finger, a row's sound), v0's keys. A painting without a mosaic draws
+  `TileOptions` (finish, one finger, a row's sound), v0's keys, with `Typeface`, shown in Settings (Music's
+  Sun and Moon read Major and Minor). A painting without a mosaic draws
   as Paint by Moonlight's. Demos: `PaintDemoView`'s scenarios are mosaics; `paint-setting*` and
   `paint-mosaic-measure` (frame time and memory, `FrameMeter`) are Ravenna's.
 - **Sound and haptics:** `FeedbackEngine` plays `TileSound` (v0's clinks of Paint by Moonlight's

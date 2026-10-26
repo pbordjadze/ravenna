@@ -43,3 +43,39 @@ nonisolated enum RowSound: String, CaseIterable, Sendable {
     /// One note for the row.
     case note
 }
+
+extension Finish {
+    /// The finish's name in Settings (MosaicKit's own `name` is the sketchbook's).
+    var title: String {
+        switch self {
+        case .flat: String(localized: "finish.flat", defaultValue: "Light Grout",
+                           comment: "Choice of Settings › Finish: flat tiles on light grout, a thin dark edge")
+        case .bed: String(localized: "finish.bed", defaultValue: "Painted Bed",
+                          comment: "Choice of Settings › Finish: flat tiles on a bed painted in the colours of the tiles round each joint")
+        case .material: String(localized: "finish.material", defaultValue: "Glass and Stone",
+                               comment: "Choice of Settings › Finish: tiles with a lit edge, glass that glints and matte stone in faces")
+        }
+    }
+}
+
+extension OneFinger {
+    var name: String {
+        switch self {
+        case .lays: String(localized: "oneFinger.lays", defaultValue: "Lays Tiles",
+                           comment: "Choice of Settings › One Finger: a drag lays a row of tiles, two fingers move the mosaic")
+        case .moves: String(localized: "oneFinger.moves", defaultValue: "Moves the Mosaic",
+                            comment: "Choice of Settings › One Finger: a drag moves the mosaic, a press then a drag lays a row")
+        }
+    }
+}
+
+extension RowSound {
+    var name: String {
+        switch self {
+        case .run: String(localized: "rowSound.run", defaultValue: "A Run of the Tune",
+                          comment: "Choice of Settings › Row Sound: each tile laid in a row plays the tune's next note")
+        case .note: String(localized: "rowSound.note", defaultValue: "One Note",
+                           comment: "Choice of Settings › Row Sound: a row laid in one stroke plays one note")
+        }
+    }
+}

@@ -73,6 +73,46 @@
       "comment" : "Refine screen: the tool whose tap makes a closed shape of the drawing an area of its own; its name in the tool rail and its VoiceOver label",
       "extractionState" : "manual"
     },
+    "Finish" : {
+      "comment" : "Settings picker choosing how set tiles look (Light Grout, Painted Bed or Glass and Stone)",
+      "extractionState" : "manual"
+    },
+    "finish.bed" : {
+      "comment" : "Choice of Settings › Finish: flat tiles on a bed painted in the colours of the tiles round each joint",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Painted Bed"
+          }
+        }
+      }
+    },
+    "finish.flat" : {
+      "comment" : "Choice of Settings › Finish: flat tiles on light grout, a thin dark edge",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Light Grout"
+          }
+        }
+      }
+    },
+    "finish.material" : {
+      "comment" : "Choice of Settings › Finish: tiles with a lit edge, glass that glints and matte stone in faces",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Glass and Stone"
+          }
+        }
+      }
+    },
     "Generated" : {
       "comment" : "Refine screen, Start From: the template the app made from the photo (the default)",
       "extractionState" : "manual"
@@ -124,6 +164,34 @@
     "Numbers" : {
       "comment" : "Refine screen: the group of tools about the areas' numbers (Move Number); a section of the tool rail on iPad, a tab above the tools on iPhone",
       "extractionState" : "manual"
+    },
+    "One Finger" : {
+      "comment" : "Settings picker choosing what one finger does on the mosaic (Lays Tiles or Moves the Mosaic)",
+      "extractionState" : "manual"
+    },
+    "oneFinger.lays" : {
+      "comment" : "Choice of Settings › One Finger: a drag lays a row of tiles, two fingers move the mosaic",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lays Tiles"
+          }
+        }
+      }
+    },
+    "oneFinger.moves" : {
+      "comment" : "Choice of Settings › One Finger: a drag moves the mosaic, a press then a drag lays a row",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moves the Mosaic"
+          }
+        }
+      }
     },
     "Only This Area" : {
       "comment" : "Refine screen, an area's card (a long press on an area): the label of the color picker that gives the pressed area a paint of its own, while the other areas of its paint keep theirs",
@@ -2461,6 +2529,34 @@
       "comment" : "Tool Guide: under Try This, on a page with a practice canvas, whose Reset button puts the practice picture back",
       "extractionState" : "manual"
     },
+    "Row Sound" : {
+      "comment" : "Settings picker choosing what a row of tiles laid in one stroke sounds like (A Run of the Tune or One Note)",
+      "extractionState" : "manual"
+    },
+    "rowSound.note" : {
+      "comment" : "Choice of Settings › Row Sound: a row laid in one stroke plays one note",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "One Note"
+          }
+        }
+      }
+    },
+    "rowSound.run" : {
+      "comment" : "Choice of Settings › Row Sound: each tile laid in a row plays the tune's next note",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A Run of the Tune"
+          }
+        }
+      }
+    },
     "See" : {
       "comment" : "Refine screen: the group of tools about what shows (Writing); a section of the tool rail on iPad, a tab above the tools on iPhone",
       "extractionState" : "manual"
@@ -4737,6 +4833,34 @@
       "comment" : "Tool Guide: heading of a page's suggestion of something to do on the practice picture",
       "extractionState" : "manual"
     },
+    "Typeface" : {
+      "comment" : "Settings picker choosing the font of titles and numbers (Alegreya or System Serif)",
+      "extractionState" : "manual"
+    },
+    "typeface.alegreya" : {
+      "comment" : "Choice of Settings › Typeface: titles and numbers in Alegreya, a calligraphic serif (a font's name)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alegreya"
+          }
+        }
+      }
+    },
+    "typeface.systemSerif" : {
+      "comment" : "Choice of Settings › Typeface: titles and numbers in the system's own serif",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System Serif"
+          }
+        }
+      }
+    },
     "Views" : {
       "comment" : "Tool Guide: the page's name about Refine's views (Painting, Paper, Photo, Photo Behind)",
       "extractionState" : "manual"
@@ -6682,25 +6806,25 @@
       "extractionState" : "manual"
     },
     "sky.sun" : {
-      "comment" : "Choice of Settings › Music: the daytime music, a bright kalimba, at every hour",
+      "comment" : "Choice of Settings › Music: the tune in a major key, at every hour",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sun"
+            "value" : "Major"
           }
         }
       }
     },
     "sky.moon" : {
-      "comment" : "Choice of Settings › Music: the nighttime music, a bell, and stars for sparkles, at every hour",
+      "comment" : "Choice of Settings › Music: the tune in a minor key, at every hour",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Moon"
+            "value" : "Minor"
           }
         }
       }
@@ -6730,7 +6854,7 @@
       }
     },
     "sky.auto" : {
-      "comment" : "Choice of Settings › Music: Sun by day and Moon by night, by the painter's own clock",
+      "comment" : "Choice of Settings › Music: major by day and minor by night, by the painter's own clock",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -6742,13 +6866,13 @@
       }
     },
     "settings.sky.footer" : {
-      "comment" : "Footer of Settings › Sound, under its Music row while it is set to Auto (the other choices are Sun and Moon). The arguments are the hours, as the painter's clock writes them: when Sun begins (6 AM) and when Moon begins (7 PM)",
+      "comment" : "Footer of Settings › Sound, under its Music row while it is set to Auto (the other choices are Major and Minor). The arguments are the hours, as the painter's clock writes them: when major begins (6 AM) and when minor begins (7 PM)",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Auto plays Sun from %1$@ and Moon from %2$@, your time."
+            "value" : "Auto plays the tune in major from %1$@ and in minor from %2$@, your time."
           }
         }
       }

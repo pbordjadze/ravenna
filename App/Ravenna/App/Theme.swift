@@ -74,6 +74,15 @@ nonisolated enum Typeface: String, CaseIterable, Sendable {
         defaults.string(forKey: key).flatMap(Typeface.init(rawValue:)) ?? .alegreya
     }
 
+    var name: String {
+        switch self {
+        case .alegreya: String(localized: "typeface.alegreya", defaultValue: "Alegreya",
+                               comment: "Choice of Settings › Typeface: titles and numbers in Alegreya, a calligraphic serif (a font's name)")
+        case .systemSerif: String(localized: "typeface.systemSerif", defaultValue: "System Serif",
+                                  comment: "Choice of Settings › Typeface: titles and numbers in the system's own serif")
+        }
+    }
+
     /// Alegreya SC's PostScript name, bold or medium.
     static func smallCaps(heavy: Bool) -> String { heavy ? "AlegreyaSC-Bold" : "AlegreyaSC-Medium" }
 }
