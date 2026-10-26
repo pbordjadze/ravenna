@@ -344,7 +344,7 @@ final class CanvasView: UIView, PaintingCanvas {
             press.isEnabled = false
             let lay = UIPanGestureRecognizer(target: self, action: #selector(handleLay(_:)))
             lay.maximumNumberOfTouches = 1
-            lay.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.direct.rawValue)]
+            lay.allowedTouchTypes = Self.fingerTouches
             scrollView.addGestureRecognizer(lay)
             scrollView.panGestureRecognizer.minimumNumberOfTouches = 2
         }
@@ -955,9 +955,11 @@ final class CanvasView: UIView, PaintingCanvas {
         // A mosaic's grout is the ground, there before the first tile.
         let painted = session.progress.log.map { Int($0.region) }.filter { wall?.isTile($0) ?? true }
         guard !painted.isEmpty else { return }
+        // The session counts the log's first entries as shown: a mosaic's grout leads it.
+        let ground = session.progress.log.count - painted.count
         isReplaying = true
         // Undo and the bar's Stop follow at once, not at the replay's first tick.
-        session.showReplayed(painted.count)
+        session.showReplayed(ground + painted.count)
         numbersChanged()
         zoomToFit()
         let reduceMotion = self.reduceMotion
@@ -971,11 +973,11 @@ final class CanvasView: UIView, PaintingCanvas {
         replayTask = Task { [weak self] in
             guard let self, !Task.isCancelled else { return }
             while now() - time < lift {
-                session.showReplayed(ReplayProgress.lifting(total: painted.count, elapsed: now() - time, lift: lift))
+                session.showReplayed(ground + ReplayProgress.lifting(total: painted.count, elapsed: now() - time, lift: lift))
                 try? await Task.sleep(for: Self.replayTick)
                 guard !Task.isCancelled else { return }
             }
-            session.showReplayed(0)
+            session.showReplayed(ground)
             try? await Task.sleep(for: .seconds(0.25))
             guard !Task.isCancelled else { return }
             // About 7 s for a typical painting, never a slog for a large one.
@@ -997,7 +999,7 @@ final class CanvasView: UIView, PaintingCanvas {
             activeUntil = max(activeUntil, begin + span + 1.5)
             requestRender()
             while now() - begin < span + 0.4 {
-                session.showReplayed(ReplayProgress.filling(total: painted.count, elapsed: now() - begin, step: step))
+                session.showReplayed(ground + ReplayProgress.filling(total: painted.count, elapsed: now() - begin, step: step))
                 try? await Task.sleep(for: Self.replayTick)
                 guard !Task.isCancelled else { return }
             }

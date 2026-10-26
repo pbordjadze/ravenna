@@ -231,7 +231,7 @@ private final class Demo {
         self.photo = photo
         session = await PaintingSession.make(template: t, mosaic: mosaic)
         // A mosaic's grout is set already, and is no area to aim at.
-        let tile = { (r: Int) in session.wall?.isTile(r) ?? true }
+        let tile = { [session] (r: Int) in session.wall?.isTile(r) ?? true }
 
         // Paint colors in palette order (how people tend to work), each color top to bottom.
         let order = t.regions.indices.sorted {

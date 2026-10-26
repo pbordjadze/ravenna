@@ -72,8 +72,10 @@ final class FeedbackEngine {
         if hapticsEnabled { touch.set(.stone, size: 0.2) }
     }
 
+    /// When the latest fill's last tile touched the bed (s from then): a flourish follows its note.
+    private var lastContact: TimeInterval = 0
     /// The last tile's note first (it sounds as the tile touches the bed), then a flourish from it.
-    private var flourishDelay: TimeInterval { (tileContacts.last ?? 0) + 0.12 }
+    private var flourishDelay: TimeInterval { lastContact + 0.12 }
 
     private func handle(_ event: PaintEvent, in session: PaintingSession) {
         let hapticsOn = hapticsEnabled, soundsOn = soundsEnabled
@@ -96,6 +98,9 @@ final class FeedbackEngine {
                 if soundsOn { sounds.play(voice, size: size, mode: mode, row: row, after: delay) }
                 if hapticsOn { touch.set(voice, size: size, after: delay) }
             }
+            // Spent: a fill the canvas didn't time plays at once.
+            lastContact = tileContacts.last ?? 0
+            tileContacts = []
         case .rejected:
             if hapticsOn { touch.miss() }
             if soundsOn { sounds.miss() }

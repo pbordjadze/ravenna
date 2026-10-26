@@ -50,6 +50,8 @@ nonisolated final class TileScene: @unchecked Sendable {
         shapes.reserveCapacity(m.tiles.count + 1)
         for (i, t) in m.tiles.enumerated() {
             let c = t.corners.map { $0 * k }
+            // The format and `TileWall` ensure corners; a tile without would have no shape.
+            guard !c.isEmpty else { return nil }
             let (lo, hi) = t.bounds
             var flags = TileShape.tile
             if t.stone { flags |= TileShape.stone }

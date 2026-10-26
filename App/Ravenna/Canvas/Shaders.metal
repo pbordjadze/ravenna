@@ -176,15 +176,21 @@ static bool isTile(constant FrameUniforms &u, TileShape shape) {
     return u.tiles.x > 0.5 && (shape.flags & kTile) != 0u;
 }
 
-/// Whether a tile being set is still raised: the lift pass draws it.
+/// Whether a tile being set is raised now: the lift pass draws it. One whose setting is still to
+/// come (later in a row, or in a replay) isn't there yet.
 static bool isRaised(RegionState s, float now, constant FrameUniforms &u) {
-    return u.numbers.w < 0.5 && s.painted > 0.5 && tileTime(s, now, u) < kPress + kSettle;
+    float t = tileTime(s, now, u);
+    return u.numbers.w < 0.5 && s.painted > 0.5 && t >= 0.0 && t < kPress + kSettle;
 }
 
-/// How much of a tile is set, 0…1: 1 once painted (the tessera covers its number at once), easing
-/// in over 150 ms under Reduce Motion, easing out over the unpainting's duration (undo).
+/// How much of a tile is set, 0…1: 1 once its setting begins (the tessera covers its number at
+/// once), 0 before, easing in over 150 ms under Reduce Motion, easing out over the unpainting's
+/// duration (undo).
 static float tileCoverage(RegionState s, float now, constant FrameUniforms &u) {
-    if (s.painted > 0.5) return u.numbers.w > 0.5 ? saturate(tileTime(s, now, u) / 0.15) : 1.0;
+    if (s.painted > 0.5) {
+        float t = tileTime(s, now, u);
+        return t < 0.0 ? 0.0 : u.numbers.w > 0.5 ? saturate(t / 0.15) : 1.0;
+    }
     return 1.0 - smoothstep(0.0, 1.0, (now - s.start) / max(s.duration, 1e-4));
 }
 

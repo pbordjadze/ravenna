@@ -95,7 +95,7 @@ extension Font {
         let lining = face.fontDescriptor.addingAttributes([.featureSettings: [[
             UIFontDescriptor.FeatureKey.type: kNumberCaseType, UIFontDescriptor.FeatureKey.selector: kUpperCaseNumbersSelector,
         ]]])
-        return Font(UIFont(descriptor: lining, size: size))
+        return Font(UIFont(descriptor: lining, size: size) as CTFont)
     }
 
     private static func isHeavy(_ weight: Font.Weight) -> Bool {

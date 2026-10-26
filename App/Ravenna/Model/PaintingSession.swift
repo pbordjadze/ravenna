@@ -671,11 +671,19 @@ nonisolated extension PaintProgress {
         return isPainted(wall.groutRegion) ? 1 : 0
     }
 
-    /// The progress with a mosaic's grout set (`TileWall`): the ground, never painted by hand.
+    /// The progress with a mosaic's grout set (`TileWall`): the ground, never painted by hand. It
+    /// leads the log, where undo never reaches it, so progress saved without it (v0's carried over)
+    /// is laid again after it, each fill at its own time.
     func groutSet(_ wall: TileWall?) -> PaintProgress {
         guard let wall, wall.groutRegion < regionCount, !isPainted(wall.groutRegion) else { return self }
-        var progress = self
+        var progress = PaintProgress(regionCount: regionCount)
+        progress.activeSeconds = log.first.map { Double($0.time) } ?? activeSeconds
         progress.paint(wall.groutRegion)
+        for stroke in log {
+            progress.activeSeconds = Double(stroke.time)
+            progress.paint(Int(stroke.region))
+        }
+        progress.activeSeconds = activeSeconds
         return progress
     }
 }
