@@ -1,14 +1,19 @@
 import CoreGraphics
 import Foundation
+import MosaicEngine
+import MosaicKit
 import PaintCore
 import SwiftUI
 import UIKit
 
-/// Second step of the create flow: the generated template, compared with the photo,
-/// tuned live with a few simple controls, and the painting's name. In compact windows (iPhone)
-/// the card shows the slider of one setting at a time, chosen above it, and the preview can be
-/// enlarged: the comparison then fills the page above that slider, Lines first, to look closely
-/// while tuning the lines.
+/// Second step of the create flow: the mosaic, compared with the photo, tuned live with the
+/// recipe's few controls, and the painting's name. In compact windows (iPhone) the card shows one
+/// group of the recipe at a time, chosen above it, and the preview can be enlarged: the comparison
+/// then fills the page above that group, Pieces first.
+///
+/// Ravenna's seam: the card holds Ravenna's recipe (`MosaicEngine.Recipe`: Pieces, Eyes and Mouth,
+/// Finish and Ground, the Panel, as v0's new-mosaic sheet had them) where Paint by Moonlight's
+/// Colors, Detail, Smoothness and Lines sliders were, with no suggestion chip, Adjust or Refine.
 struct TemplatePreviewView: View {
     @Bindable var model: CreateModel
     var onStart: () async throws -> Void
@@ -29,13 +34,11 @@ struct TemplatePreviewView: View {
     /// Start Painting found no free painting left for the painter's own photo.
     @State private var offersUnlock = false
     @State private var isTuning = false
-    #if UNRELEASED
-    @State private var isRefining = false
-    #endif
-    /// The setting the one slider of a compact window tunes; nil until the painter picks one.
+    /// The group a compact window's card shows; nil until the painter picks one.
     @State private var tunedSetting: Setting?
-    /// The painter opened Adjust, and the card shows its settings from then on (`foldsSettings`).
-    @AppStorage(SettingsKey.previewShowsSettings) private var opensSettings = SettingsDefault.previewShowsSettings
+    /// The panel's sheet is up, and where the painter has moved the panel on it.
+    @State private var isFraming = false
+    @State private var framingCentre = SIMD2<Double>(0.5, 0.5)
     @FocusState private var titleFocused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(UnlimitedPaintings.self) private var paintings
@@ -121,25 +124,14 @@ struct TemplatePreviewView: View {
         .navigationTitle("New Painting")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbar }
-        #if UNRELEASED
-        // Refine's button goes while the preview is enlarged, and its tip with it.
-        .barTips(.newPaintingRefine, active: !isEnlarged)
-        #endif
         // Shrink Preview is the way back from the enlarged preview. There is none while Start
         // Painting saves: leaving then would open the painting from whichever flow closes next.
         .navigationBarBackButtonHidden(isEnlarged || isStarting)
         .background { ContentSwipeBackOff().frame(width: 0, height: 0) }
-        #if UNRELEASED
-        .fullScreenCover(isPresented: $isRefining) { RefineView(model: model) }
-        // A tap on Refine made while the painting was updating: it opens once it is made.
-        .onChange(of: model.opensRefine) { _, opens in
-            if opens { openRefine() }
-        }
-        #endif
+        .sheet(isPresented: $isFraming) { framingSheet }
     }
 
-    /// What the preview does as the model changes: its tips' moments, Refine and a start asked
-    /// for early.
+    /// What the preview does as the model changes: its tips' moments and a start asked for early.
     private func observingTheModel(_ content: some View) -> some View {
         content
             // The preview's tips: a template that is final is a moment, a slider let go another.
@@ -162,26 +154,13 @@ struct TemplatePreviewView: View {
                 }
             }
             .onChange(of: model.isAdjusting) { _, adjusting in
-                if !adjusting { PaintTips.sliderReleased(isCustom: model.settingsOrigin == .custom) }
+                // No suggestion to go back to: Ravenna's recipe is always the painter's own.
+                if !adjusting { PaintTips.sliderReleased(isCustom: false) }
             }
-            .onChange(of: model.settingsOrigin) { old, origin in
-                if old == .custom, origin == .suggested { PaintTips.resetUsed() }
-            }
-            #if UNRELEASED
-            .onChange(of: isRefining) { _, refining in
-                if refining { PaintTips.refineOpened() }
-            }
-            #endif
             // Start Painting saves the painting, and The Making-of may play: the preview says no more.
             .onChange(of: isStarting) { _, starting in
                 if starting { PaintTips.desk.leave(.preview) }
             }
-            #if DEBUG && UNRELEASED
-            // `create-refine` shows the Refine screen once its painting is refined.
-            .onChange(of: model.refinements.isEmpty) { _, isEmpty in
-                if ShellDemo.current?.refines == true, !isEmpty { isRefining = true }
-            }
-            #endif
     }
 
     /// Canvas beside the controls when that shows the photo larger than stacking them: landscape
@@ -197,10 +176,9 @@ struct TemplatePreviewView: View {
     private var chosenLayout: Bool {
         let room = roomSize.width > 0 && roomSize.height > 0 ? roomSize : size
         guard room.width.isFinite, room.height.isFinite, room.width > 0, room.height > 0 else { return false }
-        // The stacked controls card: title row, settings chip, the sliders (one and its chooser in
-        // a compact window), summary, Start and the free paintings under it.
-        // With its settings shown, folded or not: Adjust then never moves the card from under the finger.
-        let card: CGFloat = (room.width < Self.compactWidth ? 364 : (hasLines ? 512 : 460)) + (showsFreeCount ? 30 : 0)
+        // The stacked controls card: title row, the recipe (one group and its chooser in a compact
+        // window), summary, Start and the free paintings under it.
+        let card: CGFloat = (room.width < Self.compactWidth ? 330 : 560) + (showsFreeCount ? 30 : 0)
         let stacked = Self.fittedArea(
             width: room.width - 2 * sidePadding, height: room.height - card, aspect: photoAspect)
         let beside = Self.fittedArea(
@@ -211,8 +189,7 @@ struct TemplatePreviewView: View {
     private var sidePadding: CGFloat { size.width > 900 ? 32 : 16 }
     private var panelWidth: CGFloat { size.width > 900 ? 360 : 320 }
     /// The card's rows sit closer stacked on a phone, where the card and the comparison share
-    /// the screen's height: with four sliders, 18 pt between rows left the comparison 125 pt tall
-    /// on an iPhone 17 Pro.
+    /// the screen's height.
     private var rowSpacing: CGFloat { !isSideBySide && isCompact ? 12 : 18 }
     /// A phone's width (or a narrow iPad window), where the stacked comparison is small.
     private var isCompact: Bool { size.width < Self.compactWidth }
@@ -222,21 +199,6 @@ struct TemplatePreviewView: View {
     /// it a fraction of the screen.
     private var offersEnlarging: Bool { isCompact && !isSideBySide }
     private var isEnlarged: Bool { isTuning && !isSideBySide }
-
-    #if UNRELEASED
-    /// Refine on the final template, or, while it is being made, as soon as it is.
-    private func openRefine() {
-        titleFocused = false
-        guard !isStarting else { return }
-        model.withdrawStart()
-        if model.canRefine {
-            model.withdrawRefine()
-            isRefining = true
-        } else {
-            model.askForRefine()
-        }
-    }
-    #endif
 
     private func setEnlarged(_ enlarged: Bool) {
         titleFocused = false
@@ -258,33 +220,6 @@ struct TemplatePreviewView: View {
                 Button("Shrink Preview", systemImage: "arrow.down.right.and.arrow.up.left") { setEnlarged(false) }
             }
         }
-        #if UNRELEASED
-        // Refine is in SideStore and Debug builds only for now: the release has no Refine step.
-        if !isEnlarged {
-            // The optional Refine step: a text button, so it reads as a step and not a view.
-            ToolbarItem(placement: .primaryAction) {
-                Button(action: openRefine) {
-                    if model.isWaitingToRefine {
-                        HStack(spacing: 6) {
-                            ProgressView().controlSize(.small)
-                            Text("Preparing…")
-                        }
-                    } else {
-                        Text("Refine")
-                    }
-                }
-                // Without line art there is nothing to draw on. Else it is on while the painting
-                // updates: Refine draws on the final template alone (its edits are made in that
-                // template's canvas units), so a tap before it is made waits for it
-                // (`CreateModel.askForRefine`) and opens by itself.
-                .disabled(!model.canAskForRefine || isStarting || !model.hasLineArtInput)
-                .accessibilityLabel("Refine")
-                .accessibilityValue(
-                    model.isWaitingToRefine ? String(localized: "Preparing…") : RefineView.changes(model.refinements.changeCount))
-                .accessibilityIdentifier("refine")
-            }
-        }
-        #endif
         if offersEnlarging && !isEnlarged {
             ToolbarItem(placement: .primaryAction) {
                 Button("Enlarge Preview", systemImage: "arrow.up.left.and.arrow.down.right") { setEnlarged(true) }
@@ -293,8 +228,9 @@ struct TemplatePreviewView: View {
         }
     }
 
+    /// The shape of the photo as the mosaic shown lays it (its panel).
     private var photoAspect: CGFloat {
-        guard let image = model.source?.image, image.width > 0, image.height > 0 else { return 4 / 3 }
+        guard let image = model.framed, image.width > 0, image.height > 0 else { return 4 / 3 }
         return CGFloat(image.width) / CGFloat(image.height)
     }
 
@@ -304,37 +240,9 @@ struct TemplatePreviewView: View {
         return fittedWidth * fittedWidth / aspect
     }
 
-    /// The colors slider runs on a squared scale: the first half of the track covers 6–42,
-    /// where each color matters, the rest reaches up to 150.
-    private static let colorBounds = (
-        Double(GenerationSettings.colorCountRange.lowerBound), Double(GenerationSettings.colorCountRange.upperBound))
-
-    private static func colorCount(at position: Double) -> Double {
-        (colorBounds.0 + (colorBounds.1 - colorBounds.0) * position * position).rounded()
-    }
-
-    private static func colorPosition(_ count: Double) -> Double {
-        min(max((count - colorBounds.0) / (colorBounds.1 - colorBounds.0), 0), 1).squareRoot()
-    }
-
-    /// Updates a setting the painter moved, ignoring unchanged values: a slider re-asserting
-    /// its value would otherwise invalidate the model on every update.
-    private func update(_ keyPath: ReferenceWritableKeyPath<CreateModel, Double>, _ value: Double) {
-        guard abs(model[keyPath: keyPath] - value) > 1e-9 else { return }
-        model[keyPath: keyPath] = value
-        model.settingsChanged()
-        PaintTips.sliderMoved(colorsOrDetail: keyPath == \CreateModel.colorCount || keyPath == \CreateModel.detail)
-    }
-
-    /// The template is final: the moment of the preview's tips. The suggestion's is only while the
-    /// settings are still the suggested ones.
+    /// The mosaic is final: the moment of the preview's tips (none for a suggestion: there is none).
     private func previewFinal() {
-        #if UNRELEASED
-        let canRefine = model.canRefine
-        #else
-        let canRefine = false
-        #endif
-        PaintTips.previewFinal(isSuggested: model.settingsOrigin == .suggested, canRefine: canRefine)
+        PaintTips.previewFinal(isSuggested: false)
         #if DEBUG
         // `create-unlock` taps Start Painting once its painting is made, with no free painting left.
         if ShellDemo.current == .createUnlock { start() }
@@ -345,28 +253,16 @@ struct TemplatePreviewView: View {
 
     private var canvas: some View {
         VStack {
-            if let source = model.source {
+            if let photo = model.framed {
                 CompareView(
-                    photo: source.preview, after: model.preview?.picture, afterID: model.preview?.id.uuidString ?? "none",
-                    afterLabel: model.previewStyle.name, aspectRatio: photoAspect, canvasSize: size, fillsSpace: isEnlarged)
+                    photo: photo, after: model.preview?.picture, afterID: model.preview?.id.uuidString ?? "none",
+                    afterLabel: String(localized: "Mosaic"), aspectRatio: photoAspect, canvasSize: size, fillsSpace: isEnlarged)
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
                         pictureProbe?.measured(frame: frame, aspect: photoAspect)
                     }
                     .overlay(alignment: .bottom) {
                         status.padding(14)
                     }
-                    #if UNRELEASED
-                    // What Refine had to say once the sliders made the template again, and a
-                    // draft that couldn't be saved.
-                    .overlay(alignment: .top) {
-                        VStack(spacing: 8) {
-                            RefineNoteToast(note: model.note)
-                            DraftSaveToast(photoID: model.photoID)
-                        }
-                        .padding(.top, 8)
-                    }
-                    .animation(reduceMotion ? nil : .snappy, value: model.note)
-                    #endif
             } else if case .failed(let message) = model.phase {
                 ContentUnavailableView("Couldn’t Open Photo", systemImage: "photo.badge.exclamationmark", description: Text(message))
                     .frame(maxHeight: .infinity)
@@ -382,18 +278,16 @@ struct TemplatePreviewView: View {
     private var status: some View {
         Group {
             switch model.phase {
-            case .loading, .analyzing, .suggesting:
+            case .loading, .analyzing:
                 StatusCapsule {
                     ProgressView().controlSize(.small)
                     if model.phase == .loading {
                         Text("Opening photo…")
-                    } else if model.phase == .analyzing {
-                        Text("Finding the subject…")
                     } else {
-                        Text("Choosing settings…")
+                        Text("Finding the subject…")
                     }
                 }
-            case .generating where !model.isAdjusting || model.refining != nil:
+            case .generating where !model.isAdjusting || model.making != nil:
                 StatusCapsule {
                     ProgressView(value: model.progress)
                         .frame(width: 64)
@@ -421,27 +315,14 @@ struct TemplatePreviewView: View {
     private var controls: some View {
         VStack(alignment: .leading, spacing: rowSpacing) {
             titleField
-            if Self.foldsSettings {
-                HStack(spacing: 12) {
-                    originChip
-                    adjustButton
-                }
+            if isCompact && !isSideBySide {
+                // One group at a time on a phone (Paul's calmer menus, October 18): the card keeps
+                // the comparison large and asks one thing at once.
+                settingChooser
+                group(shownSetting)
+                    .id(shownSetting)
             } else {
-                originChip
-            }
-            if showsSettings {
-                if isCompact && !isSideBySide {
-                    // One slider at a time on a phone (Paul's calmer menus, October 18): the card keeps
-                    // the comparison large and asks one thing at once.
-                    settingChooser
-                    slider(shownSetting)
-                        .id(shownSetting)
-                } else {
-                    slider(.colors)
-                    slider(.detail)
-                    slider(.smoothness)
-                    if hasLines { slider(.lines) }
-                }
+                ForEach(Setting.allCases, id: \.self) { group($0) }
             }
             summary
 
@@ -472,13 +353,13 @@ struct TemplatePreviewView: View {
         .padding(.bottom, isSideBySide ? 22 : 8)
     }
 
-    /// The enlarged preview's controls: the slider of one setting, chosen above it, and the
-    /// template's summary. Lines comes first, the lines being what a large preview is for.
+    /// The enlarged preview's controls: one group of the recipe, chosen above it, and the mosaic's
+    /// summary. Pieces comes first, the pieces being what a large preview is for.
     private var tuningTray: some View {
         VStack(alignment: .leading, spacing: 16) {
             settingChooser
-            slider(shownSetting)
-                // Another setting's slider, not this one's thumb sliding to its value.
+            group(shownSetting)
+                // Another group, not this one's controls changing.
                 .id(shownSetting)
             summary
         }
@@ -487,108 +368,175 @@ struct TemplatePreviewView: View {
         .padding(.bottom, 8)
     }
 
-    /// In SideStore and Debug builds (`UNRELEASED`, until a Lamplit Table round and Paul choose it for
-    /// the release) the card folds its settings away: the title, the suggestion, the summary and
-    /// Start Painting, and Adjust, which shows the sliders as they are and keeps them shown for
-    /// whoever opened it (`SettingsKey.previewShowsSettings`). The first-five-minutes walk, October
-    /// 23: four questions a newcomer can't answer, while Already Chosen for You says to just tap
-    /// Start Painting; Paul: "let's build them all". Adjust alone shows or folds them: settings of
-    /// the painter's own (from the enlarged preview) fold too, the chip saying Custom with its Reset
-    /// to Suggested, so no slider goes from under a finger as its drag comes back to its detent.
-    #if UNRELEASED
-    private static let foldsSettings = true
-    #else
-    private static let foldsSettings = false
-    #endif
+    /// Which group a compact window's card shows: the painter's choice, else Pieces.
+    private var shownSetting: Setting { tunedSetting ?? .pieces }
 
-    private var showsSettings: Bool { !Self.foldsSettings || opensSettings }
-
-    /// Shows the settings, or folds them away again. Fewer or More Areas points here while they are
-    /// folded.
-    private var adjustButton: some View {
-        Button {
-            titleFocused = false
-            withAnimation(reduceMotion ? nil : .snappy) { opensSettings.toggle() }
-        } label: {
-            HStack(spacing: 4) {
-                Text("Adjust")
-                Image(systemName: "chevron.down")
-                    .rotationEffect(.degrees(opensSettings ? 180 : 0))
-                    .accessibilityHidden(true)
-            }
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(Theme.accent)
-            .padding(.vertical, 6)
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .fixedSize()
-        .disabled(isStarting)
-        .accessibilityValue(opensSettings ? Text("Settings shown") : Text("Settings hidden"))
-        .accessibilityIdentifier("preview-adjust")
-        .gentleTip(.newPaintingSliders, active: !showsSettings, arrowEdge: .bottom)
-    }
-
-    /// Which setting the one slider tunes: the painter's choice, else Colors in the card and
-    /// Lines in the enlarged preview; a choice made in either holds in both.
-    private var shownSetting: Setting {
-        if let tunedSetting, tunedSetting != .lines || hasLines { return tunedSetting }
-        if isEnlarged { return hasLines ? .lines : .detail }
-        return .colors
-    }
-
-    /// The segmented control over the one slider of a compact window and the enlarged preview.
+    /// The segmented control over the one group of a compact window and the enlarged preview.
     private var settingChooser: some View {
         Picker("Setting", selection: Binding(get: { shownSetting }, set: { tunedSetting = $0 })) {
-            Text("Colors").tag(Setting.colors)
-            Text("Detail").tag(Setting.detail)
-            Text("Smoothness").tag(Setting.smoothness)
-            if hasLines { Text("Lines").tag(Setting.lines) }
+            Text("Pieces").tag(Setting.pieces)
+            Text("Face").tag(Setting.face)
+            Text("Look").tag(Setting.look)
+            Text("Panel").tag(Setting.panel)
         }
         .pickerStyle(.segmented)
         .accessibilityIdentifier("tuned-setting")
     }
 
-    /// The settings a slider tunes.
-    private enum Setting: Hashable { case colors, detail, smoothness, lines }
+    /// The recipe's groups: how many pieces; the eyes and the mouth; the finish and the ground;
+    /// how much of the photo is laid.
+    private enum Setting: Hashable, CaseIterable { case pieces, face, look, panel }
 
-    /// Locked while Start Painting makes the painting: a change then would make the template again
-    /// under it.
+    /// Locked while Start Painting makes the painting (a change then would lay the mosaic again
+    /// under it), and while the photo's contours and faces are found.
     @ViewBuilder
-    private func slider(_ setting: Setting) -> some View {
-        sliderBody(setting).disabled(isStarting)
+    private func group(_ setting: Setting) -> some View {
+        groupBody(setting).disabled(isStarting || model.isChoosingSettings)
     }
 
     @ViewBuilder
-    private func sliderBody(_ setting: Setting) -> some View {
+    private func groupBody(_ setting: Setting) -> some View {
         switch setting {
-        case .colors:
+        case .pieces:
             SettingSlider(
-                title: "Colors", value: Self.colorPosition(model.colorCount),
-                onChange: { update(\.colorCount, Self.colorCount(at: $0)) },
-                valueText: Int(model.colorCount.rounded()).formatted(), isPending: model.isChoosingSettings,
-                detent: suggested.map { Self.colorPosition(Double($0.colorCount)) }, onEditing: model.setAdjusting)
+                title: "Pieces", value: model.recipe.pieces, onChange: setPieces,
+                valueText: Self.piecesText(model.recipe.pieces), isPending: model.isChoosingSettings,
+                detent: MosaicEngine.Recipe.standardPieces, onEditing: model.setAdjusting)
                 // Fewer or More Areas: over the slider, clear of the preview's picture.
-                .gentleTip(.newPaintingSliders, active: showsSettings, arrowEdge: .bottom)
-        case .detail:
-            SettingSlider(
-                title: "Detail", value: model.detail, onChange: { update(\.detail, $0) },
-                valueText: Self.detailWord(model.detail), isPending: model.isChoosingSettings,
-                detent: suggested.map { Double($0.detail) }, onEditing: model.setAdjusting)
-        case .smoothness:
-            SettingSlider(
-                title: "Smoothness", value: model.smoothness, onChange: { update(\.smoothness, $0) },
-                valueText: Self.smoothnessWord(model.smoothness), isPending: model.isChoosingSettings,
-                detent: suggested.map { Double($0.smoothness) }, onEditing: model.setAdjusting)
-        case .lines:
-            SettingSlider(
-                title: "Lines", value: model.lines, onChange: { update(\.lines, $0) },
-                valueText: Self.linesWord(model.lines), isPending: model.isChoosingSettings,
-                detent: 0.5, onEditing: model.setAdjusting)
+                .gentleTip(.newPaintingSliders, arrowEdge: .bottom)
+        case .face:
+            VStack(alignment: .leading, spacing: 4) {
+                ChoiceRow(title: "Eyes", caption: "Mixed brighter, as an eye catches the light, or kept as the photo has them.") {
+                    Picker("Eyes", selection: choice(\.eyes)) {
+                        Text("As they look").tag(MosaicEngine.Eyes.asTheyLook)
+                        Text("The photo’s colours").tag(MosaicEngine.Eyes.asInThePhoto)
+                    }
+                }
+                ChoiceRow(title: "Mouth", caption: "Kept as the photo has it, or set small and closed, as Byzantine faces were.") {
+                    Picker("Mouth", selection: choice(\.mouth)) {
+                        Text("As in the photo").tag(MosaicEngine.Mouth.asInThePhoto)
+                        Text("Byzantine").tag(MosaicEngine.Mouth.byzantine)
+                    }
+                }
+            }
+        case .look:
+            VStack(alignment: .leading, spacing: 4) {
+                ChoiceRow(title: "Finish", caption: "How set tiles look. Painted bed: the joints take the colour of the tiles round them. Glass and stone: glass catches the light at its edges, faces are matte stone.") {
+                    Picker("Finish", selection: choice(\.finish)) {
+                        Text("Glass and stone").tag(Finish.material)
+                        Text("Painted bed").tag(Finish.bed)
+                        Text("Flat, light grout").tag(Finish.flat)
+                    }
+                }
+                ChoiceRow(title: "Ground", caption: "Gold lays the picture’s background in gold smalti, as behind the figures at Ravenna.") {
+                    Picker("Ground", selection: choice(\.ground)) {
+                        Text("As in the picture").tag(MosaicEngine.Ground.picture)
+                        Text("Gold").tag(MosaicEngine.Ground.gold)
+                    }
+                }
+            }
+        case .panel:
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Panel")
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                    if model.recipe.panel != .whole {
+                        Button("Move Panel", systemImage: "arrow.up.and.down.and.arrow.left.and.right") { openFraming() }
+                            .font(.subheadline)
+                            .accessibilityIdentifier("move-panel")
+                    }
+                }
+                Picker("Panel", selection: Binding(get: { model.recipe.panel }, set: choosePanel)) {
+                    Text("Whole").tag(MosaicEngine.Panel.whole)
+                    Text("Square").tag(MosaicEngine.Panel.square)
+                    Text("Upright").tag(MosaicEngine.Panel.upright)
+                    Text("Wide").tag(MosaicEngine.Panel.wide)
+                }
+                .pickerStyle(.segmented)
+                Group {
+                    if model.recipe.panel == .whole {
+                        Text("All of the photo is laid.")
+                    } else {
+                        Text("Move the panel over the part to lay.")
+                    }
+                }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            }
         }
     }
 
-    /// Colors, areas and painting time of the latest full-resolution template.
+    /// A binding to one of the recipe's choices that lays the mosaic again when it changes.
+    private func choice<T: Equatable>(_ keyPath: WritableKeyPath<MosaicEngine.Recipe, T>) -> Binding<T> {
+        Binding(get: { model.recipe[keyPath: keyPath] }, set: { value in
+            guard model.recipe[keyPath: keyPath] != value else { return }
+            model.recipe[keyPath: keyPath] = value
+            model.recipeChanged()
+        })
+    }
+
+    /// Moves Pieces, ignoring unchanged values: a slider re-asserting its value would otherwise
+    /// lay the mosaic again on every update.
+    private func setPieces(_ value: Double) {
+        guard abs(model.recipe.pieces - value) > 1e-9 else { return }
+        model.recipe.pieces = value
+        model.recipeChanged()
+        PaintTips.sliderMoved(colorsOrDetail: true)
+    }
+
+    /// A panel's shape: laid at once from the photo's middle, and its sheet opens to move it.
+    private func choosePanel(_ panel: MosaicEngine.Panel) {
+        guard panel != model.recipe.panel else { return }
+        model.recipe.panel = panel
+        model.recipe.centre = SIMD2(0.5, 0.5)
+        model.recipeChanged()
+        if panel != .whole { openFraming() }
+    }
+
+    private func openFraming() {
+        titleFocused = false
+        framingCentre = model.recipe.centre
+        isFraming = true
+    }
+
+    /// The photo with the panel over it, to drag where it is to be laid; Done lays it there.
+    private var framingSheet: some View {
+        NavigationStack {
+            Group {
+                if let photo = model.source?.preview {
+                    PanelFramingView(image: photo, panel: model.recipe.panel, centre: $framingCentre)
+                        .padding(16)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Theme.paper)
+            .navigationTitle("Panel")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { isFraming = false }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        isFraming = false
+                        guard framingCentre != model.recipe.centre else { return }
+                        model.recipe.centre = framingCentre
+                        model.recipeChanged()
+                    }
+                }
+            }
+        }
+    }
+
+    /// How many times the standard count of tiles the slider asks for.
+    private static func piecesText(_ pieces: Double) -> String {
+        let multiple = MosaicEngine.Recipe.multiple(pieces: pieces).formatted(.number.precision(.fractionLength(1)))
+        return String(localized: "create.pieces.multiple", defaultValue: "\(multiple)×",
+                      comment: "Pieces slider value: how many times the standard number of tiles, 0.5 to 3.0")
+    }
+
+    /// Tiles, paints and setting time of the latest mosaic at its own size.
     private var summary: some View {
         Text(model.stats?.summary ?? " ")
             .font(.footnote.weight(.medium))
@@ -598,58 +546,6 @@ struct TemplatePreviewView: View {
             .opacity(model.isFinal ? 1 : 0.7)
             .animation(.easeInOut(duration: 0.25), value: model.stats)
             .frame(maxWidth: .infinity, alignment: .center)
-    }
-
-    /// The suggestion's settings, where each slider has a detent.
-    private var suggested: GenerationSettings? { model.decision?.settings }
-
-    /// Classic line art has no lines to tune.
-    private var hasLines: Bool { model.baseLineArt.style != .classic }
-
-    /// Where the settings came from: the suggestion for this photo, or the painter's own with
-    /// a way back to it. Its room is kept, empty, until there is a suggestion.
-    private var originChip: some View {
-        Group {
-            if model.settingsOrigin == .custom {
-                Button { model.resetToSuggested() } label: {
-                    HStack(spacing: 6) {
-                        Text("Custom")
-                            .foregroundStyle(.secondary)
-                        Text(verbatim: "·")
-                            .foregroundStyle(.secondary)
-                            .accessibilityHidden(true)
-                        SwiftUI.Label("Reset to Suggested", systemImage: "arrow.counterclockwise")
-                            .foregroundStyle(Theme.accent)
-                    }
-                    .chipBackground(Theme.paper)
-                }
-                .buttonStyle(.plain)
-                .disabled(isStarting)
-                .accessibilityLabel("Reset to Suggested")
-                .accessibilityValue("Custom")
-            } else {
-                HStack(spacing: 6) {
-                    Image(systemName: "sparkles")
-                        .foregroundStyle(Theme.accent)
-                    Text("Suggested for this picture")
-                }
-                .chipBackground(Theme.accent.opacity(0.14))
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(Text(String(
-                    localized: "create.settingsOrigin.label", defaultValue: "Settings",
-                    comment: "VoiceOver label of the chip above the create sliders; its value says whether they are suggested for the picture or custom")))
-                .accessibilityValue("Suggested for this picture")
-            }
-        }
-        .accessibilityIdentifier("settings-origin")
-        // Already Chosen for You hangs above the chip; You Can Always Go Back below it, where the
-        // preview is left in view to watch. Before the frame: they point at the chip, not the row.
-        .gentleTip(.newPaintingSuggested, active: model.settingsOrigin != .custom, arrowEdge: .bottom)
-        .gentleTip(.newPaintingReset, active: model.settingsOrigin == .custom, arrowEdge: .top)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .opacity(model.settingsOrigin == nil ? 0 : 1)
-        .accessibilityHidden(model.settingsOrigin == nil)
-        .animation(.snappy, value: model.settingsOrigin)
     }
 
     /// Empty shows the default (the sample's name or the date) as the prompt, and the
@@ -703,11 +599,10 @@ struct TemplatePreviewView: View {
 
     /// Start Painting works from the first draft on screen, while the settings are still being
     /// chosen and the painting made: tapped before the painting is final, it says Preparing… and
-    /// starts by itself once it is (`CreateModel.askForStart`, `startsNow`), as Refine's button
-    /// opens Refine. The free paintings are asked at the tap, so the unlock sheet comes then, never
-    /// later on a screen the painter stopped watching. Meanwhile the flow stays live: a changed
-    /// setting (a touch, VoiceOver's adjust or a key), Reset to Suggested, Refine, a failed
-    /// generation or the preview going calls the start off, and Close and Back leave.
+    /// starts by itself once it is (`CreateModel.askForStart`, `startsNow`). The free paintings are
+    /// asked at the tap, so the unlock sheet comes then, never later on a screen the painter stopped
+    /// watching. Meanwhile the flow stays live: a changed setting (a touch, VoiceOver's adjust or a
+    /// key), a failed generation or the preview going calls the start off, and Close and Back leave.
     /// In SideStore and Debug builds only for now (`UNRELEASED`, until a Lamplit Table round and
     /// Paul choose it for the release): the first-five-minutes walk, October 23 ("Choosing
     /// settings…" takes tens of seconds on a phone, with Start off); Paul: "let's build them all".
@@ -764,51 +659,104 @@ struct TemplatePreviewView: View {
             // the dismissal can't save the painting again.
         }
     }
+}
 
-    /// Which of `count` equal steps of 0…1 `value` falls in.
-    private static func step(_ value: Double, of count: Int) -> Int {
-        min(count - 1, max(0, Int(value * Double(count))))
-    }
+/// One of the recipe's choices: its name, a menu of its options, and a line on what they do.
+private struct ChoiceRow<Content: View>: View {
+    let title: LocalizedStringKey
+    let caption: LocalizedStringKey
+    @ViewBuilder var picker: Content
 
-    private static func detailWord(_ value: Double) -> String {
-        switch step(value, of: 4) {
-        case 0: String(localized: "create.detail.simple", defaultValue: "Simple",
-                       comment: "Detail slider value: the fewest, largest areas")
-        case 1: String(localized: "create.detail.moderate", defaultValue: "Moderate",
-                       comment: "Detail slider value: second step")
-        case 2: String(localized: "create.detail.detailed", defaultValue: "Detailed",
-                       comment: "Detail slider value: third step")
-        default: String(localized: "create.detail.intricate", defaultValue: "Intricate",
-                        comment: "Detail slider value: the most, smallest areas")
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                picker
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .accessibilityLabel(Text(title))
+            }
+            Text(caption)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
+}
 
-    private static func linesWord(_ value: Double) -> String {
-        switch step(value, of: 5) {
-        case 0: String(localized: "create.lines.fewest", defaultValue: "Fewest",
-                       comment: "Lines slider value: only the strongest edges are drawn")
-        case 1: String(localized: "create.lines.fewer", defaultValue: "Fewer",
-                       comment: "Lines slider value: second step")
-        case 2: String(localized: "create.lines.balanced", defaultValue: "Balanced",
-                       comment: "Lines slider value: the middle, the lines as a painting is drawn by default")
-        case 3: String(localized: "create.lines.more", defaultValue: "More",
-                       comment: "Lines slider value: fourth step")
-        default: String(localized: "create.lines.most", defaultValue: "Most",
-                        comment: "Lines slider value: the faintest edges drawn too")
-        }
+/// The photo with the panel over it, as v0 framed a mosaic (`App/v0/Framing.swift`): drag to move
+/// the panel; outside it, the photo dims. VoiceOver moves it a tenth at a time.
+private struct PanelFramingView: View {
+    let image: CGImage
+    let panel: MosaicEngine.Panel
+    @Binding var centre: SIMD2<Double>
+    @State private var start: SIMD2<Double>?
+
+    var body: some View {
+        Image(decorative: image, scale: 1)
+            .resizable()
+            .scaledToFit()
+            .overlay {
+                GeometryReader { g in
+                    let unit = rect(centre)
+                    let r = CGRect(x: unit.x * g.size.width, y: unit.y * g.size.height,
+                                   width: unit.width * g.size.width, height: unit.height * g.size.height)
+                    Path { p in p.addRect(CGRect(origin: .zero, size: g.size)); p.addRect(r) }
+                        .fill(Color.black.opacity(0.55), style: FillStyle(eoFill: true))
+                    Rectangle()
+                        .stroke(Theme.gold, lineWidth: 2)
+                        .frame(width: r.width, height: r.height)
+                        .position(x: r.midX, y: r.midY)
+                    Color.clear.contentShape(.rect)
+                        .gesture(DragGesture(minimumDistance: 0).onChanged { v in
+                            let from = start ?? SIMD2(unit.x + unit.width / 2, unit.y + unit.height / 2)
+                            start = from
+                            centre = clamped(from + SIMD2(Double(v.translation.width / max(g.size.width, 1)),
+                                                          Double(v.translation.height / max(g.size.height, 1))))
+                        }.onEnded { _ in start = nil })
+                }
+            }
+            .accessibilityElement()
+            .accessibilityLabel(Text("Your photo"))
+            .accessibilityValue(Text(place))
+            .accessibilityActions {
+                Button("Move Left") { nudge(-0.1, 0) }
+                Button("Move Right") { nudge(0.1, 0) }
+                Button("Move Up") { nudge(0, -0.1) }
+                Button("Move Down") { nudge(0, 0.1) }
+            }
     }
 
-    private static func smoothnessWord(_ value: Double) -> String {
-        switch step(value, of: 4) {
-        case 0: String(localized: "create.smoothness.crisp", defaultValue: "Crisp",
-                       comment: "Smoothness slider value: sharp, angular outlines")
-        case 1: String(localized: "create.smoothness.clean", defaultValue: "Clean",
-                       comment: "Smoothness slider value: second step")
-        case 2: String(localized: "create.smoothness.smooth", defaultValue: "Smooth",
-                       comment: "Smoothness slider value: third step")
-        default: String(localized: "create.smoothness.flowing", defaultValue: "Flowing",
-                        comment: "Smoothness slider value: soft, flowing outlines")
+    private func rect(_ c: SIMD2<Double>) -> (x: Double, y: Double, width: Double, height: Double) {
+        panel.rect(width: Double(image.width), height: Double(image.height), centre: c)
+    }
+
+    /// Where the panel sits, in words.
+    private var place: String {
+        let unit = rect(centre)
+        let midX = unit.x + unit.width / 2, midY = unit.y + unit.height / 2
+        if unit.width >= 0.999 {
+            if unit.height >= 0.999 { return String(localized: "create.panel.place.all", defaultValue: "All of it", comment: "VoiceOver value of the panel's photo when the panel covers all of it") }
+            return midY < 0.4 ? String(localized: "create.panel.place.top", defaultValue: "Top", comment: "VoiceOver value of the panel's photo: the panel is at the top")
+                : midY > 0.6 ? String(localized: "create.panel.place.bottom", defaultValue: "Bottom", comment: "VoiceOver value of the panel's photo: the panel is at the bottom")
+                : String(localized: "create.panel.place.middle", defaultValue: "Middle", comment: "VoiceOver value of the panel's photo: the panel is in the middle")
         }
+        return midX < 0.4 ? String(localized: "create.panel.place.left", defaultValue: "Left", comment: "VoiceOver value of the panel's photo: the panel is at the left")
+            : midX > 0.6 ? String(localized: "create.panel.place.right", defaultValue: "Right", comment: "VoiceOver value of the panel's photo: the panel is at the right")
+            : String(localized: "create.panel.place.centre", defaultValue: "Centre", comment: "VoiceOver value of the panel's photo: the panel is in the centre")
+    }
+
+    private func nudge(_ dx: Double, _ dy: Double) {
+        let unit = rect(centre)
+        centre = clamped(SIMD2(unit.x + unit.width / 2 + dx, unit.y + unit.height / 2 + dy))
+    }
+
+    /// The centre, kept where the panel stays on the photo.
+    private func clamped(_ c: SIMD2<Double>) -> SIMD2<Double> {
+        let unit = rect(c)
+        return SIMD2(unit.x + unit.width / 2, unit.y + unit.height / 2)
     }
 }
 

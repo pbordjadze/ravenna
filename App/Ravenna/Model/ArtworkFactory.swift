@@ -1,9 +1,15 @@
 import CoreGraphics
 import Foundation
+import MosaicEngine
+import MosaicKit
 import PaintCore
 import os
 
 /// Turns photos into ready-to-save artwork drafts, off the main actor.
+///
+/// Ravenna's seam: templates are mosaics, made by Ravenna's engine (`MosaicMaker`) from the photo
+/// and the painter's recipe, where Paint by Moonlight's generator made them from its settings and
+/// refinements.
 nonisolated enum ArtworkFactory {
     enum FactoryError: Error, Equatable {
         case missingSample
@@ -11,113 +17,73 @@ nonisolated enum ArtworkFactory {
         case sourceUnavailable
     }
 
+    /// A painting of a library picture, as the create flow makes it with `recipe`.
     @concurrent
     static func draft(
-        sample: Sample, settings: GenerationSettings = GenerationSettings(),
+        sample: Sample, recipe: MosaicEngine.Recipe = MosaicEngine.Recipe(),
         paintedFraction: Double? = nil, date: Date = .now,
         photoMaxPixelSize: Int = ArtworkStore.sourceMaxPixelSize
     ) async throws -> ArtworkDraft {
         guard let url = sample.url else { throw FactoryError.missingSample }
         let photo = try PhotoLoader.load(url: url, maxPixelSize: photoMaxPixelSize)
-        let image = PhotoLoader.cgImage(from: photo)
-        #if DEBUG
-        let cached = DemoTemplateCache.url(sample: sample.id, photoMaxPixelSize: photoMaxPixelSize, settings: settings)
-        let template: Template
-        if let cached, let kept = DemoTemplateCache.template(at: cached) {
-            template = kept
-        } else {
-            template = try await self.template(from: photo, image: image, settings: settings, progress: nil)
-            if let cached { DemoTemplateCache.store(template, at: cached) }
-        }
-        #else
-        let template = try await self.template(from: photo, image: image, settings: settings, progress: nil)
-        #endif
+        guard let image = PhotoLoader.cgImage(from: photo) else { throw FactoryError.missingSample }
+        let made = try await self.made(from: image, recipe: recipe, sampleName: sample.id, progress: nil)
         var progress: PaintProgress?
         if let paintedFraction {
-            var painted = self.progress(painting: paintedFraction, of: template)
+            var painted = self.progress(painting: paintedFraction, of: made.template)
             // Plausible painting time for a demo in progress.
             painted.activeSeconds = Double(painted.paintedCount) * 3
             progress = painted
         }
         return ArtworkDraft(
-            title: sample.title, template: template, settings: settings, photo: image,
-            sampleName: sample.id, progress: progress, date: date)
+            title: sample.title, template: made.template, settings: GenerationSettings(),
+            photo: MosaicMaker.framed(image, panel: recipe.panel, centre: recipe.centre),
+            sampleName: sample.id, progress: progress, date: date, mosaic: made.mosaic, recipe: recipe)
     }
 
-    /// The template of `photo`, generated the way the create flow does it: subject importance
-    /// from Vision (when available) guides colors and detail, and line art (the coloring book by
-    /// default) draws from the photo's `LineArtInputs`: the drawing, the contours, the eyes and
-    /// the subjects. The painter's `refinements` come with it: the generator's inputs shape the
-    /// template (a blank start makes none: `blank`), and the edits are laid on it in order
-    /// (`laying`). Polls task cancellation.
+    /// The mosaic of `photo` (the whole photo, which the recipe's panel cuts) and its template, as
+    /// the create flow makes them: a library picture's bundled mosaic where it stands for the
+    /// recipe (`MosaicMaker.bundled`), else the engine's. Polls task cancellation.
     @concurrent
-    static func template(
-        from photo: RGBAImage, settings: GenerationSettings, refinements: TemplateRefinements = TemplateRefinements(),
-        progress: (@Sendable (Float) -> Void)?
-    ) async throws -> Template {
-        try await template(
-            from: photo, image: PhotoLoader.cgImage(from: photo), settings: settings, refinements: refinements, progress: progress)
-    }
-
-    @concurrent
-    private static func template(
-        from photo: RGBAImage, image: CGImage?, settings: GenerationSettings,
-        refinements: TemplateRefinements = TemplateRefinements(), progress: (@Sendable (Float) -> Void)?
-    ) async throws -> Template {
-        // The photo as one area needs neither Vision nor the line-art models.
-        if refinements.start == .blank {
-            return try laying(refinements.edits, on: blank(from: photo, settings: settings))
+    static func made(
+        from photo: CGImage, recipe: MosaicEngine.Recipe, sampleName: String?, progress: (@Sendable (Double) -> Void)?
+    ) async throws -> MosaicMaker.Made {
+        let mosaic: Mosaic
+        if let bundled = MosaicMaker.bundled(sampleName, recipe: recipe) {
+            mosaic = bundled
+        } else {
+            let framed = MosaicMaker.framed(photo, panel: recipe.panel, centre: recipe.centre)
+            let analysis = try await MosaicMaker.analyze(framed)
+            mosaic = try MosaicMaker.make(framed, analysis: analysis, recipe: recipe, side: recipe.longSide,
+                                          progress: { progress?($0) })
         }
-        // Side by side, so the line art's eyes and subjects share importance's pass of Vision
-        // (`SubjectVision`).
-        async let importance = Self.importance(of: image)
-        // Computed for this one template: the photo needn't take a place in the cache.
-        let lineArt = try await LineArtInputs.forGeneration(of: image, settings: settings.lineArt, cached: false)
-        let inputs = refinements.refining(
-            importance: await importance, lineArt: lineArt, aspect: Float(photo.width) / Float(max(photo.height, 1)))
-        let base = try TemplateGenerator(settings: settings)
-            .generate(from: photo, importance: inputs.importance, lineArt: inputs.lineArt, cancel: .task, progress: progress)
-            .template
-        return try laying(refinements.edits, on: base)
+        try Task.checkCancellation()
+        return MosaicMaker.Made(mosaic: mosaic, template: try MosaicMaker.template(of: mosaic))
     }
 
-    private static func importance(of image: CGImage?) async -> PaintCore.Grid<Float>? {
-        guard let image else { return nil }
-        return await SubjectImportance.map(for: image)
-    }
-
-    /// The base of a blank start (`TemplateRefinements.Start.blank`): `photo`, the image the
-    /// generator would read, as one area (`TemplateEditor.blank`) on the canvas the generator
-    /// would make of it for `settings` (`GenerationSettings.workingSize`), in its color space. A
-    /// canvas the editor can't take throws, as a failed generation does.
-    static func blank(from photo: RGBAImage, settings: GenerationSettings) throws -> Template {
-        let size = settings.workingSize(sourceWidth: photo.width, sourceHeight: photo.height)
-        return try TemplateEditor.blank(width: size.width, height: size.height, photo: photo, colorSpace: photo.colorSpace)
-    }
-
-    /// `base` with the painter's edits laid on it, in order, exactly as the create flow shows
-    /// them (`EditTrail`): the same base and edits give the same template. An edit that doesn't
-    /// fit the base is left out (and logged), as it is on screen.
-    static func laying(_ edits: [TemplateEditor.Edit], on base: Template) throws -> Template {
-        guard !edits.isEmpty else { return base }
-        var trail = EditTrail(base: base)
-        let replay = try trail.move(to: edits, cancel: .task)
-        if replay.left > 0 { Log.library.info("\(replay.left) of the painting's edits no longer fit it") }
-        return trail.template
-    }
-
-    /// The photo an artwork was made from, as the create flow loaded it: the stored
-    /// `source.jpg`, else the library picture it came from while the library still offers it
-    /// (`Sample.named`).
-    static func sourcePhoto(of artwork: Artwork, in store: ArtworkStore) throws -> RGBAImage {
+    /// What an artwork's mosaic is made again from: the photo the create flow kept, the stored
+    /// `source.jpg` (already cut to its panel, so laid whole, and never as a bundled mosaic of the
+    /// whole picture), else the library picture it came from while the library still offers it
+    /// (`Sample.named`), with the artwork's recipe; and the library picture whose bundled mosaic
+    /// may stand for it.
+    static func source(of artwork: Artwork, in store: ArtworkStore) throws
+        -> (photo: CGImage, recipe: MosaicEngine.Recipe, sampleName: String?) {
+        var recipe = artwork.recipe ?? MosaicEngine.Recipe()
         if store.hasSource(artwork.id) {
-            return try PhotoLoader.load(url: store.url(.source, of: artwork.id), maxPixelSize: ArtworkStore.sourceMaxPixelSize)
+            let photo = try PhotoLoader.load(url: store.url(.source, of: artwork.id), maxPixelSize: ArtworkStore.sourceMaxPixelSize)
+            guard let image = PhotoLoader.cgImage(from: photo) else { throw FactoryError.sourceUnavailable }
+            guard recipe.panel != .whole else { return (image, recipe, artwork.sampleName) }
+            recipe.panel = .whole
+            recipe.centre = SIMD2(0.5, 0.5)
+            return (image, recipe, nil)
         }
         guard let url = sampleURL(of: artwork) else { throw FactoryError.sourceUnavailable }
-        return try PhotoLoader.load(url: url, maxPixelSize: ArtworkStore.sourceMaxPixelSize)
+        let photo = try PhotoLoader.load(url: url, maxPixelSize: ArtworkStore.sourceMaxPixelSize)
+        guard let image = PhotoLoader.cgImage(from: photo) else { throw FactoryError.sourceUnavailable }
+        return (image, recipe, artwork.sampleName)
     }
 
-    /// Whether `sourcePhoto(of:in:)` has a photo to regenerate the artwork from.
+    /// Whether `source(of:in:)` has a photo to regenerate the artwork from.
     static func canRegenerate(_ artwork: Artwork, store: ArtworkStore) -> Bool {
         store.hasSource(artwork.id) || sampleURL(of: artwork) != nil
     }

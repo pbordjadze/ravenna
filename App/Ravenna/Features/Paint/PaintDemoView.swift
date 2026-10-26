@@ -128,9 +128,9 @@ struct PaintDemoView: View {
         return output.template.mesh.indices.isEmpty ? nil : output.template
     }
 
-    /// The photo's coloring book from the real pipeline: from the real detector
-    /// (`LineArtInputs.compute`), or the stand-in map (`SyntheticTemplate.edgeMap`) when the model
-    /// is unavailable.
+    /// The photo's coloring book from the real pipeline: from the real detector (HED alone, the
+    /// one model Ravenna ships: `EdgeDetector.edgeMap`), or the stand-in map
+    /// (`SyntheticTemplate.edgeMap`) when the model is unavailable.
     @concurrent
     private static func bookTemplate(photo: String) async -> Template? {
         guard let url = Bundle.main.url(forResource: photo, withExtension: "jpg"),
@@ -139,7 +139,7 @@ struct PaintDemoView: View {
         else { return nil }
         var input: LineArtInput?
         if let cgImage = PhotoLoader.cgImage(from: image) {
-            input = try? await LineArtInputs.compute(for: cgImage)
+            input = (try? EdgeDetector.edgeMap(for: cgImage)).map { LineArtInput(edges: $0) }
             Log.demo.notice("demo \(photo, privacy: .public): edge detector \(input == nil ? "unavailable, using the stand-in map" : "ran", privacy: .public)")
         }
         guard let output = try? TemplateGenerator()

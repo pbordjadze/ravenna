@@ -225,11 +225,11 @@ struct ArtworkPaintingView: View {
     }
 
     private func regenerate() {
-        guard let artwork, regeneration == nil else { return }
+        guard artwork != nil, regeneration == nil else { return }
         regenerationFailed = false
         regeneration = Task {
             do {
-                let document = try await library.regenerate(artwork: artworkID, settings: artwork.settings)
+                let document = try await library.regenerate(artwork: artworkID)
                 _ = await RenderContext.ready()
                 await present(document)
             } catch is CancellationError {

@@ -69,3 +69,20 @@ struct MosaicKitTests {
         }
     }
 }
+
+@Suite("v0's settings carried over")
+struct CarryOverTests {
+    @Test func setTilesAreRegionsAndAFinishedWallPaintsItsGrout() {
+        #expect(Setting(set: [3, 0, 9, -1]).paintedRegions(tileCount: 5) == [0, 3])
+        #expect(Setting(set: [0, 1, 2]).paintedRegions(tileCount: 3) == [0, 1, 2, 3])
+        #expect(Setting().paintedRegions(tileCount: 0) == [])
+    }
+
+    @Test func v0FileNamesNameTheirWork() {
+        #expect(Setting.v0Work(key: "own-1234")! == ("own-1234", nil))
+        #expect(Setting.v0Work(key: "young-woman-in-red-standard")! == ("young-woman-in-red", .standard))
+        #expect(Setting.v0Work(key: "william-more")! == ("william", .more))
+        #expect(Setting.v0Work(key: "-fewer") == nil)
+        #expect(Setting.v0Work(key: "notes") == nil)
+    }
+}

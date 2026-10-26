@@ -9,12 +9,36 @@
       "comment" : "Title of the tip in the gallery’s Ready to Paint section, shown on the first visit, once the starter pages are in view",
       "extractionState" : "manual"
     },
+    "A scene a step" : {
+      "comment" : "Making-of options: the build in scenes, a card each",
+      "extractionState" : "manual"
+    },
     "About" : {
       "comment" : "Header of the About section in Settings",
       "extractionState" : "manual"
     },
     "Acknowledgements" : {
       "comment" : "Settings row, and the title of the screen it opens, crediting the sample pictures, artwork, and the code, models and methods behind the template engine",
+      "extractionState" : "manual"
+    },
+    "After Start Painting, watch your mosaic set the way the old workshops set one, each step's technique named. It takes under a minute, and a tap skips it." : {
+      "comment" : "Footer of Settings › The Making-of (on by default)",
+      "extractionState" : "manual"
+    },
+    "All of the photo is laid." : {
+      "comment" : "Create preview: the line under the Panel choice when it is Whole",
+      "extractionState" : "manual"
+    },
+    "As in the photo" : {
+      "comment" : "Mouth choice: the mouth laid as the photo has it",
+      "extractionState" : "manual"
+    },
+    "As in the picture" : {
+      "comment" : "Ground choice: the picture's background laid as it is",
+      "extractionState" : "manual"
+    },
+    "As they look" : {
+      "comment" : "Eyes choice: irises mixed brighter, as an eye catches the light",
       "extractionState" : "manual"
     },
     "Bend Line" : {
@@ -31,6 +55,10 @@
     },
     "Bucket" : {
       "comment" : "Refine screen: the paint bucket tool, whose tap gives an area the current paint; its name in the tool rail and its VoiceOver label",
+      "extractionState" : "manual"
+    },
+    "Byzantine" : {
+      "comment" : "Mouth choice: the mouth set small and closed, as Byzantine faces were",
       "extractionState" : "manual"
     },
     "Cell Edge" : {
@@ -53,6 +81,102 @@
       "comment" : "Refine screen, the Pen's options: a switch; when on, the parts of an area a drawn line divides take the photo's colors there",
       "extractionState" : "manual"
     },
+    "create.panel.place.all" : {
+      "comment" : "VoiceOver value of the panel's photo when the panel covers all of it",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All of it"
+          }
+        }
+      }
+    },
+    "create.panel.place.bottom" : {
+      "comment" : "VoiceOver value of the panel's photo: the panel is at the bottom",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bottom"
+          }
+        }
+      }
+    },
+    "create.panel.place.centre" : {
+      "comment" : "VoiceOver value of the panel's photo: the panel is in the centre",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Centre"
+          }
+        }
+      }
+    },
+    "create.panel.place.left" : {
+      "comment" : "VoiceOver value of the panel's photo: the panel is at the left",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Left"
+          }
+        }
+      }
+    },
+    "create.panel.place.middle" : {
+      "comment" : "VoiceOver value of the panel's photo: the panel is in the middle",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Middle"
+          }
+        }
+      }
+    },
+    "create.panel.place.right" : {
+      "comment" : "VoiceOver value of the panel's photo: the panel is at the right",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Right"
+          }
+        }
+      }
+    },
+    "create.panel.place.top" : {
+      "comment" : "VoiceOver value of the panel's photo: the panel is at the top",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Top"
+          }
+        }
+      }
+    },
+    "create.pieces.multiple" : {
+      "comment" : "Pieces slider value: how many times the standard number of tiles, 0.5 to 3.0 (the number already formatted)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@×"
+          }
+        }
+      }
+    },
     "Draw Your Own Lines" : {
       "comment" : "Title of the gentle tip in Refine, at the Pen, said once when Refine first opens: how its canvas takes drawing",
       "extractionState" : "manual"
@@ -69,37 +193,109 @@
       "comment" : "Refine screen: the tool whose tap picks an area's paint, or the photo's color, as the current paint; its name in the tool rail and its VoiceOver label",
       "extractionState" : "manual"
     },
+    "Eyes" : {
+      "comment" : "Create preview: the choice of how a face's eyes are coloured",
+      "extractionState" : "manual"
+    },
+    "Face" : {
+      "comment" : "Create preview: the segment showing the Eyes and Mouth choices",
+      "extractionState" : "manual"
+    },
     "Fill Shape" : {
       "comment" : "Refine screen: the tool whose tap makes a closed shape of the drawing an area of its own; its name in the tool rail and its VoiceOver label",
+      "extractionState" : "manual"
+    },
+    "Finish" : {
+      "comment" : "Create preview: the choice of how set tiles look",
+      "extractionState" : "manual"
+    },
+    "Flat, light grout" : {
+      "comment" : "Finish choice: flat tiles on light grout of one colour",
       "extractionState" : "manual"
     },
     "Generated" : {
       "comment" : "Refine screen, Start From: the template the app made from the photo (the default)",
       "extractionState" : "manual"
     },
+    "Glass and stone" : {
+      "comment" : "Finish choice: glass tiles with lit edges, the face in matte stone, gold tilting",
+      "extractionState" : "manual"
+    },
     "Goes Well With" : {
       "comment" : "Tool Guide: heading of a page's buttons to the pages of tools that go with this one",
+      "extractionState" : "manual"
+    },
+    "Gold" : {
+      "comment" : "Ground choice: the picture's background laid in gold smalti",
+      "extractionState" : "manual"
+    },
+    "Gold lays the picture’s background in gold smalti, as behind the figures at Ravenna." : {
+      "comment" : "Create preview: the line under the Ground choice",
       "extractionState" : "manual"
     },
     "Good to Know" : {
       "comment" : "Tool Guide: heading of a page's notes",
       "extractionState" : "manual"
     },
+    "Ground" : {
+      "comment" : "Create preview: the choice of the picture's background as it is, or laid in gold",
+      "extractionState" : "manual"
+    },
     "Hexagon" : {
       "comment" : "Refine screen, Shapes: the figure a drag draws as a six-sided shape",
+      "extractionState" : "manual"
+    },
+    "How set tiles look. Painted bed: the joints take the colour of the tiles round them. Glass and stone: glass catches the light at its edges, faces are matte stone." : {
+      "comment" : "Create preview: the line under the Finish choice",
       "extractionState" : "manual"
     },
     "How to Use It" : {
       "comment" : "Tool Guide: heading of a page's numbered steps",
       "extractionState" : "manual"
     },
+    "Indigo, as at Hagia Sophia" : {
+      "comment" : "Making-of options: the drawing in indigo",
+      "extractionState" : "manual"
+    },
     "Ink" : {
       "comment" : "Refine screen: the group of tools that draw and erase the lines the painter sees (Pen, Shapes, Eraser, Line Eraser); a section of the tool rail on iPad, a tab above the tools on iPhone",
+      "extractionState" : "manual"
+    },
+    "Kept as the photo has it, or set small and closed, as Byzantine faces were." : {
+      "comment" : "Create preview: the line under the Mouth choice",
       "extractionState" : "manual"
     },
     "Line Eraser" : {
       "comment" : "Refine screen: the tool that rubs lines out, or takes a whole line out with a tap; its name in the tool rail and its VoiceOver label",
       "extractionState" : "manual"
+    },
+    "Look" : {
+      "comment" : "Create preview: the segment showing the Finish and Ground choices",
+      "extractionState" : "manual"
+    },
+    "makingOf.model.credit" : {
+      "comment" : "The making-of's first card, under the picture's title: who made the library picture, when, and its collection; the arguments are library.json's creator, year and credit, shown as written",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$@. %3$@"
+          }
+        }
+      }
+    },
+    "makingOf.model.ownPhoto" : {
+      "comment" : "The making-of's first card, under the painting's title, when it was made from the painter's own photo",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your photo, which stays on this device."
+          }
+        }
+      }
     },
     "Merge" : {
       "comment" : "Refine screen: the tool that joins the areas a drag crosses into one; its name in the tool rail and its VoiceOver label",
@@ -109,12 +305,48 @@
       "comment" : "Refine screen, Edit Paint: VoiceOver action on a paint's swatch that merges that paint into the current one (its areas take the current paint and it leaves the palette)",
       "extractionState" : "manual"
     },
+    "Mixed brighter, as an eye catches the light, or kept as the photo has them." : {
+      "comment" : "Create preview: the line under the Eyes choice",
+      "extractionState" : "manual"
+    },
+    "Mosaic" : {
+      "comment" : "Label of the create preview's comparison over the mosaic's side (the photo's side says Photo)",
+      "extractionState" : "manual"
+    },
+    "Mouth" : {
+      "comment" : "Create preview: the choice of how a face's mouth is set",
+      "extractionState" : "manual"
+    },
+    "Move Down" : {
+      "comment" : "VoiceOver action moving the panel over the photo a tenth down",
+      "extractionState" : "manual"
+    },
     "Move Edge" : {
       "comment" : "Refine screen: the tool that drags the boundary between two areas to change their shapes; its name in the tool rail and its VoiceOver label",
       "extractionState" : "manual"
     },
+    "Move Left" : {
+      "comment" : "VoiceOver action moving the panel over the photo a tenth to the left",
+      "extractionState" : "manual"
+    },
     "Move Number" : {
       "comment" : "Refine screen: the tool that drags an area's number to another spot in the area; its name in the tool rail and its VoiceOver label",
+      "extractionState" : "manual"
+    },
+    "Move Panel" : {
+      "comment" : "Create preview: button opening the sheet where the panel is dragged over the photo",
+      "extractionState" : "manual"
+    },
+    "Move Right" : {
+      "comment" : "VoiceOver action moving the panel over the photo a tenth to the right",
+      "extractionState" : "manual"
+    },
+    "Move the panel over the part to lay." : {
+      "comment" : "Create preview: the line under the Panel choice when a panel is chosen",
+      "extractionState" : "manual"
+    },
+    "Move Up" : {
+      "comment" : "VoiceOver action moving the panel over the photo a tenth up",
       "extractionState" : "manual"
     },
     "New Paint" : {
@@ -125,8 +357,16 @@
       "comment" : "Refine screen: the group of tools about the areas' numbers (Move Number); a section of the tool rail on iPad, a tab above the tools on iPhone",
       "extractionState" : "manual"
     },
+    "One continuous build" : {
+      "comment" : "Making-of options: one build that quickens, its cards following the stage being set",
+      "extractionState" : "manual"
+    },
     "Only This Area" : {
       "comment" : "Refine screen, an area's card (a long press on an area): the label of the color picker that gives the pressed area a paint of its own, while the other areas of its paint keep theirs",
+      "extractionState" : "manual"
+    },
+    "Options" : {
+      "comment" : "Menu over the making-of show (its VoiceOver label) with the show's choices: the drawing's colour, the build, the setter's hand",
       "extractionState" : "manual"
     },
     "Or Use a Paint" : {
@@ -137,6 +377,14 @@
       "comment" : "Refine screen: the tool that paints the current paint where it is dragged, making or growing areas; its name in the tool rail and its VoiceOver label",
       "extractionState" : "manual"
     },
+    "Painted bed" : {
+      "comment" : "Finish choice: flat tiles on a bed painted in the colours round them",
+      "extractionState" : "manual"
+    },
+    "Panel" : {
+      "comment" : "Create preview: the segment, its heading and the sheet's title for how much of the photo is laid (the whole photo or a panel of it)",
+      "extractionState" : "manual"
+    },
     "Photo Behind" : {
       "comment" : "Refine screen: what shows beneath the drawing, one of Painting, Paper, Photo and Photo Behind (the photo with the painting faint over it, for tracing); a slider sets how faint",
       "extractionState" : "manual"
@@ -145,8 +393,16 @@
       "comment" : "Refine screen, Edit Paint: shown in place of the color picker before a paint is picked",
       "extractionState" : "manual"
     },
+    "Pieces" : {
+      "comment" : "Create preview: the segment and the slider of how many tiles the mosaic is laid in",
+      "extractionState" : "manual"
+    },
     "Practice" : {
       "comment" : "Tool Guide: VoiceOver label of a page's practice canvas, where the tool can be tried on a practice picture",
+      "extractionState" : "manual"
+    },
+    "Red earth, as at Ravenna" : {
+      "comment" : "Making-of options: the drawing in red earth (sinopia)",
       "extractionState" : "manual"
     },
     "refine.areaMade" : {
@@ -4621,6 +4877,10 @@
       "comment" : "Refine screen, a drawing tool's options: a switch; when on, a drawn line's end moves onto a line its ink touches",
       "extractionState" : "manual"
     },
+    "Square" : {
+      "comment" : "Panel choice: a square panel of the photo",
+      "extractionState" : "manual"
+    },
     "Star" : {
       "comment" : "Refine screen, Shapes: the figure a drag draws as a five-pointed star",
       "extractionState" : "manual"
@@ -4661,6 +4921,14 @@
       "comment" : "Tool Guide: the first page's name, how a picture is made (ink, cells, paint) and how to move around it",
       "extractionState" : "manual"
     },
+    "The Build" : {
+      "comment" : "Making-of options: the choice of how the tiles are set, scene by scene or in one build",
+      "extractionState" : "manual"
+    },
+    "The Drawing" : {
+      "comment" : "Making-of options: the choice of the colour the design is drawn on the bed in",
+      "extractionState" : "manual"
+    },
     "The gear holds paper tone, sound and painting length. Tips can be turned off there." : {
       "comment" : "Message of the tip titled Settings and Tips; the gear is the gallery’s Settings button",
       "extractionState" : "manual"
@@ -4693,8 +4961,16 @@
       "comment" : "Message of the tip titled Paint with Apple Pencil; the page is the painting being painted",
       "extractionState" : "manual"
     },
+    "The photo’s colours" : {
+      "comment" : "Eyes choice: irises kept in the photo's own colours",
+      "extractionState" : "manual"
+    },
     "The Practice Picture Didn’t Open" : {
       "comment" : "Tool Guide: shown in place of a page's practice canvas when its picture couldn't be made",
+      "extractionState" : "manual"
+    },
+    "The Setter’s Hand" : {
+      "comment" : "Making-of options: switch showing the setter's hand pressing each tile home",
       "extractionState" : "manual"
     },
     "These settings were picked for this photo. You can just tap Start Painting." : {
@@ -4735,6 +5011,10 @@
     },
     "Try This" : {
       "comment" : "Tool Guide: heading of a page's suggestion of something to do on the practice picture",
+      "extractionState" : "manual"
+    },
+    "Upright" : {
+      "comment" : "Panel choice: an upright panel (4:5) of the photo",
       "extractionState" : "manual"
     },
     "Views" : {
@@ -6969,6 +7249,14 @@
       "comment" : "Title of the sheet that sells Unlimited Paintings, the app's one purchase (paid once: as many paintings of the painter's own photos as they like), and the Settings row that opens it or says it is unlocked",
       "extractionState" : "manual"
     },
+    "Whole" : {
+      "comment" : "Panel choice: all of the photo is laid",
+      "extractionState" : "manual"
+    },
+    "Wide" : {
+      "comment" : "Panel choice: a wide panel (3:2) of the photo",
+      "extractionState" : "manual"
+    },
     "Your next free painting comes tomorrow. One purchase unlocks as many paintings of your own photos as you like." : {
       "comment" : "The Unlimited Paintings sheet's message when Start Painting found no free painting left for a painting of the painter's own photo (one free painting comes back each day)",
       "extractionState" : "manual"
@@ -7163,6 +7451,10 @@
     },
     "Your painting with your marks" : {
       "comment" : "Feedback's review sheet: VoiceOver label of the picture of the painting with the marks drawn on it",
+      "extractionState" : "manual"
+    },
+    "Your photo" : {
+      "comment" : "VoiceOver label of the photo in the panel's sheet, where the panel is dragged",
       "extractionState" : "manual"
     },
     "Your Photos" : {

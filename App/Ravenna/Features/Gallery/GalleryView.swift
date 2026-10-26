@@ -12,8 +12,6 @@ struct GalleryView: View {
     /// The painting Send Template… is sending; the app shell presents its sheet.
     @Binding var sending: Artwork?
     var onCreate: () -> Void
-    /// The painter chose to continue refining the create flow's draft.
-    var onContinueDraft: (Drafts.Opened) -> Void
     /// Whether a rename, restart or delete question (or the restart's failure) is up; set false
     /// by the shell to close it, as a photo shared in from another app does.
     @Binding var isAsking: Bool
@@ -27,7 +25,6 @@ struct GalleryView: View {
     @State private var restarting: Artwork?
     @State private var deleting: Artwork?
     @State private var restartFailed = false
-    @State private var isOpeningDraft = false
     /// The top of the pages is in view, where the bar's tips lie.
     @State private var showsTop = true
 
@@ -41,15 +38,6 @@ struct GalleryView: View {
                         GentleTipView(id: tip)
                             .transition(.opacity)
                     }
-                    #if UNRELEASED
-                    if let draft = shownDraft {
-                        DraftRow(
-                            draft: draft, photo: library.drafts.store.url(.source), isCompact: width < 560,
-                            isOpening: isOpeningDraft, onContinue: continueDraft, onDiscard: { library.drafts.discard() }
-                        )
-                        .transition(.opacity)
-                    }
-                    #endif
                     // A painting nobody has painted on is ready to paint, not in progress.
                     let active = library.inProgress(matching: query)
                     if !active.isEmpty {
@@ -113,7 +101,6 @@ struct GalleryView: View {
         // Deleting, filtering, searching and (un)favoriting all move cards.
         .animation(reduceMotion ? nil : .snappy, value: shownIDs)
         .animation(reduceMotion ? nil : .snappy, value: library.placeholders)
-        .animation(reduceMotion ? nil : .snappy, value: shownDraft?.photoID)
         .animation(.easeInOut(duration: 0.35), value: isBare)
         .alert("This painting can’t be restarted.", isPresented: $restartFailed) {}
         // A photo shared in from another app can't present over a question: the shell closes it.
@@ -154,13 +141,10 @@ struct GalleryView: View {
         (library.inProgress(matching: query) + library.readyToPaint(matching: query) + library.finished(matching: query)).map(\.id)
     }
 
-    /// There are paintings or a draft, but the filter or the search hides every one.
-    private var isNarrowedToNothing: Bool { shownIDs.isEmpty && shownPlaceholders.isEmpty && shownDraft == nil }
+    /// There are paintings, but the filter or the search hides every one.
+    private var isNarrowedToNothing: Bool { shownIDs.isEmpty && shownPlaceholders.isEmpty }
 
-    /// The create flow's draft belongs to no selection either: it shows while nothing is narrowed.
-    private var shownDraft: CreateDraft? { query.isActive ? nil : library.drafts.current }
-
-    /// Nothing to list, not even a draft: the invitation to the first painting shows instead.
+    /// Nothing to list: the invitation to the first painting shows instead.
     private var isBare: Bool { library.isBare }
 
     @ViewBuilder
@@ -267,16 +251,6 @@ struct GalleryView: View {
     private var hasQuestion: Bool { renaming != nil || restarting != nil || deleting != nil || restartFailed }
 
     // MARK: Actions
-
-    /// Reads the draft off the main actor, then opens the create flow on it.
-    private func continueDraft() {
-        guard !isOpeningDraft else { return }
-        isOpeningDraft = true
-        Task {
-            if let opened = await library.drafts.open() { onContinueDraft(opened) }
-            isOpeningDraft = false
-        }
-    }
 
     @ViewBuilder
     private func menu(for artwork: Artwork) -> some View {

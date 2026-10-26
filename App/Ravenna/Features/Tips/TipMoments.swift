@@ -61,11 +61,10 @@ nonisolated enum TipMoments {
 
     /// What the preview may say once its template is final, given whether the divider's tip is
     /// over (Already Chosen for You waits for it) and where the settings came from.
-    static func preview(dividerIsOver: Bool, isSuggested: Bool, canRefine: Bool) -> [TipID] {
+    static func preview(dividerIsOver: Bool, isSuggested: Bool) -> [TipID] {
         var due: [TipID] = [.newPaintingDivider]
         if dividerIsOver, isSuggested { due.append(.newPaintingSuggested) }
         due.append(.newPaintingSliders)
-        if canRefine { due.append(.newPaintingRefine) }
         return due
     }
 }

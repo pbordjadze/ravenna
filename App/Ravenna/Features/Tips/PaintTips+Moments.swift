@@ -1,6 +1,6 @@
 import Foundation
 
-// The moments of the shelf, New Painting, Refine and the drawer at which a tip may speak, and what
+// The moments of the shelf, New Painting and the drawer at which a tip may speak, and what
 // the painter does there that silences one. The bench's are in `PaintChromeState`. A moment hands
 // the tips it may offer to the desk, which finds the first TipKit says is eligible and gives it the
 // turn if the pacing allows; a thing used invalidates its tip (`PaintTips.used`).
@@ -45,11 +45,11 @@ extension PaintTips {
         used(.newPaintingSamples)
     }
 
-    /// The preview's template is final: the divider, the suggestion, what the sliders do, Refine.
-    static func previewFinal(isSuggested: Bool, canRefine: Bool) {
+    /// The preview's template is final: the divider, the suggestion, what the sliders do.
+    static func previewFinal(isSuggested: Bool) {
         var dividerIsOver = false
         if case .over = TipID.newPaintingDivider.progress { dividerIsOver = true }
-        let due = TipMoments.preview(dividerIsOver: dividerIsOver, isSuggested: isSuggested, canRefine: canRefine)
+        let due = TipMoments.preview(dividerIsOver: dividerIsOver, isSuggested: isSuggested)
         desk.offer(due, in: .preview, rest: .milliseconds(1200))
     }
 
@@ -76,35 +76,9 @@ extension PaintTips {
         used(.newPaintingReset)
     }
 
-    static func refineOpened() {
-        used(.newPaintingRefine)
-    }
-
     /// Start Painting made a page.
     static func pageMade() {
         donate(TipEvents.pagesMade, limit: 4)
-    }
-
-    // MARK: Refine
-
-    /// Refine is on screen: how to draw on it is the first thing.
-    static func refineShown() {
-        desk.offer([.refineDraw], in: .refine, rest: .milliseconds(1200))
-    }
-
-    /// Any change made in Refine: the painter has found how to draw.
-    static func refineEdited() {
-        used(.refineDraw)
-    }
-
-    /// A line was drawn: filling a closed shape is the next thing.
-    static func refineLineDrawn() {
-        donate(TipEvents.linesDrawn, limit: 2)
-        desk.offer([.refineFill], in: .refine, rest: .milliseconds(1500))
-    }
-
-    static func refineFilled() {
-        used(.refineFill)
     }
 
     // MARK: The drawer
