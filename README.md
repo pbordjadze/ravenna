@@ -9,6 +9,9 @@ Not announced. Built on Paint by Moonlight's engine
 
 - `docs/brief.md`: what this is, Paul's words and decisions, and the plan.
 - `prototype/`: the Python prototype the engine is ported from.
+- `Sources/MosaicKit`: a mosaic and what's done with it, shared by the engine and the app: tiles,
+  finishes, grounds, the set tiles (`Setting`), a row laid (`Laying`), the tune, and the
+  making-of's plan and cards.
 - `Sources/MosaicCore`: a mosaic as a PaintCore template (`MosaicCore.template(of:)`: a numbered
   area per tile, the grout one more), on PaintCore at a pinned commit, tested on Linux:
   `tools/paintcore.sh && swift test` (the script checks out only that commit of paint-by-number;
@@ -18,9 +21,10 @@ Not announced. Built on Paint by Moonlight's engine
   on a PPM and its contour map, for the bench.
 - `sketchbook/`: how the faces-first rounds are made, and `bundle.py`, which makes the app's mosaics
   with the Swift engine.
-- `App/`: the app (iOS 26, SwiftUI, bundle `com.pbordjadze.ravenna`). v1, in the making (issue
-  #13): Paint by Moonlight's app with Ravenna's engine, making-of and look (`App/CLAUDE.md`); v0's
-  code waits in `App/v0/` until v1 replaces it. Builds on macOS only when asked (`[compile]`) or on
+- `App/`: the app (iOS 26, SwiftUI, bundle `com.pbordjadze.ravenna`): Paint by Moonlight's app
+  with Ravenna's engine, making-of, canvas of tiles and look (issue #13; every change to the copy
+  is listed in `App/CLAUDE.md`). It carries the first app's (v0's) mosaics and settings over at
+  launch; v0's code is in the history. Builds on macOS only when asked (`[compile]`) or on
   `main` when it changed, as an unsigned IPA for SideStore: add
   `https://raw.githubusercontent.com/pbordjadze/ravenna/sidestore/source.json` in SideStore.
 - `CLAUDE.md`: the rules for the agents working here.

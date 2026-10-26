@@ -5,9 +5,9 @@ import MosaicKit
 import os
 import PaintCore
 
-/// Mosaics started in v0 (Ravenna's first app, `App/v0/`, the same bundle identifier and so the
-/// same container), carried into the library once, with their progress (issue #13). v0 kept them
-/// in Application Support (`App/v0/Library.swift`):
+/// Mosaics started in v0 (Ravenna's first app, the same bundle identifier and so the same
+/// container; its code is `App/v0/` in the history, up to 108a3c7), carried into the library once,
+/// with their progress (issue #13). v0 kept them in Application Support (its `Library.swift`):
 ///
 ///     Own/<own-id>/work.json, mosaic.json, photo.jpg   a mosaic of the painter's own photo
 ///     Settings/<own-id>.json                          its tiles set (`Setting`)

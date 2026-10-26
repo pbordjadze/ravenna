@@ -69,6 +69,34 @@ struct Preferences {
         "finishHaptics", "fillSparkles", "finishShine",
     ].map { "paintingEffect." + $0 }
 
+    /// v0's settings v1 carries to its own (`carryV0Settings`) and then retires: its Sound, Touch
+    /// and Tune, its first lesson's step (the tips teach the same: Tap to Set, Lay a Row) and its
+    /// Detail (each mosaic keeps its own pieces now, `MosaicEngine.Recipe`). v0's `ground` goes
+    /// once `V0CarryOver` has recorded it with each carried work. Ravenna's seam.
+    static let retiredV0Keys = ["sound", "touch", "tune", "lesson", "detail"]
+
+    /// Carries v0's Sound, Touch and Tune to Settings' Sounds, Haptics and Music, where the painter
+    /// hasn't set those yet, then removes v0's keys that nothing reads (`retiredV0Keys`, and
+    /// `ground` once v0's works are carried over).
+    static func carryV0Settings(in defaults: UserDefaults = .standard) {
+        if defaults.object(forKey: SettingsKey.sounds) == nil, let sound = defaults.object(forKey: "sound") as? Bool {
+            defaults.set(sound, forKey: SettingsKey.sounds)
+        }
+        if defaults.object(forKey: SettingsKey.haptics) == nil, let touch = defaults.object(forKey: "touch") as? Bool {
+            defaults.set(touch, forKey: SettingsKey.haptics)
+        }
+        // v0's tune was major or minor at every hour: the Sun's and the Moon's.
+        if defaults.object(forKey: SettingsKey.sky) == nil, let tune = defaults.string(forKey: "tune") {
+            switch tune {
+            case "major": defaults.set(SkySetting.sun.rawValue, forKey: SettingsKey.sky)
+            case "minor": defaults.set(SkySetting.moon.rawValue, forKey: SettingsKey.sky)
+            default: break
+            }
+        }
+        for key in retiredV0Keys { defaults.removeObject(forKey: key) }
+        if defaults.bool(forKey: V0CarryOver.doneKey) { defaults.removeObject(forKey: "ground") }
+    }
+
     /// Where the retired Custom palette order kept each painting's arrangement, by its nickname
     /// seed.
     static let retiredCustomOrderPrefix = "paletteOrder.custom."
@@ -91,5 +119,6 @@ struct Preferences {
         for key in defaults.dictionaryRepresentation().keys where key.hasPrefix(retiredCustomOrderPrefix) {
             defaults.removeObject(forKey: key)
         }
+        carryV0Settings(in: defaults)
     }
 }

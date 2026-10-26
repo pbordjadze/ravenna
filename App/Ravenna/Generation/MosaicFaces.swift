@@ -6,7 +6,7 @@ import Vision
 /// The faces in a photo, as Ravenna's engine sets them (`MosaicEngine.Face`), from
 /// `SubjectVision`'s pass: each feature as its own pieces, from Vision's face landmarks, mapped as
 /// the sketchbook's bench maps MediaPipe's (`sketchbook/features.py`) and as v0 did
-/// (`App/v0/Faces.swift`): upper lids and the line where the lips meet as dark rows; brows and the
+/// (its `Faces.swift`): upper lids and the line where the lips meet as dark rows; brows and the
 /// nose's shadow side as rows in their own shadow; lower lids and the lips' outline as rows in their
 /// tone; the eye openings and the lips as areas. Cats' and dogs' faces get a box (finer tiles) and no
 /// features.
