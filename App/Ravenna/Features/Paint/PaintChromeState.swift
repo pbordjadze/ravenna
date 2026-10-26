@@ -44,8 +44,9 @@ final class PaintChromeState {
     /// the selected color has areas left, for where to find one.
     private static let calmPause: Duration = .seconds(20)
     private static let stallPause: Duration = .seconds(60)
-    /// Every this many single fills, Paint Several Areas is looked at.
-    private static let dragCheckEvery = 5
+    /// Every this many single fills, Paint Several Areas is looked at (Ravenna's seam: every 5 in
+    /// Paint by Moonlight, which offers it after 15; Ravenna after 3, `DragPaintTip`).
+    private static let dragCheckEvery = 3
     /// About a quarter of a page.
     private static let quarter = 0.25
 

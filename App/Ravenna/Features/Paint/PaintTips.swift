@@ -52,7 +52,8 @@ nonisolated struct ZoomTip: Tip {
     }
 }
 
-/// After 15 single fills: one stroke paints many areas.
+/// After 3 single fills: one stroke paints many areas. Ravenna's seam: 15 in Paint by Moonlight;
+/// laying a row is Ravenna's own gesture, and v0's first lesson taught it after the first tile.
 nonisolated struct DragPaintTip: Tip {
     var id: String { PaintTips.scoped("tip.dragPaint") }
     var title: Text { Text("Paint Several Areas") }
@@ -60,7 +61,7 @@ nonisolated struct DragPaintTip: Tip {
     var image: Image? { Image(systemName: "hand.draw") }
     var rules: [Tips.Rule] {
         #Rule(TipSwitch.$tipsOn) { $0 == true }
-        #Rule(TipEvents.singleTaps) { $0.donations.count >= 15 }
+        #Rule(TipEvents.singleTaps) { $0.donations.count >= 3 }
     }
 }
 

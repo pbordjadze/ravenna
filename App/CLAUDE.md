@@ -67,6 +67,14 @@ go back into it (#5).
   those are unset, removes them with `lesson` and `detail` (`retiredV0Keys`; v0's first lesson is
   the tips' Tap to Set and Lay a Row), and `ground` once the carry-over is done. v0's code is in
   the history (`App/v0/`, up to 108a3c7).
+- **The More menu** (v0's): The Making-of plays the show again on an open mosaic, and About This
+  Work shows a library work's record (`SampleAboutView`: title, maker and year, place, medium,
+  credit, license and its page at The Met, from `library.json`'s `place`, `medium` and `source`,
+  which `Sample` reads tolerantly). `ArtworkPaintingView` hands them to `PaintView` as
+  `PaintingWork` (`\.paintingWork`); a painting without a mosaic has no making-of.
+- **The row tip sooner:** Lay a Row (`DragPaintTip`) after 3 single taps, looked at every 3
+  (`PaintChromeState.dragCheckEvery`), where Paint by Moonlight waits for 15: v0's first lesson
+  taught the row right after the first tile.
 - **The icon:** `App/AppIcon.swift`, v0's picker as Settings › Icon (`AppIconSection`), between
   the halo (`AppIcon`) and the alternates `AppIcon-Stars`, `-Tessera` and `-Rows`
   (`ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES`; their pictures are the catalog's `Icon-…`),

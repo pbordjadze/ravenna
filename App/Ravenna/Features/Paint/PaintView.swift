@@ -55,6 +55,10 @@ struct PaintView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.undoManager) private var undoManager
     @Environment(\.sourcePhotoLoader) private var photoLoader
+    /// Ravenna's seam: the open mosaic's making-of and record, for the More menu.
+    @Environment(\.paintingWork) private var work
+    @State private var makingOf: MakingOfSource?
+    @State private var aboutSample: Sample?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
@@ -181,6 +185,14 @@ struct PaintView: View {
         }
         .sheet(item: $timelapse) { request in
             TimelapseExportSheet(request: request)
+        }
+        .sheet(item: $aboutSample) { sample in
+            SampleAboutView(sample: sample)
+        }
+        .fullScreenCover(isPresented: Binding(get: { makingOf != nil }, set: { if !$0 { makingOf = nil } })) {
+            if let makingOf {
+                MakingOfView(source: makingOf, onFinish: { self.makingOf = nil })
+            }
         }
         .sheet(isPresented: reviewsFeedback, onDismiss: thankForFeedback) {
             if let feedback {
@@ -595,6 +607,7 @@ struct PaintView: View {
                 paletteMenu
             }
             Button(action: startFeedback) { Label("Give Feedback…", systemImage: "exclamationmark.bubble") }
+            workItems
             Divider()
             Button(role: .destructive) { confirmRestart = true } label: { Label("Restart", systemImage: "arrow.counterclockwise") }
         } label: {
@@ -618,6 +631,30 @@ struct PaintView: View {
             }
         } message: {
             Text("All paint will be cleared.")
+        }
+    }
+
+    /// More › The Making-of and About This Work (`PaintingWork`), as v0's menu had them. Ravenna's
+    /// seam.
+    @ViewBuilder
+    private var workItems: some View {
+        if let show = work?.makingOf {
+            Button {
+                Task { makingOf = await show() }
+            } label: {
+                Label(String(localized: "paint.more.makingOf", defaultValue: "The Making-of",
+                             comment: "Item of the mosaic's More menu: plays the show of how the mosaic was made again"),
+                      systemImage: "film")
+            }
+        }
+        if let sample = work?.sample {
+            Button {
+                aboutSample = sample
+            } label: {
+                Label(String(localized: "paint.more.about", defaultValue: "About This Work",
+                             comment: "Item of the mosaic's More menu: who made the ancient work it was laid from, when and where"),
+                      systemImage: "info.circle")
+            }
         }
     }
 

@@ -4416,6 +4416,66 @@
           }
         }
       }
+    },
+    "sampleAbout.title" : {
+      "comment" : "Title of the sheet, from the mosaic's More menu, about the ancient work a library mosaic was laid from",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About This Work"
+          }
+        }
+      }
+    },
+    "sampleAbout.source.met" : {
+      "comment" : "More › About This Work: the link to the work's page at The Metropolitan Museum of Art (a proper name)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "See It at The Met"
+          }
+        }
+      }
+    },
+    "sampleAbout.source" : {
+      "comment" : "More › About This Work: the link to the work's page at the collection it comes from",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "See Its Source"
+          }
+        }
+      }
+    },
+    "paint.more.makingOf" : {
+      "comment" : "Item of the mosaic's More menu: plays the show of how the mosaic was made again",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Making-of"
+          }
+        }
+      }
+    },
+    "paint.more.about" : {
+      "comment" : "Item of the mosaic's More menu: who made the ancient work it was laid from, when and where",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About This Work"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

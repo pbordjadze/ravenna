@@ -29,11 +29,20 @@ nonisolated struct Sample: Identifiable, Hashable, Sendable {
     let id: String
     let title: String
     let provenance: Provenance?
+    /// Where the work was made and what of, and its page at the collection, as its record has
+    /// them: More › About This Work (`SampleAboutView`). Ravenna's seam, read tolerantly: a record
+    /// without them, or with one malformed, lists the picture all the same.
+    var place: String?
+    var medium: String?
+    var source: URL?
 
-    init(id: String, title: String, provenance: Provenance? = nil) {
+    init(id: String, title: String, provenance: Provenance? = nil, place: String? = nil, medium: String? = nil, source: URL? = nil) {
         self.id = id
         self.title = title
         self.provenance = provenance
+        self.place = place
+        self.medium = medium
+        self.source = source
     }
 
     /// Ravenna's ancient works are bundled as `<id>-photo.jpg`, beside their mosaics.
@@ -79,25 +88,33 @@ nonisolated struct Sample: Identifiable, Hashable, Sendable {
         }
         return records.map { record in
             let title = Bundle.main.localizedString(forKey: "sample.\(record.id)", value: record.title, table: nil)
-            return Sample(id: record.id, title: title, provenance: record.provenance)
+            return Sample(
+                id: record.id, title: title, provenance: record.provenance,
+                place: record.place, medium: record.medium, source: record.source)
         }
     }
 
-    /// A picture's record in `library.json`. Its other fields (source, license evidence,
-    /// checksum, …) are for the people who audit the library.
+    /// A picture's record in `library.json`. Its other fields (license evidence, checksum, …)
+    /// are for the people who audit the library.
     private struct Record: Decodable {
         let id: String
         /// English; the catalog's `sample.<id>` translates it.
         let title: String
         let provenance: Provenance
+        let place: String?
+        let medium: String?
+        let source: URL?
 
-        private enum CodingKeys: String, CodingKey { case id, title }
+        private enum CodingKeys: String, CodingKey { case id, title, place, medium, source }
 
         init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             id = try container.decode(String.self, forKey: .id)
             title = try container.decode(String.self, forKey: .title)
             provenance = try Provenance(from: decoder)
+            place = (try? container.decodeIfPresent(String.self, forKey: .place)) ?? nil
+            medium = (try? container.decodeIfPresent(String.self, forKey: .medium)) ?? nil
+            source = ((try? container.decodeIfPresent(String.self, forKey: .source)) ?? nil).flatMap(URL.init(string:))
         }
     }
 }

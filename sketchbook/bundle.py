@@ -1,7 +1,8 @@
 """bundle.py <catalog.json> <work dir> <out dir>: the app's bundled mosaics, from public-domain works in the
 Met's Open Access collection. For each work: the Met's image and record (medium, accession, credit), the
-picture at 724, 1024 and 1448 px (the detail option's Fewer, Standard and More pieces), its contours
-(paint-by-number's HED, through hed.py), its face's features (features.py, for faces), the tight set
+picture at 724, 1024 and 1448 px (Fewer, Standard and More pieces, which a library picture's
+recipe is laid from when it matches one, `Recipe.bundledDetail`), its contours (paint-by-number's HED,
+through hed.py), its face's features (features.py, for faces), the tight set
 made by the app's own engine (the Swift CLI `mosaic`, as a photo is on the phone). The app paints each
 mosaic's bed itself (`TileScene.bed`), so none is bundled.
 A catalog entry may add "window" ("left,top,side" fractions: where features.py looks for a small or
