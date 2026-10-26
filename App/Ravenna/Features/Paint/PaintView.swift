@@ -55,6 +55,12 @@ struct PaintView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.undoManager) private var undoManager
     @Environment(\.sourcePhotoLoader) private var photoLoader
+    /// Ravenna's seam: the open mosaic's making-of and record, for the More menu.
+    @Environment(\.paintingWork) private var work
+    /// The show playing, kept until its cover has gone so the cover never empties as it leaves.
+    @State private var makingOf: MakingOfSource?
+    @State private var showsMakingOf = false
+    @State private var aboutSample: Sample?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
@@ -181,6 +187,18 @@ struct PaintView: View {
         }
         .sheet(item: $timelapse) { request in
             TimelapseExportSheet(request: request)
+        }
+        .sheet(item: $aboutSample) { sample in
+            SampleAboutView(sample: sample)
+        }
+        .fullScreenCover(isPresented: $showsMakingOf, onDismiss: {
+            makingOf = nil
+            chrome.isShowingMakingOf = false
+            chrome.activity()
+        }) {
+            if let makingOf {
+                MakingOfView(source: makingOf, onFinish: { showsMakingOf = false })
+            }
         }
         .sheet(isPresented: reviewsFeedback, onDismiss: thankForFeedback) {
             if let feedback {
@@ -595,6 +613,7 @@ struct PaintView: View {
                 paletteMenu
             }
             Button(action: startFeedback) { Label("Give Feedback…", systemImage: "exclamationmark.bubble") }
+            workItems
             Divider()
             Button(role: .destructive) { confirmRestart = true } label: { Label("Restart", systemImage: "arrow.counterclockwise") }
         } label: {
@@ -618,6 +637,42 @@ struct PaintView: View {
             }
         } message: {
             Text("All paint will be cleared.")
+        }
+    }
+
+    /// More › The Making-of and About This Work (`PaintingWork`), as v0's menu had them. Ravenna's
+    /// seam.
+    @ViewBuilder
+    private var workItems: some View {
+        if let show = work?.makingOf {
+            Button {
+                guard !chrome.isShowingMakingOf else { return }
+                chrome.isShowingMakingOf = true
+                Task {
+                    let source = await show()
+                    // Not over another sheet (About This Work, opened meanwhile): the cover wouldn't
+                    // present, and its dismissal, which ends the quiet, would never come.
+                    if let source, aboutSample == nil, timelapse == nil {
+                        makingOf = source
+                        showsMakingOf = true
+                    } else {
+                        chrome.isShowingMakingOf = false
+                    }
+                }
+            } label: {
+                Label(String(localized: "paint.more.makingOf", defaultValue: "The Making-of",
+                             comment: "Item of the mosaic's More menu: plays the show of how the mosaic was made again"),
+                      systemImage: "film")
+            }
+        }
+        if let sample = work?.sample {
+            Button {
+                aboutSample = sample
+            } label: {
+                Label(String(localized: "paint.more.about", defaultValue: "About This Work",
+                             comment: "Item of the mosaic's More menu: who made the ancient work it was laid from, when and where"),
+                      systemImage: "info.circle")
+            }
         }
     }
 

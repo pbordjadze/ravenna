@@ -59,9 +59,28 @@ go back into it (#5).
   Settings switch gone; Skip ends it).
   The `MakingOf` package product is unlinked and `making-of.json` is gone. Its demos:
   `making-of`, `-smalti`, `-andamento`, `-dark`, `-long-text`, `-end`, `-reduce-motion`.
-- **v0's mosaics:** `Model/V0CarryOver` carries v0's `Own/` mosaics and `Settings/` progress into
-  the library once at launch (`Library.forLaunch`), a set tile a painted region, v0's app-wide
-  `ground` recorded as each one's.
+- **v0's mosaics and settings:** `Model/V0CarryOver` carries v0's `Own/` mosaics and `Settings/`
+  progress into the library once at launch (`Library.forLaunch`), a set tile a painted region,
+  v0's app-wide `ground` recorded as each one's; a read failing just now is tried again at a later
+  launch, a work failing 3 launches is given up, and the starters wait for it
+  (`Library.forLaunch`, made only if it leaves the library empty). v0's keys `finish`, `oneFinger`, `rowSound`,
+  `border` and `makingOf.*` are v1's own; `Preferences.carryV0Settings` (from
+  `removeRetiredSettings`) carries `sound`, `touch` and `tune` to Sounds, Haptics and Music where
+  those are unset, removes them with `lesson` and `detail` (`retiredV0Keys`; v0's first lesson is
+  the tips' Tap to Set and Lay a Row), and `ground` once the carry-over is done. v0's code is in
+  the history (`App/v0/`, up to 108a3c7).
+- **The More menu** (v0's): The Making-of plays the show again on an open mosaic, and About This
+  Work shows a library work's record (`SampleAboutView`: title, maker and year, place, medium,
+  credit, license and its page at The Met, from `library.json`'s `place`, `medium` and `source`,
+  which `Sample` reads tolerantly). `ArtworkPaintingView` hands them to `PaintView` as
+  `PaintingWork` (`\.paintingWork`); a painting without a mosaic has no making-of.
+- **The row tip sooner:** Lay a Row (`DragPaintTip`) after 3 single taps, looked at every 3
+  (`PaintChromeState.dragCheckEvery`), where Paint by Moonlight waits for 15: v0's first lesson
+  taught the row right after the first tile.
+- **The icon:** `App/AppIcon.swift`, v0's picker as Settings › Icon (`AppIconSection`), between
+  the halo (`AppIcon`) and the alternates `AppIcon-Stars`, `-Tessera` and `-Rows`
+  (`ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES`; their pictures are the catalog's `Icon-…`),
+  until Paul picks one.
 - **Demos:** `ShellDemo` has no Refine, draft, line-art or suggestion scenarios; `create-custom`
   moves Pieces so the engine lays a library picture. `[shots]` takes `create-custom`, `making-of`
   and `making-of-end` beside Paint by Moonlight's (ci.yml's `ALL`).

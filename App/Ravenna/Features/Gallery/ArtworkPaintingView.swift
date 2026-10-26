@@ -1,5 +1,7 @@
 import CoreGraphics
 import Foundation
+import MosaicEngine
+import MosaicKit
 import os
 import PaintCore
 import SwiftUI
@@ -25,6 +27,8 @@ struct ArtworkPaintingView: View {
     /// environment on every one. None of what they read changes while painting.
     @State private var sourcePhotoLoader: SourcePhotoLoader?
     @State private var feedbackSource: FeedbackSource?
+    /// Ravenna's seam: the More menu's making-of and About This Work (`PaintingWork`).
+    @State private var paintingWork: PaintingWork?
     /// The push has finished. Only then does the painting replace its thumbnail: the zoom
     /// transition lays the screen out afresh every frame, and the painting screen rendered at
     /// each of them kept CI's simulator from answering for up to half a minute (hundreds of
@@ -75,6 +79,32 @@ struct ArtworkPaintingView: View {
             paintingLength: artwork.paintingLength, sampleName: artwork.sampleName, createdAt: artwork.createdAt, photo: photo)
     }
 
+    /// What the More menu tells of this mosaic: its making-of, made from its mosaic and its stored
+    /// photo when asked for, and a library work's record.
+    private func makePaintingWork(mosaic: Mosaic?) -> PaintingWork {
+        let sample = artwork?.sampleName.flatMap(Sample.named), title = artwork?.title ?? ""
+        var makingOf: (@Sendable () async -> MakingOfSource?)?
+        // The stored photo, else a library work's own: a show with no photo isn't offered.
+        let bundled = sample?.url, recipe = artwork?.recipe ?? MosaicEngine.Recipe()
+        if let mosaic, library.store.hasSource(artworkID) || bundled != nil {
+            makingOf = { [library, artworkID] in
+                var photo = await library.sourcePhoto(for: artworkID)
+                if photo == nil, let bundled {
+                    // Cut to the panel the mosaic was laid from, as the stored photo is.
+                    photo = await Background.run {
+                        ImageCodec.image(at: bundled, maxPixelSize: ArtworkStore.sourceMaxPixelSize)
+                            .map { MosaicMaker.framed($0, panel: recipe.panel, centre: recipe.centre) }
+                    }
+                }
+                guard let photo else { return nil }
+                return MakingOfSource(
+                    mosaic: mosaic, photo: photo, finish: MosaicLook.current.finish, title: title,
+                    credit: sample.map { MakingOfSource.credit(of: $0) } ?? MakingOfSource.ownPhotoCredit)
+            }
+        }
+        return PaintingWork(sample: sample, makingOf: makingOf)
+    }
+
     var body: some View {
         ZStack {
             Theme.paper.ignoresSafeArea()
@@ -84,6 +114,7 @@ struct ArtworkPaintingView: View {
                     onTemplateFrame: canvasReport)
                     .environment(\.sourcePhotoLoader, sourcePhotoLoader)
                     .environment(\.feedbackSource, feedbackSource)
+                    .environment(\.paintingWork, paintingWork)
                     .background { RevisionObserver(session: autosaver.session, onChange: autosaver.sessionChanged) }
                     .transition(.opacity)
             } else if let failure {
@@ -190,6 +221,7 @@ struct ArtworkPaintingView: View {
                 await library.sourcePhoto(for: artworkID, maxPixelSize: maxPixelSize)
             }
             feedbackSource = artwork.map(makeFeedbackSource)
+            paintingWork = makePaintingWork(mosaic: document.mosaic)
         }
         if let notice = document.notice { show(notice) }
         Log.library.notice("Opened \(artworkID.uuidString, privacy: .public): \(document.template.regions.count, privacy: .public) regions")

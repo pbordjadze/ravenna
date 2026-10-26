@@ -161,6 +161,9 @@ struct SettingsView: View {
                         }
                     }
 
+                    // Ravenna's seam: v0's icon picker, until Paul picks an icon.
+                    AppIconSection()
+
                     if paintings.isSold { unlimitedPaintings }
 
                     Section {

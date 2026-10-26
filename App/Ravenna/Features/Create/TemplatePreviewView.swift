@@ -677,7 +677,7 @@ private struct ChoiceRow<Content: View>: View {
     }
 }
 
-/// The photo with the panel over it, as v0 framed a mosaic (`App/v0/Framing.swift`): drag to move
+/// The photo with the panel over it, as v0 framed a mosaic (its `Framing.swift`): drag to move
 /// the panel; outside it, the photo dims. VoiceOver moves it a tenth at a time.
 private struct PanelFramingView: View {
     let image: CGImage

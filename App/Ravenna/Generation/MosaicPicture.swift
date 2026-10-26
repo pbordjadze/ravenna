@@ -3,7 +3,7 @@ import Foundation
 import MosaicEngine
 import MosaicKit
 
-/// A mosaic drawn in its finish with Core Graphics, as v0 drew its walls (`App/v0/TileArt.swift`):
+/// A mosaic drawn in its finish with Core Graphics, as v0 drew its walls (its `TileArt.swift`):
 /// what drawing it needs, worked out once per finish, and the drawing of one tile. The create
 /// flow's preview draws every tile set (`MosaicPicture.image`); the making-of bakes them in as they
 /// settle and draws those still in flight. Canvas units, y down. Plain Core Graphics, drawn off the

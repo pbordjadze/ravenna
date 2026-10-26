@@ -10,10 +10,10 @@ purpose. Keep it that way.
   change the prototype only to try an idea in the sketchbook.
 - The engine: this Swift package (`MosaicKit`, `MosaicEngine`, `MosaicCore` on Paint by
   Moonlight's `PaintCore`), tested on Linux.
-- The app, v1 (issue #13, on `claude/v1` until it does all v0 does): `App/Ravenna` is Paint by
-  Moonlight's app copied at the pinned commit, with Ravenna inside it; its notes are
-  `App/CLAUDE.md`. `App/v0/` is the first app's code, not compiled, kept to port from until v1
-  replaces it.
+- The app (v1, issue #13, on `claude/v1` until it lands on `main`): `App/Ravenna` is Paint by
+  Moonlight's app copied at the pinned commit, with Ravenna inside it; its notes and seams are
+  `App/CLAUDE.md`. It replaced the first app, v0, whose code is in the history (`App/v0/`, up to
+  108a3c7); `Model/V0CarryOver` still reads v0's saved files on painters' devices.
 
 ## The sibling repository
 

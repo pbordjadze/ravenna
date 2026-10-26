@@ -22,6 +22,8 @@ final class PaintChromeState {
     @ObservationIgnored private weak var tipSession: PaintingSession?
     /// Give Feedback is on: no hint speaks.
     @ObservationIgnored var isGivingFeedback = false
+    /// More › The Making-of is playing over the bench: no hint speaks (Ravenna's seam).
+    @ObservationIgnored var isShowingMakingOf = false
     /// Since when a finger has been moving or zooming the page (the canvas reports it).
     @ObservationIgnored private var handDownSince: ContinuousClock.Instant?
     @ObservationIgnored private var lastFill: ContinuousClock.Instant?
@@ -44,8 +46,9 @@ final class PaintChromeState {
     /// the selected color has areas left, for where to find one.
     private static let calmPause: Duration = .seconds(20)
     private static let stallPause: Duration = .seconds(60)
-    /// Every this many single fills, Paint Several Areas is looked at.
-    private static let dragCheckEvery = 5
+    /// Every this many single fills, Paint Several Areas is looked at (Ravenna's seam: every 5 in
+    /// Paint by Moonlight, which offers it after 15; Ravenna after 3, `DragPaintTip`).
+    private static let dragCheckEvery = 3
     /// About a quarter of a page.
     private static let quarter = 0.25
 
@@ -237,6 +240,7 @@ final class PaintChromeState {
         if let lastFill, session.flowsToNextArea, now - lastFill < Self.zenDrift { quiet.insert(.zenDrifting) }
         if session.replayed != nil { quiet.insert(.replay) }
         if isGivingFeedback { quiet.insert(.feedback) }
+        if isShowingMakingOf { quiet.insert(.makingOf) }
         if session.isComplete {
             quiet.insert(.pageFinished)
             let shine = UIAccessibility.isReduceMotionEnabled ? Duration.milliseconds(1200) : Self.shine

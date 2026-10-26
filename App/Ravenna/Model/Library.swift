@@ -145,8 +145,7 @@ final class Library {
         #endif
         let library = Library(store: ArtworkStore(root: ArtworkStore.defaultRoot))
         // Ravenna's seam: v0's mosaics first, whose painter needs no starters.
-        library.carryOverV0IfNeeded()
-        library.seedIfNeeded()
+        if !library.carryOverV0IfNeeded() { library.seedIfNeeded() }
         return library
     }
 

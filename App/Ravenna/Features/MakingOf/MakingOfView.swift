@@ -36,7 +36,7 @@ nonisolated struct MakingOfSource: Sendable {
 /// painting Start has already saved. With Reduce Motion it moves a scene at a time, each shown as
 /// it stands at its end.
 ///
-/// Ravenna's seam: v0's show (`App/v0/MakingOfView.swift`) in place of Paint by Moonlight's field
+/// Ravenna's seam: v0's show (its `MakingOfView.swift`) in place of Paint by Moonlight's field
 /// show (its `MakingOf` package product is not linked), keeping its hand-off. The show comes and
 /// goes as one picture moving (`StartHandoff`): it comes in from the preview (its picture starts
 /// where the preview's was, `entry`, global coordinates), and goes to the painting Start has opened
