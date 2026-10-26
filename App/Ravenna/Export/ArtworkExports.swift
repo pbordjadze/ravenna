@@ -1,5 +1,6 @@
 import CoreTransferable
 import Foundation
+import MosaicKit
 import PaintCore
 import UniformTypeIdentifiers
 
@@ -29,6 +30,11 @@ nonisolated enum ArtworkExporter {
     static func paintingPNG(store: ArtworkStore, artwork: Artwork) throws -> Data {
         let template = try store.readTemplate(artwork.id)
         let progress = try store.readProgress(artwork.id, regionCount: template.regions.count).progress
+        // Ravenna's seam: a mosaic is shared as its tiles (`MosaicCard.keepsake`).
+        if let mosaic = try store.readMosaic(artwork.id), let wall = MosaicCard.keepsake(mosaic, painted: progress.painted),
+           let data = ImageCodec.pngData(wall) {
+            return data
+        }
         let style: TemplateRasterizer.Style = progress.isComplete ? .finished : .thumbnail
         guard let data = TemplateRasterizer.pngData(template, painted: progress.painted, style: style, maxPixelSize: imagePixelSize) else {
             throw ExportError.renderFailed
@@ -167,7 +173,8 @@ nonisolated struct PrintableTemplateFile: Transferable, Sendable {
 /// copy may lag behind).
 nonisolated enum TimelapseSource: Sendable {
     case saved(store: ArtworkStore, artwork: Artwork)
-    case live(template: Template, progress: PaintProgress)
+    /// With the mosaic the template is of, when it is one (Ravenna's seam: its tiles are set).
+    case live(template: Template, progress: PaintProgress, mosaic: Mosaic?)
 }
 
 /// "Share Time-lapse": the painting replayed fill by fill with the canvas shaders, as a short
@@ -181,19 +188,21 @@ nonisolated struct TimelapseRequest: Identifiable, Sendable {
     /// frame) the folder and the partial movie are removed.
     @concurrent
     func render(longSide: Int = 1080, onProgress: (@Sendable (Double) -> Void)? = nil) async throws -> URL {
-        let template: Template, progress: PaintProgress
+        let template: Template, progress: PaintProgress, mosaic: Mosaic?
         switch source {
         case let .saved(store, artwork):
             template = try store.readTemplate(artwork.id)
             progress = try store.readProgress(artwork.id, regionCount: template.regions.count).progress
-        case let .live(liveTemplate, liveProgress):
+            mosaic = try store.readMosaic(artwork.id)
+        case let .live(liveTemplate, liveProgress, liveMosaic):
             template = liveTemplate
             progress = liveProgress
+            mosaic = liveMosaic
         }
         let url = try ArtworkExporter.temporaryURL(name: ArtworkExporter.timelapseName(title: title), pathExtension: "mp4")
         do {
             try await TimelapseFrameRenderer.export(
-                template: template, progress: progress, to: url, longSide: longSide, onProgress: onProgress)
+                template: template, progress: progress, mosaic: mosaic, to: url, longSide: longSide, onProgress: onProgress)
         } catch {
             ArtworkExporter.removeExport(at: url)
             throw error

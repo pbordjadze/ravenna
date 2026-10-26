@@ -105,6 +105,46 @@
       "comment" : "Eyes choice: irises mixed brighter, as an eye catches the light",
       "extractionState" : "manual"
     },
+    "Border" : {
+      "comment" : "Settings picker choosing what goes round a shared mosaic (None, Plaster or A Band of Tesserae)",
+      "extractionState" : "manual"
+    },
+    "border.band" : {
+      "comment" : "Choice of Settings › Border: a shared mosaic has a band of square tiles laid round it in the plaster",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A Band of Tesserae"
+          }
+        }
+      }
+    },
+    "border.none" : {
+      "comment" : "Choice of Settings › Border: a shared mosaic has nothing round it",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "None"
+          }
+        }
+      }
+    },
+    "border.plaster" : {
+      "comment" : "Choice of Settings › Border: a shared mosaic has a margin of lime plaster round it",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plaster"
+          }
+        }
+      }
+    },
     "Brings back the other controls" : {
       "comment" : "Accessibility hint of the painting screen's progress ring while the top bar is quiet (faded to Back, the ring and Hint): a tap brings back Photo, Undo and More",
       "extractionState" : "manual"
