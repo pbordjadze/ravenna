@@ -183,8 +183,9 @@ nonisolated extension FeedbackReport {
 
     /// `feedback.md`.
     var markdown: String {
-        var lines = ["# \(title.isEmpty ? "Untitled painting" : title): feedback", ""]
-        lines.append("Paint by Moonlight \(app) on \(device), \(system), \(date.formatted(.iso8601))")
+        var lines = ["# \(title.isEmpty ? "Untitled mosaic" : title): feedback", ""]
+        // Ravenna's seam: `app` names the app itself ("Ravenna …", `FeedbackCapture`).
+        lines.append("\(app) on \(device), \(system), \(date.formatted(.iso8601))")
         lines += ["", "## Note", "", note.isEmpty ? "(none)" : note, "", "## Marks", ""]
         if marks.isEmpty { lines.append("(none)") }
         for mark in marks {

@@ -1,4 +1,5 @@
 import Foundation
+import MosaicKit
 import Observation
 import PaintCore
 import SwiftUI
@@ -108,7 +109,7 @@ final class CompletionShare {
         let target = session.revision
         revision = target
         picture = nil
-        let image = await Self.render(template: session.template, progress: session.progress)
+        let image = await Self.render(template: session.template, progress: session.progress, mosaic: session.wall?.mosaic)
         // Undone and finished again meanwhile: that completion renders its own.
         guard revision == target else { return }
         picture = image
@@ -117,7 +118,9 @@ final class CompletionShare {
     }
 
     @concurrent
-    private static func render(template: Template, progress: PaintProgress) async -> CGImage? {
+    private static func render(template: Template, progress: PaintProgress, mosaic: Mosaic?) async -> CGImage? {
+        // Ravenna's seam: a mosaic is shared as its tiles (`MosaicCard.keepsake`).
+        if let mosaic, let wall = MosaicCard.keepsake(mosaic, painted: progress.painted) { return wall }
         let size = CanvasSnapshot.fittedSize(for: template, longSide: 2048)
         return CanvasSnapshot.render(template: template, progress: progress, size: size, options: .painting)
     }

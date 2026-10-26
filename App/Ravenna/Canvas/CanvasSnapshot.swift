@@ -111,7 +111,9 @@ nonisolated enum CanvasSnapshot {
     /// Shader constants for an offscreen frame: canvas fitted and centred in `width`×`height`
     /// pixels, renderer clock at 0. With a `rect` (canvas units), that part of the canvas is
     /// fitted and centred instead, as a close-up (`render(template:progress:rect:…)`).
-    static func uniforms(scene: CanvasScene, width w: Int, height h: Int, options: Options, rect: CGRect? = nil) -> CanvasUniforms {
+    static func uniforms(
+        scene: CanvasScene, width w: Int, height h: Int, options: Options, rect: CGRect? = nil, hasBed: Bool = false
+    ) -> CanvasUniforms {
         let canvasW = scene.canvasSize.x, canvasH = scene.canvasSize.y
         let shown = rect.map { (x: Float($0.minX), y: Float($0.minY), w: Float($0.width), h: Float($0.height)) }
             ?? (x: 0, y: 0, w: canvasW, h: canvasH)
@@ -134,7 +136,7 @@ nonisolated enum CanvasSnapshot {
             selection: highlight.map { (color: $0, paint: scene.paletteLinear[$0]) },
             hovered: -1, pulsing: -1, bumped: -1, brush: nil, shine: (start: CanvasClock.never, color: -1),
             photoOpacity: 0,
-            tiles: scene.tiles.map { TileLook(finish: TileOptions.finish(), hasBed: false, grout: $0.grout, pace: 1) }))
+            tiles: scene.tiles.map { TileLook(finish: TileOptions.finish(), hasBed: hasBed, grout: $0.grout, pace: 1) }))
     }
 
     /// Output size for a template fitted into `longSide` pixels.

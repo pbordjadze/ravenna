@@ -90,7 +90,18 @@ go back into it (#5).
   navigation titles and the swatch numerals (`Font.numeral`), or the system serif (`Typeface`, an
   option until Paul chooses); `CanvasPalette`'s sheet, ink and backdrop; the launch screen is
   `LaunchGround`, and the app is dark only (`UIUserInterfaceStyle`).
-- **A mosaic's card:** `Library.thumbnailPNG` draws a mosaic's thumbnail with `MosaicCard` (its
-  ground, the places still to set faint on it, the set tiles in the app's finish, through
-  `MosaicPicture` and `MosaicDrawing`), in place of `TemplateRasterizer`'s light paper; the
-  time-lapse and print keep Paint by Moonlight's paper.
+- **A mosaic as a picture:** `MosaicCard` draws a mosaic on the CPU (its ground, the places still to
+  set faint on it, the set tiles in the app's finish, through `MosaicPicture` and `MosaicDrawing`),
+  in place of Paint by Moonlight's light paper: the gallery's card (`Library.thumbnailPNG`) and the
+  picture shared, saved or printed (`ArtworkExporter.paintingPNG`, `CompletionShare`), the latter
+  with v0's border (`Border`, Settings › Border, v0's key `border`). The time-lapse replays a mosaic
+  as tiles on its bed with the canvas shaders (`TimelapseFrameRenderer`, `TimelapseSource.live`'s
+  mosaic). The printable template (PDF) keeps Paint by Moonlight's page.
+- **The words** (phase 5): Ravenna's vocabulary is in `Localizable.xcstrings` as English values over
+  Paint by Moonlight's keys, so the sources keep its words and the catalog says Ravenna's: a
+  painting is a mosaic, an area a tile, to paint is to set (a page is the mosaic; "Lay a Row",
+  "Start the Mosaic", "Ready to Set"), and the app is Ravenna. Left: the samples' Paintings (the
+  ancient works are paintings), colors, Nightfall and the unlock sheet (neither shows in Ravenna),
+  the engine's acknowledgements, and the paints' nicknames, which are PaintCore's
+  (`ColorNickname`, seeded per artwork) and wait on Paul. The feedback report's header names the
+  app from `FeedbackCapture`.

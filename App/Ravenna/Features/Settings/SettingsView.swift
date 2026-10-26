@@ -18,6 +18,7 @@ struct SettingsView: View {
     @AppStorage(TileOptions.oneFingerKey) private var oneFinger = OneFinger.lays
     @AppStorage(TileOptions.rowSoundKey) private var rowSound = RowSound.run
     @AppStorage(Typeface.key) private var typeface = Typeface.alegreya
+    @AppStorage(TileOptions.borderKey) private var border = Border.none
     @Environment(UnlimitedPaintings.self) private var paintings
     @State private var path: [Destination] = []
     @State private var isUnlocking = false
@@ -76,6 +77,14 @@ struct SettingsView: View {
                             SwiftUI.Label("Typeface", systemImage: "textformat")
                         }
                         .accessibilityIdentifier("settings-typeface")
+                        Picker(selection: $border) {
+                            ForEach(Border.allCases, id: \.self) { choice in
+                                Text(choice.name).tag(choice)
+                            }
+                        } label: {
+                            SwiftUI.Label("Border", systemImage: "square.dashed")
+                        }
+                        .accessibilityIdentifier("settings-border")
                     } header: {
                         // Not the "Painting" key: that one names a picture, this one the activity.
                         Text(String(localized: "settings.section.painting", defaultValue: "Painting",

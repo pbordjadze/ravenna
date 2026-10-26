@@ -12,6 +12,8 @@ nonisolated enum TileOptions {
     static let oneFingerKey = "oneFinger"
     /// What a row laid with a drag sounds like (`RowSound`).
     static let rowSoundKey = "rowSound"
+    /// What goes round a shared mosaic (`Border`).
+    static let borderKey = "border"
 
     static func finish(in defaults: UserDefaults = .standard) -> Finish {
         defaults.string(forKey: finishKey).flatMap(Finish.init(rawValue:)) ?? .material
@@ -23,6 +25,10 @@ nonisolated enum TileOptions {
 
     static func rowSound(in defaults: UserDefaults = .standard) -> RowSound {
         defaults.string(forKey: rowSoundKey).flatMap(RowSound.init(rawValue:)) ?? .run
+    }
+
+    static func border(in defaults: UserDefaults = .standard) -> Border {
+        defaults.string(forKey: borderKey).flatMap(Border.init(rawValue:)) ?? .none
     }
 }
 
@@ -76,6 +82,19 @@ extension RowSound {
                           comment: "Choice of Settings › Row Sound: each tile laid in a row plays the tune's next note")
         case .note: String(localized: "rowSound.note", defaultValue: "One Note",
                            comment: "Choice of Settings › Row Sound: a row laid in one stroke plays one note")
+        }
+    }
+}
+
+extension Border {
+    var name: String {
+        switch self {
+        case .none: String(localized: "border.none", defaultValue: "None",
+                           comment: "Choice of Settings › Border: a shared mosaic has nothing round it")
+        case .plaster: String(localized: "border.plaster", defaultValue: "Plaster",
+                              comment: "Choice of Settings › Border: a shared mosaic has a margin of lime plaster round it")
+        case .band: String(localized: "border.band", defaultValue: "A Band of Tesserae",
+                           comment: "Choice of Settings › Border: a shared mosaic has a band of square tiles laid round it in the plaster")
         }
     }
 }

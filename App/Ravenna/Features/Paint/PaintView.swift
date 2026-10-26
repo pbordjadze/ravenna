@@ -692,7 +692,7 @@ struct PaintView: View {
     /// From the live session: the saved copy may lag behind.
     private func shareTimelapse() {
         let name = title.isEmpty ? String(localized: "Painting") : title
-        timelapse = TimelapseRequest(title: name, source: .live(template: session.template, progress: session.progress))
+        timelapse = TimelapseRequest(title: name, source: .live(template: session.template, progress: session.progress, mosaic: session.wall?.mosaic))
     }
 
     private func handlePencil(_ action: PencilAction) {
