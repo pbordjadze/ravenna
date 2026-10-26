@@ -74,8 +74,10 @@ nonisolated final class TimelapseFrameRenderer {
         let states = stateBuffer.contents().bindMemory(to: RegionState.self, capacity: max(1, scene.regionCount))
         // Time is measured in strokes: the renderer clock is 0, a fill started `age` strokes ago.
         if isMosaic { states[scene.regionCount - 1] = .settled(painted: true) }
+        // The movie's closing hold: every tile settled and past its light (0.76 s), none frozen mid-way.
+        let hold: Float = isMosaic && strokes >= order.count ? 4 : 0
         for (k, r) in order.enumerated() {
-            let age = Float(strokes - k) + fraction
+            let age = Float(strokes - k) + fraction + hold
             if isMosaic {
                 states[r] = k < strokes || (k == strokes && fraction > 0)
                     ? RegionState(origin: .zero, start: -age * Self.tileSeconds, duration: 0.8, radius: 0, painted: 1, seed: 0)

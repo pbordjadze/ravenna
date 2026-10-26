@@ -24,9 +24,13 @@ nonisolated enum MosaicCard {
     /// still go; with the border round it.
     static func keepsake(_ m: Mosaic, painted: [Bool], border: Border = TileOptions.border(), maxPixelSize: Int = 3000) -> CGImage? {
         guard let wall = image(m, painted: painted, maxPixelSize: maxPixelSize) else { return nil }
-        let finished = !painted.contains(false)
+        // Every tile set (the grout, the last region, set or not).
+        let finished = !painted.dropLast().contains(false)
         return border.around(wall, m, finished: finished) ?? wall
     }
+
+    /// The painted bed's long side at most, as the canvas's (`TileScene.bed`).
+    static let bedLongSide = 1024
 
     static func image(_ m: Mosaic, painted: [Bool], maxPixelSize: Int) -> CGImage? {
         guard m.width > 0, m.height > 0, !m.tiles.isEmpty, painted.count == m.tiles.count + 1 else { return nil }
@@ -34,7 +38,13 @@ nonisolated enum MosaicCard {
         let scale = CGFloat(maxPixelSize) / CGFloat(max(m.width, m.height))
         let w = max(Int((CGFloat(m.width) * scale).rounded()), 1), h = max(Int((CGFloat(m.height) * scale).rounded()), 1)
         guard let cg = MosaicPicture.canvas(for: m, width: w, height: h) else { return nil }
-        MosaicPicture.ground(m, finish: finish, in: cg, width: w, height: h)
+        // The bed is a blur: made at no more than `bedLongSide` and scaled up, a keepsake's costs
+        // what the canvas's does rather than hundreds of megabytes.
+        let k = min(1, CGFloat(Self.bedLongSide) / CGFloat(max(w, h)))
+        let bed = finish.paintedBed
+            ? MosaicPicture.bed(of: m, width: max(Int((CGFloat(w) * k).rounded()), 1), height: max(Int((CGFloat(h) * k).rounded()), 1))
+            : nil
+        MosaicPicture.ground(m, finish: finish, in: cg, width: w, height: h, bed: bed)
         let drawing = MosaicDrawing(m, finish: finish)
         // The places still to set, as v0's covers drew them: faint on the bed, grey on light grout.
         let unset = drawing.paths.indices.filter { !painted[$0] }

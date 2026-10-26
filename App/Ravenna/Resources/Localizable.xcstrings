@@ -8,14 +8,22 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A Calmer Way to Set"
+            "value" : "A Calmer Way to Set Tiles"
           }
         }
       }
     },
     "A Page Is Waiting" : {
       "comment" : "Title of the tip in the gallery’s Ready to Paint section, shown on the first visit, once the starter pages are in view",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A Mosaic Is Waiting"
+          }
+        }
+      }
     },
     "A scene a step" : {
       "comment" : "Making-of options: the build in scenes, a card each",
@@ -719,7 +727,15 @@
     },
     "Compare Photo and Page" : {
       "comment" : "Title of the tip at the divider of the New Painting preview",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compare Photo and Mosaic"
+          }
+        }
+      }
     },
     "colorName.chroma.grayish" : {
       "comment" : "Color name chroma modifier (a dull, desaturated color)",
@@ -1312,7 +1328,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Every tile set will be lifted."
+            "value" : "Every set tile will be lifted."
           }
         }
       }
@@ -1475,7 +1491,15 @@
     },
     "Fewer or More Areas" : {
       "comment" : "Title of the tip at the Colors slider of the New Painting preview, shown on the second page made",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fewer or More Pieces"
+          }
+        }
+      }
     },
     "Finding the subject…" : {
       "comment" : "Status shown while the photo's main subject is detected before generating the template",
@@ -2091,7 +2115,15 @@
     },
     "Make Your Own Page" : {
       "comment" : "Title of the tip at the gallery’s + button, shown on returning from the first painting",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make Your Own Mosaic"
+          }
+        }
+      }
     },
     "Making Your Time-lapse" : {
       "comment" : "Title of the sheet shown while a time-lapse movie is rendered",
@@ -2099,7 +2131,15 @@
     },
     "More for Each Painting" : {
       "comment" : "Title of the tip at a painting in the gallery about its touch-and-hold menu",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "More for Each Mosaic"
+          }
+        }
+      }
     },
     "No Photo at Hand" : {
       "comment" : "Title of the tip at Samples when the New Painting screen opens for the first time",
@@ -2112,7 +2152,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Finish sets how the tiles look. The Making-of shows a picture laid as a mosaic, step by step."
+            "value" : "Music plays the tune as each tile goes in: in a major key, a minor one, or by the hour."
           }
         }
       }
@@ -2164,7 +2204,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "They get a blank copy of this mosaic to set, your changes included. Your photo stays on this device."
+            "value" : "They get a blank copy of this mosaic to set. Your photo stays on this device."
           }
         }
       }
@@ -2188,7 +2228,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "They get a blank copy of this mosaic to set, your changes included."
+            "value" : "They get a blank copy of this mosaic to set."
           }
         }
       }
@@ -2212,7 +2252,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "They get a blank copy of this mosaic to set, your changes included, and your photo to peek at."
+            "value" : "They get a blank copy of this mosaic to set, and your photo to peek at."
           }
         }
       }
@@ -2236,7 +2276,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "They get a blank copy of this mosaic to set, your changes included, and the picture to peek at."
+            "value" : "They get a blank copy of this mosaic to set, and the picture to peek at."
           }
         }
       }
@@ -2464,7 +2504,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Drag along a row of tiles with this number to set them in one stroke."
+            "value" : "Drag along a row of tiles with this number to set them in one stroke. If one finger moves the mosaic, touch and hold first."
           }
         }
       }
@@ -2912,7 +2952,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Area %lld"
+            "value" : "Tile %lld"
           }
         }
       }
@@ -3044,7 +3084,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mosaic set"
+            "value" : "The mosaic is set"
           }
         }
       }
@@ -3560,7 +3600,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Setting Tiles"
+            "value" : "The Mosaic"
           }
         }
       }
@@ -4239,7 +4279,15 @@
     },
     "Zoom In on Small Areas" : {
       "comment" : "Title of a tip about zooming in on the painting, shown after two taps beside areas too small to hit",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom In on Small Tiles"
+          }
+        }
+      }
     },
     "Zoom Out" : {
       "comment" : "Paint menu item (iPad menu bar): zoom out of the canvas",
