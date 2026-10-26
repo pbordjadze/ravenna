@@ -177,9 +177,9 @@ struct MakingOfView: View {
 
     /// Plans the show off the main actor, then plays it from the start; its end opens the painting.
     private func start() async {
-        let mosaic = source.mosaic, finish = source.finish, options = options, photo = source.photo
+        let mosaic = source.mosaic, tiles = source.finish, options = options, photo = source.photo
         let made = await Task.detached(priority: .userInitiated) {
-            MakingOfStage(mosaic, show: MakingOf.Show(mosaic, options: options), drawing: MosaicDrawing(mosaic, finish: finish),
+            MakingOfStage(mosaic, show: MakingOf.Show(mosaic, options: options), drawing: MosaicDrawing(mosaic, finish: tiles),
                           photo: photo)
         }.value
         guard !Task.isCancelled else { return }
