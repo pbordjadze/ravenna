@@ -166,7 +166,7 @@ struct ProgressCaption: View {
                             comment: "Caption of a painting card in progress; the argument is the formatted percentage painted, e.g. 42%"))
                     .monospacedDigit()
             } else {
-                Image(systemName: "paintbrush.pointed").foregroundStyle(.tint)
+                Image(systemName: "square.grid.3x3.fill").foregroundStyle(.tint)  // Ravenna: tiles, not a brush
                 Text("Ready to paint")
             }
         }
@@ -257,7 +257,7 @@ struct PlaceholderCard: View {
     }
 
     private var brush: some View {
-        Image(systemName: "paintbrush.pointed.fill")
+        Image(systemName: "square.grid.3x3.fill")  // Ravenna: tiles, not a brush
             .font(.system(size: 30, weight: .medium))
             .foregroundStyle(.tint)
             .symbolEffect(.pulse, options: .repeating)
