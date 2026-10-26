@@ -12,14 +12,14 @@ nonisolated final class FrameMeter: @unchecked Sendable {
     static let shared = FrameMeter()
 
     private let lock = NSLock()
-    private var cpu: [Double] = [], gpu: [Double] = [], gaps: [Double] = []
+    private var cpu: [Double] = [], gpu: [Double] = [], gaps: [Double] = [], calls: [Double] = []
     private var lastFrame: CFTimeInterval?
     private var isOn = false
 
     /// Starts a fresh measurement.
     func start() {
         lock.withLock {
-            cpu = []; gpu = []; gaps = []; lastFrame = nil; isOn = true
+            cpu = []; gpu = []; gaps = []; calls = []; lastFrame = nil; isOn = true
         }
     }
 
@@ -30,6 +30,15 @@ nonisolated final class FrameMeter: @unchecked Sendable {
             cpu.append(seconds)
             if let last = lastFrame { gaps.append(at - last) }
             lastFrame = at
+        }
+    }
+
+    /// A tile was set through the session, its call (the session, the canvas and every observer of
+    /// the event, but not SwiftUI's update after) taking `seconds` on the main thread.
+    func called(_ seconds: Double) {
+        lock.withLock {
+            guard isOn else { return }
+            calls.append(seconds)
         }
     }
 
@@ -53,9 +62,9 @@ nonisolated final class FrameMeter: @unchecked Sendable {
     /// Stops and reports: frames, the median and 95th percentile of each time in milliseconds, and
     /// the footprint.
     func report(_ title: String) -> String {
-        let (cpu, gpu, gaps) = lock.withLock {
+        let (cpu, gpu, gaps, calls) = lock.withLock {
             isOn = false
-            return (self.cpu, self.gpu, self.gaps)
+            return (self.cpu, self.gpu, self.gaps, self.calls)
         }
         func line(_ name: String, _ values: [Double]) -> String {
             guard !values.isEmpty else { return "\(name): none" }
@@ -69,6 +78,7 @@ nonisolated final class FrameMeter: @unchecked Sendable {
             line("main thread per frame", cpu),
             line("GPU per frame", gpu),
             line("between frames", gaps),
+            line("session.paint per tile", calls),
             "gaps over 1.5 refreshes at 60 Hz: \(longGaps) of \(gaps.count)",
             "memory: " + Self.memory(),
         ].joined(separator: "\n")

@@ -586,27 +586,48 @@ private final class Demo {
             "demo paint-fill: painted \(Array(targets), privacy: .public) of color \(color, privacy: .public); frames \(canvas?.framesRendered ?? -1, privacy: .public)")
     }
 
-    /// Lays rows of the paint in hand for eight seconds, a tile every 45 ms as a quick finger does,
-    /// moving on to the next paint as one runs out, while `FrameMeter` measures; then reports.
+    /// Lays a tile every 45 ms, as a quick finger does, in two phases of eight seconds while
+    /// `FrameMeter` measures: through the session, as a painter sets them (the session, the canvas,
+    /// the sounds and taps, the chrome's observers and SwiftUI's update of what shows progress), then
+    /// on the canvas alone (`didPaint` with nothing else told), so the difference is what a set tile
+    /// costs outside the canvas. The tiles go in the palette's order, worked out beforehand so the
+    /// demo's own search costs nothing per tile. Reports both.
     private func measure() async {
         try? await Task.sleep(for: .seconds(1.5))
         let t = session.template
         let tiles = t.regions.count - 1
         Log.demo.notice("demo paint-mosaic-measure: \(tiles, privacy: .public) tiles; \(FrameMeter.memory(), privacy: .public)")
-        FrameMeter.shared.start()
+        var order = t.regions.indices.filter { session.wall?.isTile($0) ?? true }.filter { !session.isPainted($0) }
+            .sorted { (session.colorOf($0), $0) < (session.colorOf($1), $1) }[...]
         let clock = ContinuousClock()
-        let end = clock.now + .seconds(8)
+        var reports: [String] = []
+
+        FrameMeter.shared.start()
         session.beginStroke()
-        while clock.now < end {
-            guard let color = session.selectedColor,
-                  let next = t.regions.indices.first(where: { session.colorOf($0) == color && !session.isPainted($0) })
-            else { break }
+        var end = clock.now + .seconds(8)
+        while clock.now < end, let next = order.popFirst() {
+            let began = clock.now
             session.paint([next], from: Self.center(t, next), animated: true)
+            FrameMeter.shared.called((clock.now - began) / .seconds(1))
             try? await Task.sleep(for: .milliseconds(45))
         }
         session.endStroke()
         try? await Task.sleep(for: .seconds(1))
-        let report = FrameMeter.shared.report("paint-mosaic-measure: \(tiles) tiles, \(session.progress.paintedCount - 1) set, fitted")
+        reports.append(FrameMeter.shared.report(
+            "paint-mosaic-measure: \(tiles) tiles, fitted; through the session (\(session.progress.paintedCount - 1) set)"))
+
+        guard let canvas = session.canvas else { return }
+        FrameMeter.shared.start()
+        end = clock.now + .seconds(8)
+        var alone = 0
+        while clock.now < end, let next = order.popFirst() {
+            canvas.session(session, didPaint: [next], from: Self.center(t, next), animated: true)
+            alone += 1
+            try? await Task.sleep(for: .milliseconds(45))
+        }
+        try? await Task.sleep(for: .seconds(1))
+        reports.append(FrameMeter.shared.report("on the canvas alone (\(alone) tiles)"))
+        let report = reports.joined(separator: "\n\n")
         Log.demo.notice("\(report, privacy: .public)")
         try? report.write(to: URL(fileURLWithPath: NSTemporaryDirectory()).appending(path: "canvas-measure.txt"), atomically: true, encoding: .utf8)
     }
