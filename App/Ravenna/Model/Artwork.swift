@@ -84,12 +84,19 @@ nonisolated struct Artwork: Identifiable, Hashable, Codable, Sendable {
         format = Self.currentFormat
     }
 
+    /// A mosaic's grout region, which its session sets first (`PaintProgress.groutSet`), is no
+    /// part of how far it is painted (Ravenna's seam): the recipe marks an artwork made a mosaic.
+    private var groutRegions: Int { recipe != nil && regionCount > 1 ? 1 : 0 }
+    /// The areas painted and to paint, the grout aside.
+    var paintedAreas: Int { max(0, paintedCount - (paintedCount > 0 ? groutRegions : 0)) }
+    var areaCount: Int { regionCount - groutRegions }
+
     var fractionComplete: Double {
-        regionCount == 0 ? 0 : min(1, Double(paintedCount) / Double(regionCount))
+        areaCount <= 0 ? 0 : min(1, Double(paintedAreas) / Double(areaCount))
     }
 
     var isComplete: Bool { regionCount > 0 && paintedCount >= regionCount }
-    var isStarted: Bool { paintedCount > 0 }
+    var isStarted: Bool { paintedAreas > 0 }
     var aspectRatio: CGFloat { height == 0 ? 1 : CGFloat(width) / CGFloat(height) }
     /// Written by a newer app: listed and deletable, but never opened or rewritten here.
     var needsNewerApp: Bool { format > Self.currentFormat }

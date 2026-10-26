@@ -9,8 +9,9 @@ import MosaicKit
 
 nonisolated extension MosaicEngine {
     /// What a mosaic is made with, as the painter chose it in the create flow: how many pieces, how
-    /// the eyes and the mouth are set, the finish, the ground and the panel of the photo laid. Each
-    /// is a creative fork kept as an option until Paul narrows it. The app records it with the
+    /// the eyes and the mouth are set, and the panel of the photo laid. Each is a creative fork kept
+    /// as an option until Paul narrows it. (The finish and the gold ground are how any mosaic is
+    /// shown, the app's settings, as in v0: they move no tile.) The app records it with the
     /// artwork (`meta.json`'s `recipe`), so a mosaic is made again as it was made.
     ///
     /// Decoding is tolerant: a field missing or unknown (written by an older or a newer app) takes
@@ -20,18 +21,13 @@ nonisolated extension MosaicEngine {
         public var pieces: Double
         public var eyes: Eyes
         public var mouth: Mouth
-        /// How set tiles look; it changes no tile.
-        public var finish: Finish
-        public var ground: Ground
         public var panel: Panel
         /// The panel's centre in the photo's unit square (x right, y down).
         public var centre: SIMD2<Double>
 
         public init(pieces: Double = Recipe.standardPieces, eyes: Eyes = .asTheyLook, mouth: Mouth = .asInThePhoto,
-                    finish: Finish = .material, ground: Ground = .picture, panel: Panel = .whole,
-                    centre: SIMD2<Double> = SIMD2(0.5, 0.5)) {
-            self.pieces = pieces; self.eyes = eyes; self.mouth = mouth; self.finish = finish
-            self.ground = ground; self.panel = panel; self.centre = centre
+                    panel: Panel = .whole, centre: SIMD2<Double> = SIMD2(0.5, 0.5)) {
+            self.pieces = pieces; self.eyes = eyes; self.mouth = mouth; self.panel = panel; self.centre = centre
         }
 
         /// The slider's position for the standard count (1024 px, the bundled mosaics' Standard).
@@ -54,7 +50,7 @@ nonisolated extension MosaicEngine {
 
         /// The bundled detail this recipe's tiles are, when a bundled mosaic made from the whole
         /// picture with the default eyes and mouth stands for what the engine would make; nil
-        /// otherwise. The finish and the ground change no tile's place (the ground is laid on).
+        /// otherwise.
         public var bundledDetail: Detail? {
             guard eyes == .asTheyLook, mouth == .asInThePhoto, panel == .whole else { return nil }
             return Self.detailPieces.first { abs($0.value - pieces) < 1e-6 }?.key
@@ -75,10 +71,7 @@ nonisolated extension MosaicEngine {
             return s
         }
 
-        /// The mosaic as this recipe lays it: with its background in gold, for the gold ground.
-        public func laid(_ mosaic: Mosaic) -> Mosaic { ground == .gold ? mosaic.goldGround() : mosaic }
-
-        private enum CodingKeys: String, CodingKey { case pieces, eyes, mouth, finish, ground, panel, centre }
+        private enum CodingKeys: String, CodingKey { case pieces, eyes, mouth, panel, centre }
 
         public init(from decoder: any Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -90,8 +83,6 @@ nonisolated extension MosaicEngine {
             pieces = p.map { $0.isFinite ? min(max($0, 0), 1) : d.pieces } ?? d.pieces
             eyes = raw(.eyes, d.eyes)
             mouth = raw(.mouth, d.mouth)
-            finish = raw(.finish, d.finish)
-            ground = raw(.ground, d.ground)
             panel = raw(.panel, d.panel)
             let xy = ((try? c.decodeIfPresent([Double].self, forKey: .centre)) ?? nil) ?? []
             centre = xy.count == 2 && xy.allSatisfy(\.isFinite)
@@ -103,17 +94,9 @@ nonisolated extension MosaicEngine {
             try c.encode(pieces, forKey: .pieces)
             try c.encode(eyes.rawValue, forKey: .eyes)
             try c.encode(mouth.rawValue, forKey: .mouth)
-            try c.encode(finish.rawValue, forKey: .finish)
-            try c.encode(ground.rawValue, forKey: .ground)
             try c.encode(panel.rawValue, forKey: .panel)
             try c.encode([centre.x, centre.y], forKey: .centre)
         }
-    }
-
-    /// The picture's background as it is, or laid in gold smalti, as behind the figures at Ravenna
-    /// and in the icons (`Mosaic.goldGround`).
-    nonisolated public enum Ground: String, Sendable, Hashable, CaseIterable {
-        case picture, gold
     }
 
     /// How much of the photo goes on the wall: the whole of it, or a panel of a chosen shape the

@@ -12,7 +12,7 @@ import UIKit
 /// then fills the page above that group, Pieces first.
 ///
 /// Ravenna's seam: the card holds Ravenna's recipe (`MosaicEngine.Recipe`: Pieces, Eyes and Mouth,
-/// Finish and Ground, the Panel, as v0's new-mosaic sheet had them) where Paint by Moonlight's
+/// the Panel, as v0's new-mosaic sheet had them) where Paint by Moonlight's
 /// Colors, Detail, Smoothness and Lines sliders were, with no suggestion chip, Adjust or Refine.
 struct TemplatePreviewView: View {
     @Bindable var model: CreateModel
@@ -376,16 +376,14 @@ struct TemplatePreviewView: View {
         Picker("Setting", selection: Binding(get: { shownSetting }, set: { tunedSetting = $0 })) {
             Text("Pieces").tag(Setting.pieces)
             Text("Face").tag(Setting.face)
-            Text("Look").tag(Setting.look)
             Text("Panel").tag(Setting.panel)
         }
         .pickerStyle(.segmented)
         .accessibilityIdentifier("tuned-setting")
     }
 
-    /// The recipe's groups: how many pieces; the eyes and the mouth; the finish and the ground;
-    /// how much of the photo is laid.
-    private enum Setting: Hashable, CaseIterable { case pieces, face, look, panel }
+    /// The recipe's groups: how many pieces; the eyes and the mouth; how much of the photo is laid.
+    private enum Setting: Hashable, CaseIterable { case pieces, face, panel }
 
     /// Locked while Start Painting makes the painting (a change then would lay the mosaic again
     /// under it), and while the photo's contours and faces are found.
@@ -416,22 +414,6 @@ struct TemplatePreviewView: View {
                     Picker("Mouth", selection: choice(\.mouth)) {
                         Text("As in the photo").tag(MosaicEngine.Mouth.asInThePhoto)
                         Text("Byzantine").tag(MosaicEngine.Mouth.byzantine)
-                    }
-                }
-            }
-        case .look:
-            VStack(alignment: .leading, spacing: 4) {
-                ChoiceRow(title: "Finish", caption: "How set tiles look. Painted bed: the joints take the colour of the tiles round them. Glass and stone: glass catches the light at its edges, faces are matte stone.") {
-                    Picker("Finish", selection: choice(\.finish)) {
-                        Text("Glass and stone").tag(Finish.material)
-                        Text("Painted bed").tag(Finish.bed)
-                        Text("Flat, light grout").tag(Finish.flat)
-                    }
-                }
-                ChoiceRow(title: "Ground", caption: "Gold lays the picture’s background in gold smalti, as behind the figures at Ravenna.") {
-                    Picker("Ground", selection: choice(\.ground)) {
-                        Text("As in the picture").tag(MosaicEngine.Ground.picture)
-                        Text("Gold").tag(MosaicEngine.Ground.gold)
                     }
                 }
             }

@@ -34,14 +34,17 @@ go back into it (#5).
   (v0's `TileArt`, as `MosaicDrawing`), for the preview and the making-of.
 - **The mosaic kept:** each artwork folder has `mosaic.json` (`ArtworkStore.File.mosaic`, written
   by `create` and `replaceContents`, read by `readMosaic`) and `meta.json` records `recipe`
-  (`Artwork.recipe`, `MosaicEngine.Recipe`, tolerant; GenerationSettings stay written, unread).
+  (`Artwork.recipe`, `MosaicEngine.Recipe`: pieces, eyes, mouth, panel; tolerant; GenerationSettings
+  stay written, unread). The finish and the gold ground are the app's, how every mosaic shows
+  (`MosaicLook`, v0's keys `finish` and `ground`), not the recipe's. A mosaic's grout region is
+  no part of `Artwork.isStarted`, `fractionComplete`, `paintedAreas` and `areaCount`.
   `Library.loadForPainting` and `regenerate` hand it out as `PaintingDocument.mosaic` (nil when
   missing or not one tile a region plus the grout). `ArtworkDraft` carries `mosaic` and `recipe`.
 - **The create flow:** `CreateModel` is Ravenna's (its recipe, drafts at `MosaicMaker.draftLongSide`
   while Pieces moves, the engine's mosaics kept per tile recipe, a panel's analysis once); the
-  preview's card (`TemplatePreviewView`) holds Pieces, Eyes, Mouth, Finish, Ground and the Panel (its
-  sheet, `PanelFramingView`) where the sliders were. Out: Suggested settings (`AutoSettings`, the
-  chip, Settings › Painting Length), Settings › Preview and the line-art picture (`CompareView`,
+  preview's card (`TemplatePreviewView`) holds Pieces, Eyes, Mouth and the Panel (its sheet,
+  `PanelFramingView`) where the sliders were. Out: Suggested settings (`AutoSettings`, the chip,
+  Settings › Painting Length), Settings › Preview and Line Weight, the line-art picture (`CompareView`,
   `LineArtDrawing`), Refine (`Features/Refine`, its button, tips, notes, `TemplateRefinements`,
   `refinements.json`), drafts (`Drafts`, `CreateDraft`, `DraftRow`, `DraftSaveToast`), the
   line-art inputs (`LineArtInputs`, `LineArtMapsCache`, `TextFinder`, `ObjectFinder`, `EyeFinder`,
@@ -49,7 +52,8 @@ go back into it (#5).
   (`Preferences.retiredKeys`); `PaintDemoView`'s book demo runs HED alone.
 - **The making-of:** `Features/MakingOf` is v0's show (MosaicKit's `MakingOf.Show`, its cards and
   sources from docs/making-of.md) behind Paint by Moonlight's `MakingOfView` interface and hand-off
-  (`StartHandoff`), with v0's options in a menu; on by default (`SettingsDefault.playsMakingOf`).
+  (`StartHandoff`), with v0's options in a menu; always on (`SettingsDefault.playsMakingOf`, its
+  Settings switch gone; Skip ends it).
   The `MakingOf` package product is unlinked and `making-of.json` is gone. Its demos:
   `making-of`, `-smalti`, `-andamento`, `-dark`, `-long-text`, `-end`, `-reduce-motion`.
 - **v0's mosaics:** `Model/V0CarryOver` carries v0's `Own/` mosaics and `Settings/` progress into

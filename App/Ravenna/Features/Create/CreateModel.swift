@@ -9,7 +9,7 @@ import PhotosUI
 import SwiftUI
 
 /// Drives the create flow: holds the chosen photo and the painter's recipe (how many pieces, the
-/// eyes, the mouth, the finish, the ground and the panel: `MosaicEngine.Recipe`), and lays the
+/// eyes, the mouth and the panel: `MosaicEngine.Recipe`), and lays the
 /// mosaic again as the recipe changes: quick drafts at a smaller size while the Pieces slider is
 /// dragged (`MosaicMaker.draftLongSide`), the mosaic at its own size once it settles, always
 /// discarding stale work.
@@ -18,9 +18,9 @@ import SwiftUI
 /// chose them for each photo (Suggested settings) and refined them (Refine, drafts); here the
 /// engine lays a mosaic (`MosaicMaker`), its template made from it, and none of that remains. A
 /// photo's contours and faces are found once for each panel of it (`MosaicMaker.analyze`); the
-/// engine's mosaics are kept by the recipe's tiles (`TileKey`), so a finish or a ground changes
-/// only how the same tiles are laid and drawn. A library picture whose recipe a bundled mosaic
-/// stands for is laid from it at once.
+/// engine's mosaics are kept by recipe, for coming back to one. A library picture whose recipe a
+/// bundled mosaic stands for is laid from it at once. The preview draws the mosaic as the app shows
+/// every mosaic (`MosaicLook`: the finish and the gold ground, which move no tile).
 @Observable
 final class CreateModel {
     struct Source {
@@ -32,7 +32,7 @@ final class CreateModel {
 
     nonisolated struct Preview: Sendable, Identifiable {
         let id = UUID()
-        /// The mosaic laid (its ground on it).
+        /// The mosaic laid.
         let mosaic: Mosaic
         /// Its template: made for the mosaic at its own size only, never for a draft.
         let template: Template?
@@ -43,7 +43,7 @@ final class CreateModel {
         let isDraft: Bool
     }
 
-    /// What the comparison shows beside the photo: the mosaic, every tile set in its finish.
+    /// What the comparison shows beside the photo: the mosaic, every tile set, as it shows.
     nonisolated enum Picture: Sendable {
         case painting(CGImage)
     }
@@ -123,18 +123,6 @@ final class CreateModel {
     private(set) var framed: CGImage?
     @ObservationIgnored private var framedKey: PanelKey?
 
-    /// The recipe's tiles: what the engine's mosaic depends on (not the finish or the ground).
-    nonisolated struct TileKey: Equatable, Sendable {
-        let recipe: MosaicEngine.Recipe
-
-        init(_ recipe: MosaicEngine.Recipe) {
-            var r = recipe
-            r.finish = .material
-            r.ground = .picture
-            self.recipe = r
-        }
-    }
-
     /// The panel an analysis is of.
     nonisolated struct PanelKey: Equatable, Sendable {
         let panel: MosaicEngine.Panel
@@ -147,9 +135,8 @@ final class CreateModel {
     }
 
     @ObservationIgnored private var analysis: (key: PanelKey, value: MosaicMaker.Analysis)?
-    /// The engine's mosaics at their own size, newest first, before their ground: a mosaic is a
-    /// megabyte or so.
-    @ObservationIgnored private var made: [(key: TileKey, mosaic: Mosaic)] = []
+    /// The engine's mosaics at their own size, newest first: a mosaic is a megabyte or so.
+    @ObservationIgnored private var made: [(key: MosaicEngine.Recipe, mosaic: Mosaic)] = []
     static let madeKept = 4
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     @ObservationIgnored private var fullTask: Task<Void, Never>?
@@ -323,7 +310,7 @@ final class CreateModel {
         guard source != nil, !isChoosingSettings else { return }
         // A start tapped before is for a recipe that is gone.
         startAsked = false
-        trace("Recipe changed: pieces \(recipe.pieces), eyes \(recipe.eyes.rawValue), mouth \(recipe.mouth.rawValue), finish \(recipe.finish.rawValue), ground \(recipe.ground.rawValue), panel \(recipe.panel.rawValue)")
+        trace("Recipe changed: pieces \(recipe.pieces), eyes \(recipe.eyes.rawValue), mouth \(recipe.mouth.rawValue), panel \(recipe.panel.rawValue)")
         if isAdjusting {
             requestDraft()
             scheduleFull(after: Self.restDelay)
@@ -394,13 +381,13 @@ final class CreateModel {
             sampleName: source.sampleName, mosaic: preview.mosaic, recipe: recipe)
     }
 
-    /// What the making-of show of `draft` (the painting Start saved) is made from: its mosaic, the
-    /// photo it was laid from, its finish and the model's card. None without a mosaic.
+    /// What the making-of show of `draft` (the painting Start saved) is made from: its mosaic as the
+    /// app shows it, the photo it was laid from and the model's card. None without a mosaic.
     func makingOfSource(for draft: ArtworkDraft) -> MakingOfSource? {
         guard let mosaic = draft.mosaic, let photo = draft.photo else { return nil }
-        let sample = draft.sampleName.flatMap(Sample.named)
+        let sample = draft.sampleName.flatMap(Sample.named), look = MosaicLook.current
         return MakingOfSource(
-            mosaic: mosaic, photo: photo, finish: draft.recipe?.finish ?? .material, title: draft.title,
+            mosaic: look.laid(mosaic), photo: photo, finish: look.finish, title: draft.title,
             credit: sample.map(MakingOfSource.credit(of:)) ?? MakingOfSource.ownPhotoCredit)
     }
 
@@ -412,7 +399,7 @@ final class CreateModel {
         let recipe = self.recipe
         let bundled = MosaicMaker.bundled(source?.sampleName, recipe: recipe) != nil
         fullTask = Task {
-            if draftFirst, !bundled, !made.contains(where: { $0.key == TileKey(recipe) }) {
+            if draftFirst, !bundled, !made.contains(where: { $0.key == recipe }) {
                 await generate(draft: true, recipe: recipe)
                 guard !Task.isCancelled else { return }
             }
@@ -484,17 +471,17 @@ final class CreateModel {
         }
         do {
             let photo = source.preview, sample = source.sampleName
-            let earlier = draft ? nil : made.first(where: { $0.key == TileKey(recipe) })?.mosaic
+            let earlier = draft ? nil : made.first(where: { $0.key == recipe })?.mosaic
             var analysis: MosaicMaker.Analysis?
             if earlier == nil, MosaicMaker.bundled(sample, recipe: recipe) == nil {
                 analysis = try await analysisOf(recipe, photo: photo, load: load)
             }
             try Task.checkCancellation()
             let shown = try await Self.render(
-                photo, analysis: analysis, recipe: recipe, sample: sample, earlier: earlier, isDraft: draft,
-                progress: draft ? nil : report)
+                photo, analysis: analysis, recipe: recipe, sample: sample, earlier: earlier, look: MosaicLook.current,
+                isDraft: draft, progress: draft ? nil : report)
             // Kept even if cancelled meanwhile: it is what this recipe makes of this photo.
-            if !draft, load == loadID, let raw = shown.raw { remember(raw, key: TileKey(recipe)) }
+            if !draft, load == loadID, let raw = shown.raw { remember(raw, key: recipe) }
             try Task.checkCancellation()
             guard load == loadID else { return }
             // A draft finishing after a newer job began would replace it with less, and one after
@@ -544,7 +531,7 @@ final class CreateModel {
     }
 
     /// Keeps an engine's mosaic at its own size for coming back to its recipe's tiles.
-    private func remember(_ mosaic: Mosaic, key: TileKey) {
+    private func remember(_ mosaic: Mosaic, key: MosaicEngine.Recipe) {
         made.removeAll { $0.key == key }
         made.insert((key, mosaic), at: 0)
         if made.count > Self.madeKept { made.removeLast(made.count - Self.madeKept) }
@@ -576,23 +563,23 @@ final class CreateModel {
         try Decoded(PhotoLoader.load(data: data, maxPixelSize: ArtworkStore.sourceMaxPixelSize))
     }
 
-    /// A preview, and the engine's mosaic before its ground when the engine laid it at its own size.
+    /// A preview, and the engine's mosaic when the engine laid it at its own size.
     nonisolated struct Shown: Sendable {
         var preview: Preview
         var raw: Mosaic?
     }
 
-    /// The recipe's mosaic of `photo`: `earlier` (the engine's, laid before for these tiles) with
-    /// its ground, a bundled mosaic, or the engine's from `analysis` at the recipe's size or a
-    /// draft's; its template unless a draft; drawn in its finish.
+    /// The recipe's mosaic of `photo`: `earlier` (the engine's, laid before for this recipe), a
+    /// bundled mosaic, or the engine's from `analysis` at the recipe's size or a draft's; its template
+    /// unless a draft; drawn as `look` shows it.
     @concurrent
     private static func render(
         _ photo: CGImage, analysis: MosaicMaker.Analysis?, recipe: MosaicEngine.Recipe, sample: String?, earlier: Mosaic?,
-        isDraft: Bool, progress: (@Sendable (Double) -> Void)?
+        look: MosaicLook, isDraft: Bool, progress: (@Sendable (Double) -> Void)?
     ) async throws -> Shown {
         let laid: Mosaic, raw: Mosaic?
         if let earlier {
-            laid = recipe.laid(earlier)
+            laid = earlier
             raw = earlier
         } else if let bundled = MosaicMaker.bundled(sample, recipe: recipe) {
             laid = bundled
@@ -601,11 +588,8 @@ final class CreateModel {
             guard let analysis else { throw CreateError.renderFailed }
             let framed = MosaicMaker.framed(photo, panel: recipe.panel, centre: recipe.centre)
             let side = isDraft ? min(MosaicMaker.draftLongSide, recipe.longSide) : recipe.longSide
-            var plain = recipe
-            plain.ground = .picture
-            let mosaic = try MosaicMaker.make(framed, analysis: analysis, recipe: plain, side: side, progress: { progress?($0) })
-            laid = recipe.laid(mosaic)
-            raw = isDraft ? nil : mosaic
+            laid = try MosaicMaker.make(framed, analysis: analysis, recipe: recipe, side: side, progress: { progress?($0) })
+            raw = isDraft ? nil : laid
         }
         try Task.checkCancellation()
         let template = isDraft ? nil : try MosaicMaker.template(of: laid)
@@ -618,7 +602,7 @@ final class CreateModel {
         }
         #endif
         try Task.checkCancellation()
-        guard let image = MosaicPicture.image(laid, finish: recipe.finish, longest: isDraft ? 1024 : 2048) else {
+        guard let image = MosaicPicture.image(look.laid(laid), finish: look.finish, longest: isDraft ? 1024 : 2048) else {
             throw CreateError.renderFailed
         }
         return Shown(

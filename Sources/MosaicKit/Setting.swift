@@ -43,12 +43,11 @@ nonisolated public struct Setting: Sendable, Equatable, Codable {
 /// (`MosaicCore.template(of:)`), and the grout, the last region, is one more.
 nonisolated extension Setting {
     /// The template regions this setting has painted, for a mosaic of `tileCount` tiles, ascending:
-    /// each set tile's own (indices outside the mosaic dropped), and the grout once every tile is
-    /// set, so a finished wall stays finished.
+    /// each set tile's own (indices outside the mosaic dropped), and the grout, which a mosaic's
+    /// painting sets first (the canvas's `PaintProgress.groutSet`), so a finished wall is finished.
     public func paintedRegions(tileCount: Int) -> [Int] {
-        var regions = set.filter { $0 >= 0 && $0 < tileCount }.sorted()
-        if tileCount > 0, regions.count == tileCount { regions.append(tileCount) }
-        return regions
+        guard tileCount > 0 else { return [] }
+        return set.filter { $0 >= 0 && $0 < tileCount }.sorted() + [tileCount]
     }
 
     /// What v0 named a setting's file (`Settings/<key>.json`): one of the painter's own mosaics by its

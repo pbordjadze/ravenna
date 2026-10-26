@@ -21,20 +21,12 @@
       "comment" : "Settings row, and the title of the screen it opens, crediting the sample pictures, artwork, and the code, models and methods behind the template engine",
       "extractionState" : "manual"
     },
-    "After Start Painting, watch your mosaic set the way the old workshops set one, each step's technique named. It takes under a minute, and a tap skips it." : {
-      "comment" : "Footer of Settings › The Making-of (on by default)",
-      "extractionState" : "manual"
-    },
     "All of the photo is laid." : {
       "comment" : "Create preview: the line under the Panel choice when it is Whole",
       "extractionState" : "manual"
     },
     "As in the photo" : {
       "comment" : "Mouth choice: the mouth laid as the photo has it",
-      "extractionState" : "manual"
-    },
-    "As in the picture" : {
-      "comment" : "Ground choice: the picture's background laid as it is",
       "extractionState" : "manual"
     },
     "As they look" : {
@@ -205,48 +197,20 @@
       "comment" : "Refine screen: the tool whose tap makes a closed shape of the drawing an area of its own; its name in the tool rail and its VoiceOver label",
       "extractionState" : "manual"
     },
-    "Finish" : {
-      "comment" : "Create preview: the choice of how set tiles look",
-      "extractionState" : "manual"
-    },
-    "Flat, light grout" : {
-      "comment" : "Finish choice: flat tiles on light grout of one colour",
-      "extractionState" : "manual"
-    },
     "Generated" : {
       "comment" : "Refine screen, Start From: the template the app made from the photo (the default)",
-      "extractionState" : "manual"
-    },
-    "Glass and stone" : {
-      "comment" : "Finish choice: glass tiles with lit edges, the face in matte stone, gold tilting",
       "extractionState" : "manual"
     },
     "Goes Well With" : {
       "comment" : "Tool Guide: heading of a page's buttons to the pages of tools that go with this one",
       "extractionState" : "manual"
     },
-    "Gold" : {
-      "comment" : "Ground choice: the picture's background laid in gold smalti",
-      "extractionState" : "manual"
-    },
-    "Gold lays the picture’s background in gold smalti, as behind the figures at Ravenna." : {
-      "comment" : "Create preview: the line under the Ground choice",
-      "extractionState" : "manual"
-    },
     "Good to Know" : {
       "comment" : "Tool Guide: heading of a page's notes",
       "extractionState" : "manual"
     },
-    "Ground" : {
-      "comment" : "Create preview: the choice of the picture's background as it is, or laid in gold",
-      "extractionState" : "manual"
-    },
     "Hexagon" : {
       "comment" : "Refine screen, Shapes: the figure a drag draws as a six-sided shape",
-      "extractionState" : "manual"
-    },
-    "How set tiles look. Painted bed: the joints take the colour of the tiles round them. Glass and stone: glass catches the light at its edges, faces are matte stone." : {
-      "comment" : "Create preview: the line under the Finish choice",
       "extractionState" : "manual"
     },
     "How to Use It" : {
@@ -267,10 +231,6 @@
     },
     "Line Eraser" : {
       "comment" : "Refine screen: the tool that rubs lines out, or takes a whole line out with a tap; its name in the tool rail and its VoiceOver label",
-      "extractionState" : "manual"
-    },
-    "Look" : {
-      "comment" : "Create preview: the segment showing the Finish and Ground choices",
       "extractionState" : "manual"
     },
     "makingOf.model.credit" : {
@@ -375,10 +335,6 @@
     },
     "Paint Brush" : {
       "comment" : "Refine screen: the tool that paints the current paint where it is dragged, making or growing areas; its name in the tool rail and its VoiceOver label",
-      "extractionState" : "manual"
-    },
-    "Painted bed" : {
-      "comment" : "Finish choice: flat tiles on a bed painted in the colours round them",
       "extractionState" : "manual"
     },
     "Panel" : {

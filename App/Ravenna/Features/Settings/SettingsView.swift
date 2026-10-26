@@ -10,10 +10,8 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.sounds) private var sounds = SettingsDefault.sounds
     @AppStorage(SettingsKey.sky) private var sky = SkySetting.default
     @AppStorage(SettingsKey.paperAppearance) private var paperAppearance = PaperAppearance.default
-    @AppStorage(SettingsKey.lineWeight) private var lineWeight = LineWeight.default
     /// On until switched off here (`TipPreference`).
     @AppStorage(SettingsKey.tipsEnabled) private var tipsEnabled = SettingsDefault.tipsEnabled
-    @AppStorage(SettingsKey.playsMakingOf) private var playsMakingOf = SettingsDefault.playsMakingOf
     @Environment(UnlimitedPaintings.self) private var paintings
     @State private var path: [Destination] = []
     @State private var isUnlocking = false
@@ -23,7 +21,7 @@ struct SettingsView: View {
     private let supportsHaptics = CHHapticEngine.capabilitiesForHardware().supportsHaptics
 
     private enum Destination: Hashable { case acknowledgements }
-    private static let makingOfRow = "making-of"
+    private static let tipRow = "settings-music"
     @State private var tipsReset = false
 
     init() {
@@ -48,14 +46,6 @@ struct SettingsView: View {
                             SwiftUI.Label("Paper", systemImage: "circle.lefthalf.filled")
                         }
                         .accessibilityIdentifier("paper-appearance")
-                        Picker(selection: $lineWeight) {
-                            ForEach(LineWeight.allCases) { weight in
-                                Text(weight.name).tag(weight)
-                            }
-                        } label: {
-                            SwiftUI.Label("Line Weight", systemImage: "lineweight")
-                        }
-                        .accessibilityIdentifier("settings-line-weight")
                     } header: {
                         // Not the "Painting" key: that one names a picture, this one the activity.
                         Text(String(localized: "settings.section.painting", defaultValue: "Painting",
@@ -103,6 +93,11 @@ struct SettingsView: View {
                             SwiftUI.Label("Music", systemImage: "music.note")
                         }
                         .accessibilityIdentifier("settings-music")
+                        .id(Self.tipRow)
+                        // Worth a Look Here, the first time Settings opens, once the row is there to point at
+                        // (Ravenna's seam: Painting Length, which it pointed at, is gone with the suggestions).
+                        .gentleTip(.drawerWorthALook, arrowEdge: .top)
+                        .onAppear { PaintTips.drawerRowReached() }
                     } header: {
                         if supportsHaptics {
                             Text("Sound & Haptics")
@@ -117,20 +112,6 @@ struct SettingsView: View {
                                         defaultValue: "Auto plays Sun from \(Sky.clockText(Sky.sunrise)) and Moon from \(Sky.clockText(Sky.nightfall)), your time.",
                                         comment: "Footer of Settings › Sound, under its Music row while it is set to Auto (the other choices are Sun and Moon). The arguments are the hours, as the painter's clock writes them: when Sun begins (6 AM) and when Moon begins (7 PM)"))
                         }
-                    }
-
-                    Section {
-                        Toggle(isOn: $playsMakingOf) {
-                            SwiftUI.Label("The Making-of", systemImage: "film")
-                        }
-                        .accessibilityIdentifier("settings-making-of")
-                        .id(Self.makingOfRow)
-                        // Worth a Look Here, the first time Settings opens, once the row is there to point at
-                        // (Ravenna's seam: Painting Length and Preview, which it pointed at, are gone).
-                        .gentleTip(.drawerWorthALook, arrowEdge: .top)
-                        .onAppear { PaintTips.drawerRowReached() }
-                    } footer: {
-                        Text("After Start Painting, watch your mosaic set the way the old workshops set one, each step's technique named. It takes under a minute, and a tap skips it.")
                     }
 
                     if paintings.isSold { unlimitedPaintings }
@@ -158,7 +139,7 @@ struct SettingsView: View {
                 .task {
                     guard ShellDemo.current == .settingsTip else { return }
                     try? await Task.sleep(for: .seconds(1))
-                    withAnimation { proxy.scrollTo(Self.makingOfRow, anchor: .center) }
+                    withAnimation { proxy.scrollTo(Self.tipRow, anchor: .center) }
                 }
                 #endif
             }

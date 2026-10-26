@@ -72,8 +72,9 @@ struct MosaicKitTests {
 
 @Suite("v0's settings carried over")
 struct CarryOverTests {
-    @Test func setTilesAreRegionsAndAFinishedWallPaintsItsGrout() {
-        #expect(Setting(set: [3, 0, 9, -1]).paintedRegions(tileCount: 5) == [0, 3])
+    @Test func setTilesAreRegionsAndTheGroutIsSet() {
+        #expect(Setting(set: [3, 0, 9, -1]).paintedRegions(tileCount: 5) == [0, 3, 5])
+        #expect(Setting().paintedRegions(tileCount: 2) == [2])
         #expect(Setting(set: [0, 1, 2]).paintedRegions(tileCount: 3) == [0, 1, 2, 3])
         #expect(Setting().paintedRegions(tileCount: 0) == [])
     }

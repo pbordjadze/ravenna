@@ -60,14 +60,14 @@ nonisolated enum MosaicMaker {
         return Analysis(contours: contours, faces: faces)
     }
 
-    /// The bundled mosaic of library picture `sample` that `recipe` is (`Recipe.bundledDetail`),
-    /// with the recipe's ground laid on; nil when there is none.
+    /// The bundled mosaic of library picture `sample` that `recipe` is (`Recipe.bundledDetail`);
+    /// nil when there is none.
     static func bundled(_ sample: String?, recipe: MosaicEngine.Recipe) -> Mosaic? {
         guard let sample, let detail = recipe.bundledDetail,
               let url = Bundle.main.url(forResource: "\(sample)-\(detail.rawValue)", withExtension: "json"),
               let data = try? Data(contentsOf: url), let mosaic = try? JSONDecoder().decode(Mosaic.self, from: data)
         else { return nil }
-        return recipe.laid(mosaic)
+        return mosaic
     }
 
     /// The mosaic of `framed` (whose `analysis` it is) as `recipe` lays it, at `side` px on its
@@ -91,10 +91,9 @@ nonisolated enum MosaicMaker {
         let contours = bilinear(map.values.map { Float($0) / 255 }, map.width, map.height, to: w, h)
         let scale = Float(w) / Float(max(map.width, 1))
         let faces = analysis.faces.map { $0.scaled(by: scale) }
-        let mosaic = try MosaicEngine.make(
+        return try MosaicEngine.make(
             photo: .init(width: w, height: h, rgb: rgb), contours: contours, faces: faces,
             settings: recipe.settings(side: side), cancel: { Task.isCancelled }, progress: progress)
-        return recipe.laid(mosaic)
     }
 
     /// The painting's template of `mosaic`, which `Template.validate` passes.
