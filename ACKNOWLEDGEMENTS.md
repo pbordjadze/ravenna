@@ -59,8 +59,23 @@ Apache License, Version 2.0 (in full below).
   exact Euclidean distance transform.
 
 - OKLab colour space: Björn Ottosson, "A perceptual color space for image processing" (2020).
+- The paints chosen by k-means++: David Arthur and Sergei Vassilvitskii, "k-means++: The
+  Advantages of Careful Seeding" (2007).
+- Seeded randomness, so the same photo makes the same mosaic: SplitMix64, Guy Steele, Doug Lea and
+  Christine Flood, "Fast Splittable Pseudorandom Number Generators" (2014).
 - Face landmarks: Apple's Vision framework on the device; on the sketchbook's bench, Google's
   MediaPipe face landmarker (Apache-2.0), which never ships in the app.
+
+## PaintCore
+
+The app links Paint by Moonlight's PaintCore (pbordjadze/paint-by-number, at the commit
+`tools/paintcore.sh` pins), whose template engine is compiled in with it. Settings ›
+Acknowledgements credits the published methods it implements as Paint by Moonlight does: the
+domain transform (Eduardo Gastal and Manuel Oliveira, 2011), relative total variation (Li Xu,
+Qiong Yan, Yang Xia and Jiaya Jia, 2012), Potrace (Peter Selinger, 2003) and Douglas-Peucker
+(David Douglas and Thomas Peucker, 1973), beside the ones above. PaintCore's own ports of Earcut
+and Polylabel are under the same ISC License as Ravenna's (below). Paint by Moonlight's
+line-drawing model (Informative Drawings) and its picture library are not shipped in Ravenna.
 
 ## Type
 
