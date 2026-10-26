@@ -61,7 +61,9 @@ go back into it (#5).
   `making-of`, `-smalti`, `-andamento`, `-dark`, `-long-text`, `-end`, `-reduce-motion`.
 - **v0's mosaics and settings:** `Model/V0CarryOver` carries v0's `Own/` mosaics and `Settings/`
   progress into the library once at launch (`Library.forLaunch`), a set tile a painted region,
-  v0's app-wide `ground` recorded as each one's. v0's keys `finish`, `oneFinger`, `rowSound`,
+  v0's app-wide `ground` recorded as each one's; a read failing just now is tried again at a later
+  launch, a work failing 3 launches is given up, and the starters wait for it
+  (`Library.forLaunch`, made only if it leaves the library empty). v0's keys `finish`, `oneFinger`, `rowSound`,
   `border` and `makingOf.*` are v1's own; `Preferences.carryV0Settings` (from
   `removeRetiredSettings`) carries `sound`, `touch` and `tune` to Sounds, Haptics and Music where
   those are unset, removes them with `lesson` and `detail` (`retiredV0Keys`; v0's first lesson is
