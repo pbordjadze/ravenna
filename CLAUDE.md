@@ -8,21 +8,28 @@ purpose. Keep it that way.
 
 - `prototype/`: the Python reference (its `README.md`). The Swift engine is ported from it;
   change the prototype only to try an idea in the sketchbook.
-- The engine (to come): a Swift package here, `MosaicCore`, on Paint by Moonlight's `PaintCore`.
-- The app (to come): an iOS 26 SwiftUI app with its own bundle identifier, built for SideStore.
+- The engine: this Swift package (`MosaicKit`, `MosaicEngine`, `MosaicCore` on Paint by
+  Moonlight's `PaintCore`), tested on Linux.
+- The app (v1, issue #13, on `claude/v1` until it lands on `main`): `App/Ravenna` is Paint by
+  Moonlight's app copied at the pinned commit, with Ravenna inside it; its notes and seams are
+  `App/CLAUDE.md`. It replaced the first app, v0, whose code is in the history (`App/v0/`, up to
+  108a3c7); `Model/V0CarryOver` still reads v0's saved files on painters' devices.
 
 ## The sibling repository
 
 [pbordjadze/paint-by-number](https://github.com/pbordjadze/paint-by-number) is Paint by
 Moonlight, a shipping app with its own sessions, CI and rules.
 
-- Use its `PaintCore` package pinned by `revision:` (a commit), never a version range: its
-  targets use unsafe compiler flags, which SwiftPM refuses in a dependency resolved by version.
-  Move the pin on purpose, and say why in the commit.
+- Use its `PaintCore` at one commit, checked out by `tools/paintcore.sh` (a path dependency,
+  never a version range: its targets use unsafe compiler flags, which SwiftPM refuses in a
+  dependency resolved by version). Move the pin on purpose, and say why in the commit; the app
+  was copied at the same commit, so its copy moves with it.
 - Never push to it, edit it or start its CI from here. If the engine needs a change, write it up
   as a proposal for Paul; the main app's sessions make it, through their own review.
-- Copy what you need from it (the line-art Core ML models, app plumbing), with its credits
-  (`ACKNOWLEDGEMENTS.md` there), rather than share app code. Ravenna's look and feel are its own.
+- Its app is copied here whole (Paul's decision, October 26, issue #13: its bones, with Ravenna's
+  engine, making-of and look). Keep the copy close to its source, with every Ravenna change at a seam `App/CLAUDE.md`
+  lists, so it can follow Paint by Moonlight and one day go back into it (#5). Its credits come
+  with it (`ACKNOWLEDGEMENTS.md` there).
 
 ## Work
 

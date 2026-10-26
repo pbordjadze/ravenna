@@ -1,0 +1,66 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "CFBundleDisplayName" : {
+      "comment" : "The app's name under its icon on the Home Screen and in Settings",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ravenna"
+          }
+        }
+      }
+    },
+    "Image" : {
+      "comment" : "Name of the document type the app declares for images, shown by the system when a photo is opened in Ravenna from the share sheet or Files (CFBundleTypeName in Config/Info.plist)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Image"
+          }
+        }
+      }
+    },
+    "NSCameraUsageDescription" : {
+      "comment" : "Shown in the system alert that asks permission to use the camera (Take Photo in the create flow)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ravenna uses the camera to take a photo you can turn into a mosaic. The photo stays on your device."
+          }
+        }
+      }
+    },
+    "NSPhotoLibraryAddUsageDescription" : {
+      "comment" : "Shown in the system alert that asks permission to add pictures to the photo library (Save Image or Save Video in the share sheet, sharing a painting or its time-lapse)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ravenna saves a mosaic or its time-lapse to your photo library when you choose Save Image or Save Video as you share it."
+          }
+        }
+      }
+    },
+    "Ravenna Mosaic" : {
+      "comment" : "Name of the document type of a mosaic sent to someone else to set (a .ravenna file), shown by the system when it is opened from Messages, AirDrop or Files (CFBundleTypeName and UTTypeDescription in Config/Info.plist)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ravenna Mosaic"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

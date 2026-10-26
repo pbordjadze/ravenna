@@ -6,12 +6,15 @@ name: CI
 #   compile  `[compile]` in a branch's pushed commit message: an unsigned Debug build of the app.
 #   shots    `[shots]` in a branch's pushed commit message, or a manual run with `shots` ticked: a Debug simulator build, and each screen
 #            screenshotted (iPhone at the default and the largest text size, iPad at the default),
-#            as the `shots` artifact. The app opens each screen from RAVENNA_SHOT (Debug only).
+#            as the `shots` artifact. Each is a demo scenario (`-demo <name>`, Debug only: the
+#            catalogs are ShellDemo's, PaintDemoView's and RootView's doc comments), shot once it
+#            says it is ready (DemoMode.markReady).
 #   determinism  `[determinism]` in a branch's pushed commit message: the Determinism tests on
 #            Apple silicon, against Linux's hashes (SwiftPM, no Xcode project).
-#   ipa      main, when App/, Sources/MosaicKit/ or Sources/MosaicEngine/ changed (or `[ipa]` on a branch, which archives
+#   ipa      main, when the app or what it links changed (or `[ipa]` on a branch, which archives
 #            without publishing): an unsigned Release archive as a `build-<n>` prerelease (five
 #            kept) and the SideStore source on the `sidestore` branch. Adapted from paint-by-number.
+# Every job that builds first checks out paint-by-number at the pinned commit (tools/paintcore.sh).
 
 on:
   push:
@@ -50,7 +53,7 @@ jobs:
         run: |
           if [[ -z "$BEFORE" || "$BEFORE" =~ ^0+$ ]] || ! git cat-file -e "$BEFORE" 2>/dev/null; then
             echo "app=true" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only "$BEFORE" "$GITHUB_SHA" | grep -qE '^(App/|Sources/MosaicKit/|Sources/MosaicEngine/)'; then
+          elif git diff --name-only "$BEFORE" "$GITHUB_SHA" | grep -qE '^(App/|Sources/Mosaic(Kit|Engine|Core)/|Package.swift|tools/paintcore.sh)'; then
             echo "app=true" >> "$GITHUB_OUTPUT"
           else
             echo "app=false" >> "$GITHUB_OUTPUT"
@@ -64,6 +67,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with: { persist-credentials: false }
+      - name: PaintCore at its pin
+        run: tools/paintcore.sh
       - name: Build
         run: |
           set -o pipefail
@@ -84,6 +89,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with: { persist-credentials: false }
+      - name: PaintCore at its pin
+        run: tools/paintcore.sh
       - name: Build
         run: |
           set -o pipefail
@@ -103,27 +110,52 @@ jobs:
           m=m or [d for d in ds if '$1'.split()[0] in d['name']]
           print(sorted(m, key=lambda d: d['name'])[-1]['udid'])"
           }
-          shoot() {  # device, label, text size, shots...
+          shoot() {  # device, label, text size, scenarios...
             local dev=$1 label=$2 size=$3; shift 3
             xcrun simctl ui "$dev" content_size "$size"
             for shot in "$@"; do
               xcrun simctl terminate "$dev" "$BUNDLE" 2>/dev/null || true
-              SIMCTL_CHILD_RAVENNA_SHOT=$shot xcrun simctl launch "$dev" "$BUNDLE" >/dev/null
-              sleep 14
+              local ready
+              ready="$(xcrun simctl get_app_container "$dev" "$BUNDLE" data)/tmp/demo-ready"
+              rm -f "$ready"
+              xcrun simctl launch "$dev" "$BUNDLE" -demo "$shot" >/dev/null
+              for i in $(seq 1 120); do
+                [ -f "$ready" ] && break
+                # Gone (it crashed): no use waiting out the two minutes.
+                if [ "$i" -gt 5 ] && ! xcrun simctl spawn "$dev" launchctl list 2>/dev/null | grep "$BUNDLE" >/dev/null; then
+                  echo "::warning::$label $shot is no longer running"; break
+                fi
+                sleep 1
+              done
+              if [ ! -f "$ready" ]; then
+                echo "::warning::$label $shot never said it was ready"
+                # The app's own log for the scenario that didn't make it, kept beside its shot.
+                xcrun simctl spawn "$dev" log show --last 3m --style compact \
+                  --predicate "process == \"$(basename "$APP" .app)\"" > "out/$label-$shot.log" 2>&1 || true
+              fi
+              sleep 2
               xcrun simctl io "$dev" screenshot "out/$label-$shot.png" >/dev/null
+              # The measuring demo's report (frame times, memory), when it wrote one.
+              local measured
+              measured="$(xcrun simctl get_app_container "$dev" "$BUNDLE" data)/tmp/canvas-measure.txt"
+              if [ -f "$measured" ]; then cp "$measured" "out/$label-$shot.txt"; rm -f "$measured"; fi
             done
           }
-          ALL="gallery options new wall lesson finished gold"
+          ALL="gallery-first-run create-samples create-preview create-custom making-of making-of-end paint paint-progress paint-complete"
+          # The painting screen's tiles, at the default text size only.
+          TILES="paint-zoom paint-setting paint-setting-flat paint-setting-bed paint-finish paint-replay paint-mosaic-measure"
           for kind in "iPhone 17 Pro:iphone" "iPad Pro 11:ipad"; do
             dev=$(pick "${kind%%:*}") label=${kind##*:}
             xcrun simctl boot "$dev"; xcrun simctl bootstatus "$dev" -b >/dev/null
             xcrun simctl status_bar "$dev" override --time 9:41 --batteryLevel 100 || true
             xcrun simctl ui "$dev" appearance dark
             xcrun simctl install "$dev" "$APP"
-            shoot "$dev" "$label" large $ALL
+            shoot "$dev" "$label" large $ALL $TILES
             if [ "$label" = iphone ]; then shoot "$dev" "$label-ax5" accessibility-extra-extra-extra-large $ALL; fi
             xcrun simctl shutdown "$dev"
           done
+          # Crash reports of the app, if any scenario crashed.
+          cp ~/Library/Logs/DiagnosticReports/"$(basename "$APP" .app)"*.ips out/ 2>/dev/null || true
       - uses: actions/upload-artifact@v5
         if: always()
         with: { name: shots, path: out, if-no-files-found: ignore }
@@ -141,6 +173,8 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v5
+      - name: PaintCore at its pin
+        run: tools/paintcore.sh
       - name: Archive
         run: |
           set -o pipefail
@@ -200,8 +234,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with: { persist-credentials: false }
-      - name: PaintCore from a slim mirror
-        run: tools/paintcore-mirror.sh
+      - name: PaintCore at its pin
+        run: tools/paintcore.sh
       - name: Test
         run: |
           set -o pipefail
@@ -239,13 +273,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .build
-          key: swiftpm-${{ runner.os }}-${{ hashFiles('Package.swift', 'Package.resolved') }}
-      - name: PaintCore from a slim mirror
-        # Only the pinned commit, not paint-by-number's every ref (many gigabytes of CI reports).
+          key: swiftpm-${{ runner.os }}-${{ hashFiles('Package.swift', 'tools/paintcore.sh') }}
+      - name: PaintCore at its pin
         shell: bash
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          tools/paintcore-mirror.sh
+          tools/paintcore.sh
       - name: Build
         shell: bash
         run: |

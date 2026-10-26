@@ -1,14 +1,16 @@
 """bundle.py <catalog.json> <work dir> <out dir>: the app's bundled mosaics, from public-domain works in the
 Met's Open Access collection. For each work: the Met's image and record (medium, accession, credit), the
-picture at 724, 1024 and 1448 px (the detail option's Fewer, Standard and More pieces), its contours
-(paint-by-number's HED, through hed.py), its face's features (features.py, for faces), the tight set
-made by the app's own engine (the Swift CLI `mosaic`, as a photo is on the phone) and its painted bed.
+picture at 724, 1024 and 1448 px (Fewer, Standard and More pieces, which a library picture's
+recipe is laid from when it matches one, `Recipe.bundledDetail`), its contours (paint-by-number's HED,
+through hed.py), its face's features (features.py, for faces), the tight set
+made by the app's own engine (the Swift CLI `mosaic`, as a photo is on the phone). The app paints each
+mosaic's bed itself (`TileScene.bed`), so none is bundled.
 A catalog entry may add "window" ("left,top,side" fractions: where features.py looks for a small or
 painted face, found once at Standard and scaled) and "features": "eyes" (only the eyes and their
 lids, where the landmarker misreads the rest).
 Writes to <out dir>: <id>-<detail>.json (the design in Standard's canvas units: "size", "grout",
 "palette" as sRGB 0...1, "tiles" in laying order, each {"c": flat corners, "p": paint, "s": 1 when stone
-(inside the face), "g": the build stage}), <id>-bed.jpg, <id>-photo.jpg and catalog.json. Run from the
+(inside the face), "g": the build stage}), <id>-photo.jpg and catalog.json. Run from the
 scratch directory that holds venv/, pbn/ (paint-by-number) and models/face_landmarker.task, after
 `swift build -c release` in the repository (MOSAIC= names another build of the CLI)."""
 import json, os, subprocess, sys, urllib.request
@@ -68,7 +70,6 @@ for m in spec["mosaics"]:
                 f["lines"] = [ln for ln in f["lines"] if ln["kind"] == "eye" or (ln["kind"] in ("dark", "tone") and near(ln))]
                 json.dump(f, open(fj, "w"))
             cmd += ["--features", f"{work}/{i}-{side}-features.json"]
-        if side == 1024: cmd += ["--bed", f"{work}/{i}-bed.ppm"]
         r = subprocess.run(cmd, check=True, capture_output=True, text=True)
         print(i, detail, r.stdout.splitlines()[0])
         d = json.load(open(f"{work}/{i}-{side}.json"))
@@ -88,8 +89,6 @@ for m in spec["mosaics"]:
         json.dump({"size": list(std), "grout": d["grout"], "palette": d["palette"], "tiles": tiles},
                   open(f"{out}/{i}-{detail}.json", "w"), separators=(",", ":"))
         if side == 1024:
-            bed = Image.open(f"{work}/{i}-bed.ppm").convert("RGB").resize(std, Image.LANCZOS)
-            bed.save(f"{out}/{i}-bed.jpg", quality=82)
             ph = Image.open(f"{work}/{i}-1024.ppm"); ph.save(f"{out}/{i}-photo.jpg", quality=85)
     entries.append({"id": i, "title": m["title"], "date": m["date"], "place": m["place"],
                     "medium": rec["medium"], "credit": f"The Metropolitan Museum of Art, {rec['creditLine']} ({rec['accessionNumber']}). Public domain.",
