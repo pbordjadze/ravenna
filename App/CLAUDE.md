@@ -87,3 +87,7 @@ go back into it (#5).
   navigation titles and the swatch numerals (`Font.numeral`), or the system serif (`Typeface`, an
   option until Paul chooses); `CanvasPalette`'s sheet, ink and backdrop; the launch screen is
   `LaunchGround`, and the app is dark only (`UIUserInterfaceStyle`).
+- **A mosaic's card:** `Library.thumbnailPNG` draws a mosaic's thumbnail with `MosaicCard` (its
+  ground, the places still to set faint on it, the set tiles in the app's finish, through
+  `MosaicPicture` and `MosaicDrawing`), in place of `TemplateRasterizer`'s light paper; the
+  time-lapse and print keep Paint by Moonlight's paper.
