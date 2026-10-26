@@ -3,7 +3,15 @@
   "strings" : {
     "A Calmer Way to Paint" : {
       "comment" : "Title of the tip at the More menu of the painting screen about Zen Mode",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A Calmer Way to Set"
+          }
+        }
+      }
     },
     "A Page Is Waiting" : {
       "comment" : "Title of the tip in the gallery’s Ready to Paint section, shown on the first visit, once the starter pages are in view",
@@ -591,7 +599,15 @@
     },
     "All paint will be cleared." : {
       "comment" : "Message of the confirmation dialog for restarting the open painting",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every tile will be lifted."
+          }
+        }
+      }
     },
     "Already Chosen for You" : {
       "comment" : "Title of the tip at the Suggested for this picture chip of the New Painting preview",
@@ -627,7 +643,15 @@
     },
     "Can’t Open Painting" : {
       "comment" : "Title of the recovery screen shown when a painting's file can't be read",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can’t Open Mosaic"
+          }
+        }
+      }
     },
     "Can’t Show the Canvas" : {
       "comment" : "Title of the screen shown when the device can't draw the painting canvas (no Metal)",
@@ -971,15 +995,39 @@
     },
     "Comparison of photo and painting" : {
       "comment" : "VoiceOver label of the draggable before/after comparison of the photo and its painting (or its line art)",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comparison of photo and mosaic"
+          }
+        }
+      }
     },
     "Couldn’t Create Painting" : {
       "comment" : "Title of the alert shown when saving a new painting from the create flow fails",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t Create Mosaic"
+          }
+        }
+      }
     },
     "Couldn’t Open Painting" : {
       "comment" : "Title of the alert when a painting someone sent (a .moonlight file opened in the app) can't be added to the gallery",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t Open Mosaic"
+          }
+        }
+      }
     },
     "Couldn’t Open Photo" : {
       "comment" : "Title shown in the create flow when the chosen photo can't be opened",
@@ -1052,7 +1100,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The painting couldn’t be made. Try different settings."
+            "value" : "The mosaic couldn’t be laid. Try different settings."
           }
         }
       }
@@ -1107,7 +1155,15 @@
     },
     "Making the painting…" : {
       "comment" : "Status shown while a new painting is first made from the photo",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Laying the mosaic…"
+          }
+        }
+      }
     },
     "Delete" : {
       "comment" : "Context menu item that deletes a painting from the gallery",
@@ -1115,11 +1171,27 @@
     },
     "Delete Painting" : {
       "comment" : "Button on the recovery screen that deletes the painting that can't be opened",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete Mosaic"
+          }
+        }
+      }
     },
     "Delete this painting?" : {
       "comment" : "Title of the confirmation dialog for deleting a painting",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this mosaic?"
+          }
+        }
+      }
     },
     "Discard" : {
       "comment" : "Button of that confirmation: throws the feedback away and returns to painting",
@@ -1135,19 +1207,51 @@
     },
     "Double-tap the page to zoom in. Pinch to zoom back out." : {
       "comment" : "Message of the tip titled Zoom In on Small Areas; the page is the painting being painted",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Double-tap the mosaic to zoom in. Pinch to zoom back out."
+          }
+        }
+      }
     },
     "Drag the divider to compare the photo and the page. Pinch to look closer." : {
       "comment" : "Message of the tip titled Compare Photo and Page, at the divider between the photo and the page in the New Painting preview",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drag the divider to compare the photo and the mosaic. Pinch to look closer."
+          }
+        }
+      }
     },
     "Draw on the painting, pinch to zoom" : {
       "comment" : "Feedback mode's top bar on the painting screen: hint under its title, also its VoiceOver hint",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Draw on the mosaic, pinch to zoom"
+          }
+        }
+      }
     },
     "Drop to Create a Painting" : {
       "comment" : "Shown over the gallery while a photo is dragged onto it",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drop to Create a Mosaic"
+          }
+        }
+      }
     },
     "Each mark gets its own comment." : {
       "comment" : "Feedback's review sheet: footer under the list of marks, each with its close-up and a comment field",
@@ -1163,11 +1267,27 @@
     },
     "Every painted area will be cleared." : {
       "comment" : "Message of the confirmation dialog for restarting a painting from the gallery",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every tile set will be lifted."
+          }
+        }
+      }
     },
     "Every region is painted." : {
       "comment" : "Caption in the completion bar of a painting without a title",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every tile is set."
+          }
+        }
+      }
     },
     "export.error.renderFailed" : {
       "comment" : "Error when a painting's picture can't be rendered for sharing",
@@ -1236,7 +1356,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Feedback. Draw on the painting to show what it’s about, then choose Next."
+            "value" : "Feedback. Draw on the mosaic to show what it’s about, then choose Next."
           }
         }
       }
@@ -1248,7 +1368,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Draw on the painting to show what your feedback is about. Two fingers move and zoom."
+            "value" : "Draw on the mosaic to show what your feedback is about. Two fingers move and zoom."
           }
         }
       }
@@ -1303,7 +1423,15 @@
     },
     "Fewer colors and less detail make a calmer page. More makes a longer, finer one." : {
       "comment" : "Message of the tip titled Fewer or More Areas, about the Colors and Detail sliders of the New Painting preview; a page is a painting",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fewer pieces make a bolder mosaic, quicker to set. More make a finer one."
+          }
+        }
+      }
     },
     "Fewer or More Areas" : {
       "comment" : "Title of the tip at the Colors slider of the New Painting preview, shown on the second page made",
@@ -1344,7 +1472,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ painted"
+            "value" : "%@ set"
           }
         }
       }
@@ -1452,7 +1580,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“%1$@” is %2$@ painted."
+            "value" : "“%1$@” is %2$@ set."
           }
         }
       }
@@ -1464,7 +1592,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This painting’s saved progress couldn’t be read, so it starts fresh."
+            "value" : "This mosaic’s saved progress couldn’t be read, so it starts fresh."
           }
         }
       }
@@ -1476,7 +1604,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Painting regenerated from the original photo."
+            "value" : "Mosaic laid again from the original picture."
           }
         }
       }
@@ -1488,7 +1616,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Painting regenerated. Your painted areas were kept."
+            "value" : "Mosaic laid again. The tiles you set were kept."
           }
         }
       }
@@ -1512,7 +1640,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Its file is damaged. It can be made again from its photo, but its paint can’t be saved: it will start fresh."
+            "value" : "Its file is damaged. It can be laid again from its picture, but the tiles you set can’t be saved: it will start fresh."
           }
         }
       }
@@ -1536,7 +1664,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“%@” was made with a newer version of Paint by Moonlight. Update the app to keep painting it."
+            "value" : "“%@” was made with a newer version of Ravenna. Update the app to keep setting it."
           }
         }
       }
@@ -1548,7 +1676,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This painting was made with a newer version of Paint by Moonlight. Update the app to keep painting it."
+            "value" : "This mosaic was made with a newer version of Ravenna. Update the app to keep setting it."
           }
         }
       }
@@ -1707,13 +1835,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld finished painting"
+                  "value" : "%lld finished mosaic"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld finished paintings"
+                  "value" : "%lld finished mosaics"
                 }
               }
             }
@@ -1731,13 +1859,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld painting in progress"
+                  "value" : "%lld mosaic in progress"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld paintings in progress"
+                  "value" : "%lld mosaics in progress"
                 }
               }
             }
@@ -1755,13 +1883,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld ready to paint"
+                  "value" : "%lld ready to set"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld ready to paint"
+                  "value" : "%lld ready to set"
                 }
               }
             }
@@ -1819,11 +1947,27 @@
     },
     "In More, Give Feedback lets you mark the page and say what is wrong or right." : {
       "comment" : "Message of the tip titled Tell Us What You Think; More is the painting screen’s menu button, Give Feedback one of its items",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In More, Give Feedback lets you mark the mosaic and say what is wrong or right."
+          }
+        }
+      }
     },
     "In More, Zen Mode moves the page to the next area after each fill." : {
       "comment" : "Message of the tip titled A Calmer Way to Paint; More is the painting screen’s menu button, Zen Mode one of its items",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In More, Zen Mode moves the mosaic to the next tile after each one you set."
+          }
+        }
+      }
     },
     "In Progress" : {
       "comment" : "Gallery section header for paintings that are painted on and not finished",
@@ -1840,7 +1984,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This file may be damaged, or it isn’t a painting. Ask whoever sent it to send it again."
+            "value" : "This file may be damaged, or it isn’t a mosaic. Ask whoever sent it to send it again."
           }
         }
       }
@@ -1852,7 +1996,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This painting was sent from a newer version of Paint by Moonlight. Update the app to open it."
+            "value" : "This mosaic was sent from a newer version of Ravenna. Update the app to open it."
           }
         }
       }
@@ -1864,7 +2008,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The painting couldn’t be saved on this device. Free up some space and open it again."
+            "value" : "The mosaic couldn’t be saved on this device. Free up some space and open it again."
           }
         }
       }
@@ -1923,7 +2067,15 @@
     },
     "Painting Length sets how long new pages take. The Making-of shows a photo becoming its page." : {
       "comment" : "Message of the tip titled Worth a Look Here, at the Painting Length setting; the Making-of is a setting that plays a show after Start Painting",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finish sets how the tiles look. The Making-of shows a picture laid as a mosaic, step by step."
+          }
+        }
+      }
     },
     "Peek at the Photo" : {
       "comment" : "Title of the tip at the Photo control of the painting screen, shown when a page is about a quarter painted",
@@ -1931,11 +2083,27 @@
     },
     "Pick a color, then tap an area marked with its number to fill it." : {
       "comment" : "Message of the first tip on the painting screen (Tap to Paint); the color is the one selected in the palette, below the page or, on a landscape iPad, beside it",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick a color, then tap a tile marked with its number to set it."
+          }
+        }
+      }
     },
     "Replay Painting plays your page back from the first fill." : {
       "comment" : "Message of the tip titled Watch It Again; Replay Painting plays a finished painting back from its first fill",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replay Mosaic plays your mosaic back from the first tile."
+          }
+        }
+      }
     },
     "Samples has paintings and photographs ready to use." : {
       "comment" : "Message of the tip titled No Photo at Hand; Samples is the pane or list of the app’s sample pictures",
@@ -1956,7 +2124,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "They get a blank copy of this page to paint, your changes to the drawing included. Your photo stays on this device."
+            "value" : "They get a blank copy of this mosaic to set, your changes included. Your photo stays on this device."
           }
         }
       }
@@ -1968,7 +2136,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "They get a blank copy of this page to paint. Your photo stays on this device."
+            "value" : "They get a blank copy of this mosaic to set. Your photo stays on this device."
           }
         }
       }
@@ -1980,7 +2148,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "They get a blank copy of this page to paint, your changes to the drawing included."
+            "value" : "They get a blank copy of this mosaic to set, your changes included."
           }
         }
       }
@@ -1992,7 +2160,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "They get a blank copy of this page to paint."
+            "value" : "They get a blank copy of this mosaic to set."
           }
         }
       }
@@ -2004,7 +2172,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "They get a blank copy of this page to paint, your changes to the drawing included, and your photo to peek at."
+            "value" : "They get a blank copy of this mosaic to set, your changes included, and your photo to peek at."
           }
         }
       }
@@ -2016,7 +2184,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "They get a blank copy of this page to paint, and your photo to peek at."
+            "value" : "They get a blank copy of this mosaic to set, and your photo to peek at."
           }
         }
       }
@@ -2028,7 +2196,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "They get a blank copy of this page to paint, your changes to the drawing included, and the picture to peek at."
+            "value" : "They get a blank copy of this mosaic to set, your changes included, and the picture to peek at."
           }
         }
       }
@@ -2040,7 +2208,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "They get a blank copy of this page to paint, and the picture to peek at."
+            "value" : "They get a blank copy of this mosaic to set, and the picture to peek at."
           }
         }
       }
@@ -2079,15 +2247,39 @@
     },
     "Tap + to turn one of your photos, or a sample, into a page to paint." : {
       "comment" : "Message of the tip titled Make Your Own Page, at the gallery’s + (New Painting) button",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap + to lay one of your photos, or a sample, as a mosaic to set."
+          }
+        }
+      }
     },
     "Tap a page in Ready to Paint to begin. Nothing needs setting up first." : {
       "comment" : "Message of the tip titled A Page Is Waiting, inline in the gallery’s Ready to Paint section; Ready to Paint is that section’s title",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap a mosaic in Ready to Set to begin. Nothing needs setting up first."
+          }
+        }
+      }
     },
     "Tap the selected color again, or the lightbulb, to be shown an area to paint." : {
       "comment" : "Message of the tip titled Can’t Find It?; the lightbulb is the painting screen’s Hint button",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap the selected color again, or the lightbulb, to be shown a tile to set."
+          }
+        }
+      }
     },
     "Tell Us What You Think" : {
       "comment" : "Title of the tip at Give Feedback on the painting screen, shown on opening the third painting",
@@ -2103,7 +2295,15 @@
     },
     "The gear holds paper tone, sound and painting length. Tips can be turned off there." : {
       "comment" : "Message of the tip titled Settings and Tips; the gear is the gallery’s Settings button",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The gear holds the finish, the sound and the paper. Tips can be turned off there."
+          }
+        }
+      }
     },
     "The Making-of" : {
       "comment" : "Settings switch (off by default) that makes Start Painting first play the making-of show: the painter's photo becoming its painting, step by step (a name, like a film's title)",
@@ -2111,11 +2311,27 @@
     },
     "Send goes straight to the people who make Paint by Moonlight." : {
       "comment" : "Feedback's review sheet: footer under what is sent; Send delivers the feedback to the developers directly",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send goes straight to the people who make Ravenna."
+          }
+        }
+      }
     },
     "Send goes straight to the people who make Paint by Moonlight. Your photo helps us remake the painting; it goes only if you turn it on." : {
       "comment" : "Feedback's review sheet: footer under what is sent, for a painting made from the painter's own photo",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send goes straight to the people who make Ravenna. Your photo helps us lay the mosaic again; it goes only if you turn it on."
+          }
+        }
+      }
     },
     "Sending…" : {
       "comment" : "Feedback's review sheet: message (and VoiceOver label of the progress indicator) while the feedback is being sent to the developers",
@@ -2127,11 +2343,27 @@
     },
     "The painting couldn’t be prepared for sending." : {
       "comment" : "Send Template sheet: shown when the painting's file can't be made (its template can't be read)",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The mosaic couldn’t be prepared for sending."
+          }
+        }
+      }
     },
     "The Pencil paints while fingers move the page. Double-tap the Pencil for the next color." : {
       "comment" : "Message of the tip titled Paint with Apple Pencil; the page is the painting being painted",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Pencil sets tiles while fingers move the mosaic. Double-tap the Pencil for the next color."
+          }
+        }
+      }
     },
     "The photo’s colours" : {
       "comment" : "Eyes choice: irises kept in the photo's own colours",
@@ -2143,7 +2375,15 @@
     },
     "These settings were picked for this photo. You can just tap Start Painting." : {
       "comment" : "Message of the tip titled Already Chosen for You; Start Painting is the New Painting screen’s main button",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "These settings were picked for this photo. You can just tap Start the Mosaic."
+          }
+        }
+      }
     },
     "Tips" : {
       "comment" : "Settings switch for the small tips, and the name of its section",
@@ -2155,15 +2395,39 @@
     },
     "Touch and hold a finished painting and choose Share for a time-lapse of it." : {
       "comment" : "Message of the tip titled Share the Making; a time-lapse is a movie of the painting being painted",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch and hold a finished mosaic and choose Share for a time-lapse of it."
+          }
+        }
+      }
     },
     "Touch and hold a painting to favorite, rename, share, print or start it over." : {
       "comment" : "Message of the tip titled More for Each Painting, about a gallery card’s touch-and-hold menu",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch and hold a mosaic to favorite, rename, share, print or start it over."
+          }
+        }
+      }
     },
     "Touch and hold, then drag across areas with this number to fill them in one stroke." : {
       "comment" : "Message of the tip titled Paint Several Areas",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drag along a row of tiles with this number to set them in one stroke."
+          }
+        }
+      }
     },
     "Type" : {
       "comment" : "Header of the Acknowledgements section crediting the typeface the app is set in (Alegreya)",
@@ -2235,7 +2499,15 @@
     },
     "New Painting" : {
       "comment" : "Button (and title of the create flow) that starts a new painting from a photo",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Mosaic"
+          }
+        }
+      }
     },
     "Next Color" : {
       "comment" : "Paint menu item (iPad menu bar): select the next color",
@@ -2271,15 +2543,39 @@
     },
     "Paint" : {
       "comment" : "Paint menu title (iPad menu bar) and the name of the undo/redo action for painting an area; on the Refine screen, the group of tools that give areas their paint (a section of the tool rail on iPad, a tab on iPhone)",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set Tiles"
+          }
+        }
+      }
     },
     "Paint Several Areas" : {
       "comment" : "Title of a tip about painting many areas in one stroke, shown after fifteen single fills",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lay a Row"
+          }
+        }
+      }
     },
     "Every painting starts with a photo" : {
       "comment" : "Headline of the empty gallery",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every mosaic starts with a picture"
+          }
+        }
+      }
     },
     "feedback.bundleName" : {
       "comment" : "Name of the files a painting's feedback is shared as (a picture and a zip archive); the arguments are the painting's title and when the feedback was given, e.g. 2026-10-05 14.32",
@@ -2300,7 +2596,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Painting"
+            "value" : "Mosaic"
           }
         }
       }
@@ -2343,7 +2639,15 @@
     },
     "Paint with Apple Pencil" : {
       "comment" : "Title of a tip shown the first time Apple Pencil is used",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set Tiles with Apple Pencil"
+          }
+        }
+      }
     },
     "paint.action.hint" : {
       "comment" : "VoiceOver action: show an unpainted area of the selected color near the view",
@@ -2364,7 +2668,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Paint next area"
+            "value" : "Set next tile"
           }
         }
       }
@@ -2376,7 +2680,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zoom to next area"
+            "value" : "Zoom to next tile"
           }
         }
       }
@@ -2400,7 +2704,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Use the actions to zoom to the next area."
+            "value" : "Use the actions to zoom to the next tile."
           }
         }
       }
@@ -2412,7 +2716,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Painting"
+            "value" : "Mosaic"
           }
         }
       }
@@ -2544,7 +2848,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Unpainted areas"
+            "value" : "Tiles to set"
           }
         }
       }
@@ -2556,7 +2860,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Paints this area with %@."
+            "value" : "Sets this tile in %@."
           }
         }
       }
@@ -2580,7 +2884,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "not painted, %@"
+            "value" : "not set, %@"
           }
         }
       }
@@ -2652,7 +2956,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No areas of %@ in view"
+            "value" : "No tiles of %@ in view"
           }
         }
       }
@@ -2664,7 +2968,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Painting, %@"
+            "value" : "Mosaic, %@"
           }
         }
       }
@@ -2679,13 +2983,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Painted, %lld left"
+                  "value" : "Set, %lld left"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Painted, %lld left"
+                  "value" : "Set, %lld left"
                 }
               }
             }
@@ -2700,7 +3004,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Painting finished"
+            "value" : "Mosaic set"
           }
         }
       }
@@ -2715,13 +3019,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld percent painted"
+                  "value" : "%lld percent set"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld percent painted"
+                  "value" : "%lld percent set"
                 }
               }
             }
@@ -2748,7 +3052,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Shows where to paint next"
+            "value" : "Shows where to set next"
           }
         }
       }
@@ -2767,7 +3071,15 @@
     },
     "Painting" : {
       "comment" : "Name of the painted layer: Settings › Preview's choice and the caption in the create flow's comparison with the photo; the item of the Refine screen's Show menu that shows the finished painting beneath the drawing; also the fallback title of a painting without one",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mosaic"
+          }
+        }
+      }
     },
     "Paintings" : {
       "comment" : "Section title in the create flow's Samples pane, and in the picture menu of Settings › Advanced's preview: the bundled paintings and prints",
@@ -3055,11 +3367,27 @@
     },
     "Ready to paint" : {
       "comment" : "Caption on the gallery card of a painting that has no paint yet",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ready to set"
+          }
+        }
+      }
     },
     "Ready to Paint" : {
       "comment" : "Gallery section header for paintings nobody has painted on yet",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ready to Set"
+          }
+        }
+      }
     },
     "Ready to Share" : {
       "comment" : "Status shown in the time-lapse sheet once the movie is ready to share",
@@ -3091,7 +3419,15 @@
     },
     "Rename Painting" : {
       "comment" : "Title of the alert for renaming a painting",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rename Mosaic"
+          }
+        }
+      }
     },
     "Replay" : {
       "comment" : "Accessibility label of the replay button in the completion bar",
@@ -3103,7 +3439,15 @@
     },
     "Replay Painting" : {
       "comment" : "Menu item on the painting screen that replays the finished painting stroke by stroke",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replay Mosaic"
+          }
+        }
+      }
     },
     "Stop Replay" : {
       "comment" : "Menu item on the painting screen, in Replay Painting's place while the replay plays: stops it and shows the painting whole",
@@ -3115,7 +3459,15 @@
     },
     "Restart this painting?" : {
       "comment" : "Title of the confirmation dialog for restarting the open painting",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restart this mosaic?"
+          }
+        }
+      }
     },
     "Retry" : {
       "comment" : "Button in a toast offering to try saving a painting again",
@@ -3135,7 +3487,15 @@
     },
     "Search paintings" : {
       "comment" : "Placeholder of the gallery's search field",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search mosaics"
+          }
+        }
+      }
     },
     "Send" : {
       "comment" : "Feedback's review sheet: button that prepares the feedback's files and sends them to the developers",
@@ -3160,7 +3520,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Painting"
+            "value" : "Setting Tiles"
           }
         }
       }
@@ -3175,7 +3535,15 @@
     },
     "Share Painting" : {
       "comment" : "Context menu item that shares the finished painting as a picture",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share Mosaic"
+          }
+        }
+      }
     },
     "Share Picture" : {
       "comment" : "Item of the completion bar's share menu: share the finished painting as a picture",
@@ -3315,11 +3683,27 @@
     },
     "Start Painting" : {
       "comment" : "Button of the create flow that saves the template and opens it for painting",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start the Mosaic"
+          }
+        }
+      }
     },
     "Start this painting over?" : {
       "comment" : "Title of the confirmation dialog for restarting a painting from the gallery",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start this mosaic over?"
+          }
+        }
+      }
     },
     "Take Photo" : {
       "comment" : "Toolbar button of the create flow that opens the camera",
@@ -3327,7 +3711,15 @@
     },
     "Tap to Paint" : {
       "comment" : "Title of the first tip on the painting screen, at the selected color",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap to Set"
+          }
+        }
+      }
     },
     "template.areas" : {
       "comment" : "How many areas (regions to paint) a template has; the argument is the count",
@@ -3339,13 +3731,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld area"
+                  "value" : "%lld tile"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld areas"
+                  "value" : "%lld tiles"
                 }
               }
             }
@@ -3383,15 +3775,39 @@
     },
     "The painting with your marks, and each mark close up" : {
       "comment" : "Feedback's review sheet: a row of what is sent, the pictures",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The mosaic with your marks, and each mark close up"
+          }
+        }
+      }
     },
     "This device can’t draw the painting right now. Your progress is saved." : {
       "comment" : "Message of the screen shown when the canvas can't be drawn",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This device can’t draw the mosaic right now. Your progress is saved."
+          }
+        }
+      }
     },
     "This painting can’t be restarted." : {
       "comment" : "Alert title in the gallery when Restart couldn't read the painting (written by a newer app, or its files can't be read just now); nothing was changed",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This mosaic can’t be restarted."
+          }
+        }
+      }
     },
     "time.approximately" : {
       "comment" : "An estimated duration, e.g. ~40 min; the argument is the duration text",
@@ -3499,7 +3915,15 @@
     },
     "Touch and hold a painting, then choose Favorite." : {
       "comment" : "Explanation under the No Favorites empty state of the gallery; Favorite is the context menu item's name",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch and hold a mosaic, then choose Favorite."
+          }
+        }
+      }
     },
     "Touch and hold to compare with the photo. Tap to keep it shown." : {
       "comment" : "VoiceOver hint of the Photo control on the painting screen",
@@ -3571,7 +3995,15 @@
     },
     "Thank you for supporting Paint by Moonlight." : {
       "comment" : "Footer of Settings › Unlimited Paintings once the purchase is bought",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thank you for supporting Ravenna."
+          }
+        }
+      }
     },
     "A free painting of your own photos comes back each day, up to three. Everything in Samples is always free." : {
       "comment" : "Footer of Settings › Unlimited Paintings before the purchase is bought: how free paintings work (the app's own pictures, under Samples in New Painting, never need one)",
@@ -3667,7 +4099,15 @@
     },
     "Turn any photo into a numbered canvas, then bring it to life one color at a time." : {
       "comment" : "Subheadline of the empty gallery",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lay any picture as a mosaic, then set it tile by tile."
+          }
+        }
+      }
     },
     "Undo" : {
       "comment" : "Undo button: the painting screen's undo button and feedback mode's undo of the last mark (their accessibility labels), and the action of the gallery's toast after a painting is deleted; the Refine screen's undo of the last stroke or text change",
@@ -3691,7 +4131,15 @@
     },
     "What would make this painting better?" : {
       "comment" : "Feedback's review sheet: placeholder of the note field",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What would make this mosaic better?"
+          }
+        }
+      }
     },
     "With thanks to the museums and archives that share these pictures." : {
       "comment" : "Footer under the Pictures list in Acknowledgements",
@@ -3711,7 +4159,15 @@
     },
     "Your painting with your marks" : {
       "comment" : "Feedback's review sheet: VoiceOver label of the picture of the painting with the marks drawn on it",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your mosaic with your marks"
+          }
+        }
+      }
     },
     "Your photo" : {
       "comment" : "VoiceOver label of the photo in the panel's sheet, where the panel is dragged",
@@ -3723,7 +4179,15 @@
     },
     "Your photos and paintings stay on this device unless you share them or choose to send feedback. Paint by Moonlight has no accounts, ads or tracking." : {
       "comment" : "Footer of the About section in Settings: the privacy statement",
-      "extractionState" : "manual"
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your photos and mosaics stay on this device unless you share them or choose to send feedback. Ravenna has no accounts, ads or tracking."
+          }
+        }
+      }
     },
     "Zen Mode" : {
       "comment" : "Painting screen's More menu: a switch that, after each area painted, moves the view on to the nearest area left of the selected color",

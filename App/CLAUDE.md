@@ -91,3 +91,11 @@ go back into it (#5).
   ground, the places still to set faint on it, the set tiles in the app's finish, through
   `MosaicPicture` and `MosaicDrawing`), in place of `TemplateRasterizer`'s light paper; the
   time-lapse and print keep Paint by Moonlight's paper.
+- **The words** (phase 5): Ravenna's vocabulary is in `Localizable.xcstrings` as English values over
+  Paint by Moonlight's keys, so the sources keep its words and the catalog says Ravenna's: a
+  painting is a mosaic, an area a tile, to paint is to set (a page is the mosaic; "Lay a Row",
+  "Start the Mosaic", "Ready to Set"), and the app is Ravenna. Left: the samples' Paintings (the
+  ancient works are paintings), colors, Nightfall and the unlock sheet (neither shows in Ravenna),
+  the engine's acknowledgements, and the paints' nicknames, which are PaintCore's
+  (`ColorNickname`, seeded per artwork) and wait on Paul. The feedback report's header names the
+  app from `FeedbackCapture`.
