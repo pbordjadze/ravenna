@@ -3,20 +3,17 @@ import CoreML
 import Foundation
 import PaintCore
 
-/// The maps a coloring book draws from, made by the two bundled models
-/// (`Resources/Models`): HED (`HED.mlpackage`: ControlNet's Apache-2.0 retraining of Xie & Tu's
-/// holistically-nested edge detector, converted by `tools/models/convert_hed.py`), a contour map
-/// whose silhouettes are strong and closed, and the Informative Drawings generator
-/// (`LineArt.mlpackage`: Chan, Durand & Isola's MIT-licensed line-drawing network, the one
-/// ControlNet's lineart annotator runs, converted by `tools/models/convert_lineart.py`), a line
-/// drawing with the fur, petals and glass a contour map lacks. `maps` makes both; `LineArtInputs`
-/// lays the drawing over the contours (`EdgeMap.combined`), which is what the app generates from,
-/// with the contours deciding the outlines.
+/// The contour map Ravenna's engine lays its strands on, made by the bundled HED model
+/// (`Resources/Models/HED.mlpackage`: ControlNet's Apache-2.0 retraining of Xie & Tu's
+/// holistically-nested edge detector, converted by Paint by Moonlight's
+/// `tools/models/convert_hed.py`), a contour map whose silhouettes are strong and closed.
+/// Ravenna's seam: Paint by Moonlight's line-drawing model (`LineArt.mlpackage`) and the maps
+/// made from both are left behind, since no such model ships here.
 ///
 /// A map is made the way the layered-lines research made its HED maps: the photo in sRGB,
 /// area-resampled to at most the model's long side (PaintCore's own resampler, as `pbn` made the
 /// research's working images), reflect-padded at the bottom and right to the network's stride,
-/// the probability cropped back and rounded to the nearest of 256 levels. The models run on the
+/// the probability cropped back and rounded to the nearest of 256 levels. The model runs on the
 /// CPU only (`.cpuOnly`) in float32: the Neural Engine and GPU compute in reduced precision that
 /// differs between chips, and the 8-bit rounding absorbs the float32 noise that is left, so a
 /// photo gets the same map on every device (but where a value lies within that noise of a
@@ -33,14 +30,11 @@ nonisolated enum EdgeDetector {
     enum Model: String, Sendable, CaseIterable {
         /// HED: contours, from `HED.mlmodelc`.
         case hed
-        /// The line-drawing generator, from `LineArt.mlmodelc`.
-        case lineArt
 
         /// The model's resource name in the bundle.
         var resource: String {
             switch self {
             case .hed: "HED"
-            case .lineArt: "LineArt"
             }
         }
 
@@ -48,15 +42,13 @@ nonisolated enum EdgeDetector {
         var inputMultiple: Int {
             switch self {
             case .hed: 16
-            case .lineArt: 4
             }
         }
 
-        /// What a byte of the photo is in the model's input: HED takes 0...255, the drawing 0...1.
+        /// What a byte of the photo is in the model's input: HED takes 0...255.
         var inputScale: Float {
             switch self {
             case .hed: 1
-            case .lineArt: 1 / 255
             }
         }
 
@@ -64,18 +56,13 @@ nonisolated enum EdgeDetector {
         var output: String {
             switch self {
             case .hed: "edges"
-            case .lineArt: "lines"
             }
         }
     }
 
     /// Longest side the models accept (their input shapes' bound) and the default size of maps.
     static let maximumLongSide = 1152
-    /// The long side the line drawing is made at: the generator was trained on small crops, so
-    /// at 768 its lines are a touch heavier and cleaner than at 1152, and it runs four times
-    /// faster; the drawing is resampled up to the map's size.
-    static let drawingLongSide = 768
-    /// HED's stride, the coarser of the two: its input is padded to a multiple of it.
+    /// HED's stride: its input is padded to a multiple of it.
     static let inputMultiple = Model.hed.inputMultiple
 
     /// The HED edge map of `image` (any color space; drawn into sRGB), at the image's own size or
@@ -89,30 +76,6 @@ nonisolated enum EdgeDetector {
     /// The HED edge map of an sRGB image (see `edgeMap(for:maxLongSide:)`).
     static func edgeMap(for image: RGBAImage, maxLongSide: Int = maximumLongSide, cancel: CancellationCheck) throws -> EdgeMap {
         try map(.hed, for: image, maxLongSide: maxLongSide, cancel: cancel)
-    }
-
-    /// The line drawing of an sRGB image (see `edgeMap(for:maxLongSide:)`; `maxLongSide` defaults
-    /// to `drawingLongSide`), ink probability per pixel.
-    static func lineDrawing(for image: RGBAImage, maxLongSide: Int = drawingLongSide, cancel: CancellationCheck) throws -> EdgeMap {
-        try map(.lineArt, for: image, maxLongSide: maxLongSide, cancel: cancel)
-    }
-
-    /// Both maps of a photo: the line drawing (made at `drawingLongSide`, resampled up to the
-    /// HED map's size) and the HED map at `maxLongSide`. What the app generates from is the
-    /// drawing over the contours (`EdgeMap.combined`) with the contours deciding the outlines, or
-    /// either alone (`LineArtSettings.Detector`, `LineArtInputs`).
-    static func maps(for image: CGImage, maxLongSide: Int = maximumLongSide) throws -> (drawing: EdgeMap, contours: EdgeMap) {
-        try maps(for: PhotoLoader.rgbaImage(from: image, colorSpace: .sRGB), maxLongSide: maxLongSide, cancel: .task)
-    }
-
-    /// The maps of an sRGB image (see `maps(for:maxLongSide:)`).
-    static func maps(
-        for image: RGBAImage, maxLongSide: Int = maximumLongSide, cancel: CancellationCheck
-    ) throws -> (drawing: EdgeMap, contours: EdgeMap) {
-        let contours = try map(.hed, for: image, maxLongSide: maxLongSide, cancel: cancel)
-        let drawing = try map(.lineArt, for: image, maxLongSide: min(drawingLongSide, maxLongSide), cancel: cancel)
-        try cancel.throwIfCancelled()
-        return (drawing.resampled(width: contours.width, height: contours.height), contours)
     }
 
     /// `model`'s map of `image`, at the image's size scaled down to `maxLongSide` (clamped to

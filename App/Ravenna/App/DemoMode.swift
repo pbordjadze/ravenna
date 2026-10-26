@@ -60,7 +60,7 @@ enum DemoMode {
     static let tracesPaper = UserDefaults.standard.bool(forKey: "tracePaper")
 
     /// `-demoFixedPictures YES`: the scenarios that show the picture library by position
-    /// (`gallery`, `create-preview`, `create-suggested`) show `ShellDemo`'s fixed pictures
+    /// (`gallery`, `create-preview`) show `ShellDemo`'s fixed pictures
     /// instead, for UI tests that name paintings by their titles: those stay put however the
     /// library is reordered.
     static let usesFixedPictures = UserDefaults.standard.bool(forKey: "demoFixedPictures")

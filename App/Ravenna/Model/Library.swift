@@ -1,5 +1,7 @@
 import CoreGraphics
 import Foundation
+import MosaicKit
+import MosaicEngine
 import Observation
 import os
 import PaintCore
@@ -8,6 +10,10 @@ import PaintCore
 nonisolated struct PaintingDocument: Sendable {
     var template: Template
     var progress: PaintProgress
+    /// The mosaic the template is of (Ravenna's: region i is tile i, the last region the grout),
+    /// for the canvas to set its tiles; nil when the artwork has none that fits (a painting
+    /// someone sent, or a `mosaic.json` damaged), and the canvas paints the template's areas.
+    var mosaic: Mosaic? = nil
     /// Something the painter should be told once the painting is on screen.
     var notice: OpenNotice? = nil
 }
@@ -36,7 +42,7 @@ final class Library {
     private(set) var placeholders: [Placeholder] = []
     /// The most recently deleted artwork, restorable until the undo window closes.
     private(set) var recentlyDeleted: Artwork?
-    /// Artworks being regenerated (`regenerate(artwork:settings:)`) and their 0…1 progress.
+    /// Artworks being regenerated (`regenerate(artwork:)`) and their 0…1 progress.
     private(set) var regenerating: [UUID: Double] = [:]
     /// Artworks whose progress or details didn't reach the disk; cleared by the next
     /// successful save of them.
@@ -90,8 +96,6 @@ final class Library {
     }
 
     @ObservationIgnored let store: ArtworkStore
-    /// The create flow's unfinished painting, kept in a folder of the store's root.
-    @ObservationIgnored let drafts: Drafts
     @ObservationIgnored private var writes: [UUID: Task<Bool, Never>] = [:]
     @ObservationIgnored private var purge: Task<Void, Never>?
     /// The newest progress submitted per artwork, kept until a write of exactly that
@@ -118,7 +122,6 @@ final class Library {
 
     init(store: ArtworkStore) {
         self.store = store
-        drafts = Drafts(store: DraftStore(root: store.root.appending(path: "Drafts", directoryHint: .isDirectory)))
         store.purgeStaging()
         store.purgeTrash()
         artworks = store.loadAll().sorted(by: Self.newestFirst)
@@ -141,6 +144,8 @@ final class Library {
         }
         #endif
         let library = Library(store: ArtworkStore(root: ArtworkStore.defaultRoot))
+        // Ravenna's seam: v0's mosaics first, whose painter needs no starters.
+        library.carryOverV0IfNeeded()
         library.seedIfNeeded()
         return library
     }
@@ -160,8 +165,9 @@ final class Library {
     func readyToPaint(matching query: GalleryQuery) -> [Artwork] { readyToPaint.filter(query.includes) }
     func finished(matching query: GalleryQuery) -> [Artwork] { finished.filter(query.includes) }
     var isEmpty: Bool { artworks.isEmpty && placeholders.isEmpty }
-    /// No painting and no draft: the gallery is its empty state, with its own New Painting.
-    var isBare: Bool { isEmpty && drafts.current == nil }
+    /// No painting: the gallery is its empty state, with its own New Painting. (Ravenna has no
+    /// drafts: Refine, which made them, is left out.)
+    var isBare: Bool { isEmpty }
 
     func artwork(with id: UUID) -> Artwork? { artworks.first { $0.id == id } }
 
@@ -179,7 +185,7 @@ final class Library {
         let artwork = Artwork(
             title: draft.title, createdAt: draft.date, template: draft.template, settings: draft.settings,
             settingsOrigin: draft.settingsOrigin, paintingLength: draft.paintingLength,
-            progress: draft.progress, sampleName: draft.sampleName)
+            progress: draft.progress, sampleName: draft.sampleName, recipe: draft.recipe)
         let store = self.store
         try await Background.run {
             let progress = draft.progress ?? PaintProgress(regionCount: draft.template.regions.count)
@@ -188,8 +194,8 @@ final class Library {
                 ImageCodec.jpegData(ImageCodec.downscaled($0, maxPixelSize: ArtworkStore.sourceMaxPixelSize), quality: 0.88)
             }
             try store.create(
-                artwork, template: draft.template, progress: progress, sourceJPEG: source, thumbnailPNG: thumbnail,
-                refinements: draft.refinements)
+                artwork, template: draft.template, mosaic: draft.mosaic, progress: progress, sourceJPEG: source,
+                thumbnailPNG: thumbnail)
         }
         insert(artwork)
         return artwork
@@ -460,11 +466,12 @@ final class Library {
         guard !artwork.needsNewerApp else { throw OpenError.needsNewerApp }
         _ = await writes[id]?.value
         let store = self.store
-        let (template, saved) = try await Background.run { () throws -> (Template, ArtworkStore.SavedProgress) in
+        let (template, saved, mosaic) = try await Background.run { () throws -> (Template, ArtworkStore.SavedProgress, Mosaic?) in
             guard let template = try Library.readTemplate(id, from: store) else {
                 throw OpenError.damaged(canRegenerate: ArtworkFactory.canRegenerate(artwork, store: store))
             }
-            return (template, try Library.readProgress(id, regionCount: template.regions.count, from: store))
+            return (template, try Library.readProgress(id, regionCount: template.regions.count, from: store),
+                    Library.readMosaic(id, fitting: template, from: store))
         }
 
         let reset: Bool
@@ -491,17 +498,17 @@ final class Library {
                 }
             }
         }
-        return PaintingDocument(template: template, progress: saved.progress, notice: reset ? .progressReset : nil)
+        return PaintingDocument(template: template, progress: saved.progress, mosaic: mosaic, notice: reset ? .progressReset : nil)
     }
 
-    /// Generates an artwork's template again from its photo (`ArtworkFactory.sourcePhoto`:
-    /// `source.jpg`, or the library picture it was made from) with `settings`, off the main
-    /// actor, and swaps it in atomically; without either it throws
-    /// `ArtworkFactory.FactoryError.sourceUnavailable` and changes nothing. Progress carries
-    /// over by painted area when the old template is still readable; otherwise the painting
-    /// starts fresh. Recovers damaged paintings (`PaintingRecoveryView`, with the artwork's own
-    /// `settings`). `regenerating[id]` reports progress meanwhile.
-    func regenerate(artwork id: UUID, settings: GenerationSettings) async throws -> PaintingDocument {
+    /// Makes an artwork's mosaic and template again from its photo (`ArtworkFactory.source`:
+    /// `source.jpg`, or the library picture it was made from) with its recipe, off the main
+    /// actor, and swaps them in atomically; without either photo it throws
+    /// `ArtworkFactory.FactoryError.sourceUnavailable` and changes nothing. Progress carries over
+    /// by painted area when the old template is still readable; otherwise the painting starts
+    /// fresh. Recovers damaged paintings (`PaintingRecoveryView`). `regenerating[id]` reports
+    /// progress meanwhile.
+    func regenerate(artwork id: UUID) async throws -> PaintingDocument {
         guard let artwork = artwork(with: id) else { throw ArtworkStore.StoreError.notFound }
         guard !artwork.needsNewerApp else { throw OpenError.needsNewerApp }
         guard regenerating[id] == nil else { throw RegenerationError.inProgress }
@@ -509,29 +516,24 @@ final class Library {
         defer { regenerating[id] = nil }
         _ = await writes[id]?.value
 
-        // Called on pipeline threads; hops to the main actor. The last 5 % are for saving.
-        let report: @Sendable (Float) -> Void = { value in
+        // Called on the engine's threads; hops to the main actor. The last 5 % are for saving.
+        let report: @Sendable (Double) -> Void = { value in
             Task { @MainActor in
                 guard self.regenerating[id] != nil else { return }
-                self.regenerating[id] = 0.95 * Double(value)
+                self.regenerating[id] = 0.95 * value
             }
         }
         let store = self.store
-        let (old, savedProgress, photo, refinements) = try await Background.run {
-            () throws -> (Template?, ArtworkStore.SavedProgress, RGBAImage, TemplateRefinements) in
+        let (old, savedProgress, source) = try await Background.run {
+            () throws -> (Template?, ArtworkStore.SavedProgress, (photo: CGImage, recipe: MosaicEngine.Recipe, sampleName: String?)) in
             let old = try Library.readTemplate(id, from: store)
             // Progress from a newer app is never overwritten, even when the template is damaged.
             let saved = try Library.readProgress(id, regionCount: old?.regions.count ?? 0, from: store)
-            let refinements: TemplateRefinements
-            do {
-                refinements = try store.readRefinements(id)
-            } catch {
-                Log.library.error("Refinements of \(id.uuidString, privacy: .public) can't be read: \(String(describing: error), privacy: .public)")
-                throw OpenError.unreadable
-            }
-            return (old, saved, try ArtworkFactory.sourcePhoto(of: artwork, in: store), refinements)
+            return (old, saved, try ArtworkFactory.source(of: artwork, in: store))
         }
-        let template = try await ArtworkFactory.template(from: photo, settings: settings, refinements: refinements, progress: report)
+        let made = try await ArtworkFactory.made(
+            from: source.photo, recipe: source.recipe, sampleName: source.sampleName, progress: report)
+        let template = made.template
         let (progress, thumbnail) = await Background.run { () -> (PaintProgress, Data?) in
             let progress = old.map { savedProgress.progress.remapped(from: $0, to: template) }
                 ?? PaintProgress(regionCount: template.regions.count)
@@ -540,13 +542,13 @@ final class Library {
         try Task.checkCancellation()
 
         var updated = self.artwork(with: id) ?? artwork
-        updated.adopt(template, settings: settings)
+        updated.adopt(template, settings: updated.settings)
         updated.format = Artwork.currentFormat
         updated.record(progress)
         updated.thumbnailVersion += 1
-        let snapshot = updated
+        let snapshot = updated, mosaic = made.mosaic
         let saved = await enqueue(id) { store in
-            try store.replaceContents(of: snapshot, template: template, progress: progress, thumbnailPNG: thumbnail)
+            try store.replaceContents(of: snapshot, template: template, mosaic: mosaic, progress: progress, thumbnailPNG: thumbnail)
         }.value
         guard saved else { throw RegenerationError.saveFailed }
         // The new contents include the newest progress and details: nothing older is left to retry.
@@ -554,7 +556,9 @@ final class Library {
         unsavedMeta.remove(id)
         clearWriteFailure(id)
         replace(updated)
-        return PaintingDocument(template: template, progress: progress, notice: .regenerated(keptProgress: progress.paintedCount > 0))
+        return PaintingDocument(
+            template: template, progress: progress, mosaic: made.mosaic,
+            notice: .regenerated(keptProgress: progress.paintedCount > 0))
     }
 
     /// The photo an artwork was made from (the painting screen's photo peek), decoded off the main actor.
@@ -608,6 +612,22 @@ final class Library {
         } catch {
             Log.library.error("Progress of \(id.uuidString, privacy: .public) can't be read: \(String(describing: error), privacy: .public)")
             throw OpenError.unreadable
+        }
+    }
+
+    /// An artwork's mosaic when it fits its template (a tile a region, and the grout), else nil:
+    /// a file missing, damaged or unreadable just now costs the canvas its tiles, never the painting.
+    private nonisolated static func readMosaic(_ id: UUID, fitting template: Template, from store: ArtworkStore) -> Mosaic? {
+        do {
+            guard let mosaic = try store.readMosaic(id) else { return nil }
+            guard mosaic.tiles.count + 1 == template.regions.count else {
+                Log.library.error("The mosaic of \(id.uuidString, privacy: .public) has \(mosaic.tiles.count) tiles for \(template.regions.count) regions")
+                return nil
+            }
+            return mosaic
+        } catch {
+            Log.library.error("The mosaic of \(id.uuidString, privacy: .public) can't be read: \(String(describing: error), privacy: .public)")
+            return nil
         }
     }
 

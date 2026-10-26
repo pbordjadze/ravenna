@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		0B00000000000000000000F1 /* PaintCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0B00000000000000000000E1 /* PaintCore */; };
-		0B00000000000000000000F2 /* MakingOf in Frameworks */ = {isa = PBXBuildFile; productRef = 0B00000000000000000000E2 /* MakingOf */; };
 		0B00000000000000000000F3 /* MosaicKit in Frameworks */ = {isa = PBXBuildFile; productRef = 0B00000000000000000000E3 /* MosaicKit */; };
 		0B00000000000000000000F4 /* MosaicEngine in Frameworks */ = {isa = PBXBuildFile; productRef = 0B00000000000000000000E4 /* MosaicEngine */; };
 		0B00000000000000000000F5 /* MosaicCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0B00000000000000000000E5 /* MosaicCore */; };
@@ -33,7 +32,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				0B00000000000000000000F1 /* PaintCore in Frameworks */,
-				0B00000000000000000000F2 /* MakingOf in Frameworks */,
 				0B00000000000000000000F3 /* MosaicKit in Frameworks */,
 				0B00000000000000000000F4 /* MosaicEngine in Frameworks */,
 				0B00000000000000000000F5 /* MosaicCore in Frameworks */,
@@ -89,7 +87,6 @@
 			name = Ravenna;
 			packageProductDependencies = (
 				0B00000000000000000000E1 /* PaintCore */,
-				0B00000000000000000000E2 /* MakingOf */,
 				0B00000000000000000000E3 /* MosaicKit */,
 				0B00000000000000000000E4 /* MosaicEngine */,
 				0B00000000000000000000E5 /* MosaicCore */,
@@ -340,10 +337,6 @@
 		0B00000000000000000000E1 /* PaintCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = PaintCore;
-		};
-		0B00000000000000000000E2 /* MakingOf */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = MakingOf;
 		};
 		0B00000000000000000000E3 /* MosaicKit */ = {
 			isa = XCSwiftPackageProductDependency;

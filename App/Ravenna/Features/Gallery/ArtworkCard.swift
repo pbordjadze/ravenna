@@ -177,7 +177,7 @@ struct ProgressCaption: View {
     }
 
     static func percent(_ artwork: Artwork) -> Int {
-        PaintSpeech.percent(painted: artwork.paintedCount, total: artwork.regionCount)
+        PaintSpeech.percent(painted: artwork.paintedAreas, total: artwork.areaCount)
     }
 
     /// "42%": `percent` as the locale writes it.

@@ -1,6 +1,7 @@
 import Compression
 import CoreGraphics
 import Foundation
+import MosaicKit
 import PaintCore
 import Synchronization
 import os
@@ -14,8 +15,8 @@ import os
 ///                   progress.bin   `PaintProgress.encoded()`
 ///                   source.jpg     the photo (≤ 2048 px) for the photo peek and regeneration
 ///                   thumbnail.png  the current state of the painting
-///                   refinements.json  `TemplateRefinements`, only for a painting refined before
-///                                  painting, read again to regenerate it
+///                   mosaic.json    the `Mosaic` its template was made of (tiles, paints, stone or glass,
+///                                  stages and order), for the canvas and the making-of
 ///     <root>/.staging/  new artworks are assembled here and moved into place atomically
 ///     <root>/.trash/    deleted artworks wait here while the deletion can still be undone
 nonisolated struct ArtworkStore: Sendable {
@@ -31,8 +32,8 @@ nonisolated struct ArtworkStore: Sendable {
         case progress = "progress.bin"
         case source = "source.jpg"
         case thumbnail = "thumbnail.png"
-        /// Written only for a refined painting.
-        case refinements = "refinements.json"
+        /// Ravenna's: the mosaic the template is of (`MosaicCore.template(of:)`: region i is tile i).
+        case mosaic = "mosaic.json"
     }
 
     static let sourceMaxPixelSize = 2048
@@ -209,22 +210,31 @@ nonisolated struct ArtworkStore: Sendable {
         ImageCodec.image(at: url(.source, of: id), maxPixelSize: maxPixelSize)
     }
 
-    // MARK: Refinements
+    // MARK: Mosaic
 
-    /// The painting's refinements; none when it has no file, or one this app can't read (they
-    /// only shape a regeneration, which then makes the painting as first suggested). A file that
-    /// can't be read just now (an I/O or data protection error) throws: regenerating without it
-    /// would lose the painter's edits.
-    func readRefinements(_ id: UUID) throws -> TemplateRefinements {
+    /// The mosaic the template was made of; nil when it has no file or one this app can't read
+    /// (the painting still opens: it is regenerated only when its template is damaged). A file
+    /// that can't be read just now (an I/O or data protection error) throws.
+    func readMosaic(_ id: UUID) throws -> Mosaic? {
         let data: Data
         do {
-            data = try Data(contentsOf: url(.refinements, of: id))
+            data = try Data(contentsOf: url(.mosaic, of: id))
         } catch let error as CocoaError where !Library.isDamage(error) {
             throw error
         } catch {
-            return TemplateRefinements()
+            return nil
         }
-        return (try? JSONDecoder().decode(TemplateRefinements.self, from: data)) ?? TemplateRefinements()
+        do {
+            return try JSONDecoder().decode(Mosaic.self, from: data)
+        } catch {
+            Log.library.error("The mosaic of \(id.uuidString, privacy: .public) is unreadable: \(String(describing: error), privacy: .public)")
+            return nil
+        }
+    }
+
+    private func writeMosaic(_ mosaic: Mosaic?, in dir: URL) throws {
+        guard let mosaic else { return }
+        try JSONEncoder().encode(mosaic).write(to: dir.appending(path: File.mosaic.rawValue), options: .atomic)
     }
 
     // MARK: Lifecycle
@@ -232,8 +242,8 @@ nonisolated struct ArtworkStore: Sendable {
     /// Writes a complete artwork into staging, then moves it into place, so a crash never
     /// leaves a half-written artwork in the library.
     func create(
-        _ artwork: Artwork, template: Template, progress: PaintProgress, sourceJPEG: Data?, thumbnailPNG: Data?,
-        refinements: TemplateRefinements = TemplateRefinements()
+        _ artwork: Artwork, template: Template, mosaic: Mosaic?, progress: PaintProgress, sourceJPEG: Data?,
+        thumbnailPNG: Data?
     ) throws {
         let staging = stagingRoot.appending(path: artwork.id.uuidString, directoryHint: .isDirectory)
         try? fm.removeItem(at: staging)
@@ -243,9 +253,7 @@ nonisolated struct ArtworkStore: Sendable {
             try progress.encoded().write(to: staging.appending(path: File.progress.rawValue), options: .atomic)
             try sourceJPEG?.write(to: staging.appending(path: File.source.rawValue), options: .atomic)
             try thumbnailPNG?.write(to: staging.appending(path: File.thumbnail.rawValue), options: .atomic)
-            if !refinements.isEmpty {
-                try JSONEncoder().encode(refinements).write(to: staging.appending(path: File.refinements.rawValue), options: .atomic)
-            }
+            try writeMosaic(mosaic, in: staging)
             try writeMeta(artwork, in: staging)
             try fm.moveItem(at: staging, to: directory(for: artwork.id))
         } catch {
@@ -258,18 +266,21 @@ nonisolated struct ArtworkStore: Sendable {
     /// the new folder is assembled in staging (keeping the photo and any file this version
     /// doesn't know) and replaces the old one atomically, so a crash leaves either version.
     /// A nil `thumbnailPNG` keeps the current thumbnail.
-    func replaceContents(of artwork: Artwork, template: Template, progress: PaintProgress, thumbnailPNG: Data?) throws {
+    func replaceContents(
+        of artwork: Artwork, template: Template, mosaic: Mosaic?, progress: PaintProgress, thumbnailPNG: Data?
+    ) throws {
         let id = artwork.id
         let staging = stagingRoot.appending(path: id.uuidString, directoryHint: .isDirectory)
         try? fm.removeItem(at: staging)
         try fm.createDirectory(at: staging, withIntermediateDirectories: true)
         do {
-            let rewritten = Set([File.meta, .template, .progress, .thumbnail].map(\.rawValue))
+            let rewritten = Set([File.meta, .template, .mosaic, .progress, .thumbnail].map(\.rawValue))
             for item in try fm.contentsOfDirectory(at: directory(for: id), includingPropertiesForKeys: nil)
             where !rewritten.contains(item.lastPathComponent) {
                 try fm.copyItem(at: item, to: staging.appending(path: item.lastPathComponent))
             }
             try writeTemplate(template, in: staging)
+            try writeMosaic(mosaic, in: staging)
             try progress.encoded().write(to: staging.appending(path: File.progress.rawValue), options: .atomic)
             let thumbnail = staging.appending(path: File.thumbnail.rawValue)
             if let thumbnailPNG {

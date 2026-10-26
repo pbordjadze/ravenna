@@ -1,8 +1,12 @@
 import CoreGraphics
+import MosaicEngine
 import os
 import SwiftUI
 
-/// New painting: pick a photo (library, camera or a sample) → tune the template → paint.
+/// New painting: pick a photo (library, camera or a sample) → tune the mosaic → paint.
+///
+/// Ravenna's seam: no drafts (Refine made them) and no Settings › Preview; the making-of is
+/// Ravenna's own show of the mosaic being set (`MakingOfView`), on by default.
 ///
 /// Start Painting ends in one motion into the painting (`StartHandoff`): the painting opens under
 /// the cover this flow is presented in, and once its canvas has drawn, the flow's picture (the
@@ -16,16 +20,13 @@ struct CreateFlowView: View {
     var droppedPhoto: Data?
     /// The dropped or opened file's name, when it has one.
     var droppedTitle: String?
-    /// The draft to continue refining (`Drafts`): the flow opens on its preview.
-    var resuming: Drafts.Opened?
     var onStart: (Artwork) -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.startHandoff) private var handoff
     @Environment(Library.self) private var library
-    @State private var model = CreateModel(previewStyle: Self.previewStyle)
+    @State private var model = CreateModel()
     @State private var path: [Step] = []
     /// The painting Start saved, while its making-of plays over the flow (Settings › The Making-of).
     @State private var makingOf: MakingOfRequest?
@@ -96,8 +97,6 @@ struct CreateFlowView: View {
             guard model.source == nil else { return }
             if let droppedPhoto {
                 model.load(imageData: droppedPhoto, title: droppedTitle)
-            } else if let resuming {
-                model.load(draft: resuming.draft, photo: resuming.photo, kept: resuming.kept)
             } else if let openingSample {
                 model.load(sample: openingSample)
             }
@@ -111,69 +110,32 @@ struct CreateFlowView: View {
         }
         .onChange(of: model.isFinal) { _, isFinal in
             guard isFinal else { return }
-            if ShellDemo.current?.movesASlider == true, model.settingsOrigin == .suggested {
-                // As a painter would: Detail moved a step off the suggestion and released.
-                model.detail = model.detail < 0.75 ? model.detail + 0.25 : model.detail - 0.25
-                model.settingsChanged()
+            if ShellDemo.current?.movesASlider == true, model.recipe.pieces == MosaicEngine.Recipe.standardPieces {
+                // As a painter would: Pieces moved off the standard count and let go, so the engine
+                // lays it (the standard count of a library picture is its bundled mosaic).
+                model.recipe.pieces = 0.75
+                model.recipeChanged()
                 return
             }
-            if ShellDemo.current?.refines == true, model.refinements.isEmpty, let template = model.preview?.template {
-                // As a painter would in Refine; the preview opens it (`TemplatePreviewView`).
-                model.refine(ShellDemo.refinements(for: template))
-                return
-            }
-            // `create-tip` is ready once its tip is up (`ShellDemo.prepare`).
-            // `create-refine-guide` is ready once the guide's practice canvas shows (`RefineView.land`).
-            if (openingSample != nil && ShellDemo.current != .createTip && ShellDemo.current?.opensGuide == nil)
-                || ShellDemo.current == .createFromFile {
+            if openingSample != nil || ShellDemo.current == .createFromFile {
                 DemoMode.markReady()
             }
         }
         #endif
-        // With the template on screen too: its trail, once its edits are laid, goes with the draft.
-        .onChange(of: DraftKeeping(draft: model.draft, shown: model.preview?.id)) { old, keeping in
-            if let draft = keeping.draft, let photo = model.source?.preview {
-                library.drafts.keep(draft, photo: photo, kept: model.keptTrail)
-            } else if let old = old.draft, model.source != nil, old.photoID == model.photoID {
-                // Undone down to nothing. Another photo, or none, leaves the draft of the last.
-                library.drafts.drop(photoID: old.photoID)
-            }
-        }
-        .onChange(of: library.drafts.saveFailed == model.photoID) { _, failed in
-            // Shown on the preview and in Refine (`DraftSaveToast`), told here once.
-            if failed { Announcer.announce(DraftSaveToast.text) }
-        }
-        .onChange(of: scenePhase) { _, phase in
-            guard phase != .active else { return }
-            library.drafts.saveNow()
-            if phase == .background {
-                let drafts = library.drafts
-                BackgroundSaving.shared.hold { await drafts.flush() }
-            }
-        }
         .onDisappear {
             model.cancelAll()
-            library.drafts.saveNow()
         }
     }
 
     @ViewBuilder
     private var root: some View {
-        if droppedPhoto != nil || openingSample != nil || resuming != nil {
+        if droppedPhoto != nil || openingSample != nil {
             TemplatePreviewView(model: model, onStart: start, onClose: { dismiss() }, pictureProbe: previewPicture)
         } else {
             PhotoSourceView(model: model, initialPane: initialPane, onClose: { dismiss() }) {
                 path = [.preview]
             }
         }
-    }
-
-    /// Settings › Preview, or the scenario's (demo launches).
-    private static var previewStyle: PreviewStyle {
-        #if DEBUG
-        if let style = ShellDemo.current?.previewStyle { return style }
-        #endif
-        return Preferences().previewStyle
     }
 
     /// The `create-samples` demos open on the Samples pane; everything else starts on Photos.
@@ -184,17 +146,16 @@ struct CreateFlowView: View {
         return .photos
     }
 
-    /// Saves the full-resolution template to the library and opens it for painting; the draft of
-    /// this photo, if the painter kept one, has done its work. With Settings › The Making-of on, the
-    /// saved painting's show plays first, and the painting opens when it ends.
+    /// Saves the mosaic's template to the library and opens it for painting. With Settings › The
+    /// Making-of on (as it is unless switched off), the saved painting's show plays first, and the
+    /// painting opens when it ends.
     private func start() async throws {
         let draft = try await model.makeDraft()
         let artwork = try await library.create(draft)
-        library.drafts.drop(photoID: model.photoID)
         PaintTips.pageMade()
         let place = previewPicture.picture
         let from = StartHandoffPlan.entry(reduceMotion: reduceMotion, from: place)
-        if Preferences().playsMakingOf, let source = model.makingOfSource(for: draft, artworkID: artwork.id) {
+        if Preferences().playsMakingOf, let source = model.makingOfSource(for: draft) {
             makingOf = MakingOfRequest(artwork: artwork, source: source, entry: from)
         } else {
             // The preview's picture is what moves to the painting, from where it is.
@@ -328,16 +289,6 @@ private struct DepartingPicture: View {
                 .resizable()
                 .interpolation(.high)
                 .scaledToFill()
-        case .lineArt(let drawing):
-            LineArtLayer(drawing: drawing, picture: CGRect(origin: .zero, size: departure.rect.size), scale: 1)
-                .equatable()
         }
     }
-}
-
-/// What the flow hands the drafts (`Drafts.keep`): the draft, and the template on screen, whose
-/// trail goes with it once the draft's edits are all laid.
-private struct DraftKeeping: Equatable {
-    let draft: CreateDraft?
-    let shown: UUID?
 }

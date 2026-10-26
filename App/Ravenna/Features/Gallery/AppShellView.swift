@@ -25,8 +25,6 @@ struct AppShellView: View {
     #endif
     @State private var droppedPhoto: Data?
     @State private var droppedTitle: String?
-    /// The draft the create flow continues, read off the main actor by the gallery's row.
-    @State private var resumedDraft: Drafts.Opened?
     /// A file opened from another app (share sheet, Files), waiting for the library and the
     /// screen to be free for the create flow.
     @State private var incomingImage: IncomingImage?
@@ -69,12 +67,11 @@ struct AppShellView: View {
         // old identity).
         let flowPhoto = droppedPhoto
         let flowTitle = droppedTitle
-        let flowDraft = resumedDraft
         let flowIdentity = flowID
         NavigationStack(path: $path) {
             GalleryView(
                 namespace: zoom, query: query, timelapse: $timelapse, sending: $sending, onCreate: { isCreating = true },
-                onContinueDraft: continueDraft, isAsking: $galleryAsks)
+                isAsking: $galleryAsks)
                 // Photos dragged in from another app (Split View, Slide Over) start a painting.
                 .dropDestination(for: DroppedPhoto.self) { photos, _ in
                     guard let photo = photos.first, !isCreating else { return false }
@@ -99,12 +96,11 @@ struct AppShellView: View {
         .fullScreenCover(isPresented: $isCreating, onDismiss: {
             droppedPhoto = nil
             droppedTitle = nil
-            resumedDraft = nil
             handoff.reset()
             presentIncomingImage()
         }) {
             CreateFlowView(
-                openingSample: launchSample, droppedPhoto: flowPhoto, droppedTitle: flowTitle, resuming: flowDraft,
+                openingSample: launchSample, droppedPhoto: flowPhoto, droppedTitle: flowTitle,
                 onStart: startPainting
             )
             .id(flowIdentity)
@@ -329,15 +325,13 @@ struct AppShellView: View {
         path.removeAll()
         droppedPhoto = image.data
         droppedTitle = image.title
-        resumedDraft = nil
         // A hand-off still under way belonged to the flow this one replaces.
         handoff.reset()
         flowID = UUID()
         isCreating = true
     }
 
-    /// Opens the painting someone sent in place of whatever painting or create flow is open (a
-    /// flow's draft is kept as it closes).
+    /// Opens the painting someone sent in place of whatever painting or create flow is open.
     private func presentReceivedPainting() {
         guard let id = receivedPainting, isClearForIncoming() else { return }
         receivedPainting = nil
@@ -350,7 +344,7 @@ struct AppShellView: View {
     }
 
     /// Says why a sent painting couldn't be added, once nothing covers the shell: a create flow
-    /// closes first (its draft is kept, and its `onDismiss` comes back here).
+    /// closes first (its `onDismiss` comes back here).
     private func presentReceiveFailure() {
         guard let failure = pendingReceiveFailure, isClearForIncoming() else { return }
         guard !isCreating else {
@@ -359,12 +353,6 @@ struct AppShellView: View {
         }
         pendingReceiveFailure = nil
         receiveFailure = failure
-    }
-
-    /// Opens the create flow on the draft the gallery's row read.
-    private func continueDraft(_ opened: Drafts.Opened) {
-        resumedDraft = opened
-        isCreating = true
     }
 
     /// Start Painting has saved `artwork`. The cover stays up, showing the create flow's picture;
