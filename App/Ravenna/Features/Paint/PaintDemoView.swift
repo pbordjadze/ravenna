@@ -15,8 +15,7 @@ import simd
 /// at standard detail (`Resources/Mosaics`), its photo the canvas's photo loader's; and three are
 /// Ravenna's own:
 /// - `paint-setting`: ~40 % set, zoomed 4× onto the paint in hand, then a row of its tiles laid in
-///   one stroke and slowed twelvefold, so the shot catches them raised, settling and catching the
-///   light
+///   one stroke and slowed thirtyfold, so the shot catches the first raised over their places
 /// - `paint-setting-flat`, `paint-setting-bed`: `paint-setting` in the other finishes
 /// - `paint-mosaic-measure`: a mosaic of about 9,500 tiles (the Pieces slider's top; a jittered
 ///   grid, `measureMosaic`), fitted; once ready, rows are laid for eight seconds while
@@ -302,7 +301,9 @@ private final class Demo {
                 let finish: Finish = scenario.hasSuffix("-flat") ? .flat : .bed
                 UserDefaults.standard.register(defaults: [TileOptions.finishKey: finish.rawValue])
             }
-            fillDurationScale = 12
+            // Thirtyfold: the shot, two or three seconds after, catches the first tiles raised and
+            // the rest still to come (at twelvefold they had all but settled).
+            fillDurationScale = 30
             let color = session.selectedColor ?? 0
             let middle = SIMD2(Float(t.width), Float(t.height)) * 0.5
             let row = t.regions.indices.filter { tile($0) && session.colorOf($0) == color && !session.isPainted($0) }
