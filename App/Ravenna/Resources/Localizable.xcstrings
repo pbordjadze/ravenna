@@ -209,8 +209,8 @@
       "comment" : "Settings › Acknowledgements › The Paints’ Names: the note above the list of materials the paints are named after",
       "extractionState" : "manual"
     },
-    "Glass, Metal and Clay" : {
-      "comment" : "Settings › Acknowledgements › The Paints’ Names: header of the glass tesserae, metals, ceramics and mortars the paints are named after",
+    "Glass and Other Materials" : {
+      "comment" : "Settings › Acknowledgements › The Paints’ Names: header of the glass tesserae, metals, ceramics, mortars and other materials the paints are named after",
       "extractionState" : "manual"
     },
     "Gold" : {
@@ -2325,7 +2325,7 @@
       "comment" : "Making-of options: switch showing the setter's hand pressing each tile home",
       "extractionState" : "manual"
     },
-    "The stones, pigments and glass of Roman and Byzantine mosaic that the paints are named after." : {
+    "The stones, pigments, glass and other materials of Roman and Byzantine mosaic that the paints are named after." : {
       "comment" : "Footer under The Paints’ Names in Acknowledgements",
       "extractionState" : "manual"
     },

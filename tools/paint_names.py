@@ -15,6 +15,7 @@ PaintNamesTests fails when the Swift differs from the JSON.
 """
 import json
 import os
+import re
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SOURCE = os.path.join(ROOT, "docs", "paint-names.json")
@@ -24,7 +25,7 @@ MARKER = "<!-- The list below is written by tools/paint_names.py from docs/paint
 KINDS = {
     "stone": "Stones, marbles and gems",
     "pigment": "Pigments and painting materials",
-    "glass": "Glass, metals, ceramics and the mosaicist's other materials",
+    "glass": "Glass, metals, ceramics and other materials",
 }
 
 
@@ -36,7 +37,7 @@ def main():
     entries = json.load(open(SOURCE, encoding="utf-8"))
     for e in entries:
         assert e["kind"] in KINDS, e["name"]
-        assert len(e["hex"]) == 6 and e["hex"] == e["hex"].upper(), e["name"]
+        assert re.fullmatch(r"[0-9A-F]{6}", e["hex"]), e["name"]
 
     lines = [
         "// Written by tools/paint_names.py from docs/paint-names.json: edit the JSON and run it.",
@@ -57,6 +58,7 @@ def main():
     open(SWIFT, "w", encoding="utf-8").write("\n".join(lines))
 
     doc = open(DOC, encoding="utf-8").read()
+    assert MARKER in doc, f"{DOC} needs its marker line: {MARKER}"
     head = doc.split(MARKER)[0].rstrip() + "\n\n" + MARKER + "\n"
     body = ""
     for kind, title in KINDS.items():

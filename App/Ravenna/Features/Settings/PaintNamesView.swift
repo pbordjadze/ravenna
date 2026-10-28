@@ -1,3 +1,4 @@
+import Foundation
 import MosaicCore
 import SwiftUI
 
@@ -26,7 +27,7 @@ struct PaintNamesView: View {
             Section {
                 ForEach(Self.credits(.glass)) { PaintNameRow(credit: $0) }
             } header: {
-                Text("Glass, Metal and Clay")
+                Text("Glass and Other Materials")
             }
         }
         .navigationTitle("The Paints’ Names")
@@ -74,6 +75,7 @@ private struct PaintNameRow: View {
                               systemImage: "building.columns")
                     }
                     .font(.footnote)
+                    .buttonStyle(.borderless)   // the link alone, not the whole row
                     .padding(.top, 2)
                     .accessibilityLabel(String(localized: "paintNames.source.accessibility", defaultValue: "Source of \(credit.name)",
                                                comment: "VoiceOver label of the link to a paint name’s source in Settings › Acknowledgements › The Paints’ Names; the argument is the name, e.g. “Source of Giallo Antico”"))

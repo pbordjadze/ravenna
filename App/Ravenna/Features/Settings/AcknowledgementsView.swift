@@ -24,7 +24,7 @@ struct AcknowledgementsView: View {
             } header: {
                 Text("The Paints’ Names")
             } footer: {
-                Text("The stones, pigments and glass of Roman and Byzantine mosaic that the paints are named after.")
+                Text("The stones, pigments, glass and other materials of Roman and Byzantine mosaic that the paints are named after.")
             }
 
             Section {
