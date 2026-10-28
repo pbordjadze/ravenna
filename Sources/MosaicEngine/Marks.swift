@@ -29,12 +29,57 @@ nonisolated extension MosaicEngine {
         /// Its path in the panel's unit square; a single point is a dab.
         public var points: [SIMD2<Double>]
 
+        /// A mark as `meta.json` keeps it, so the mosaic laid now is the one made again: its width
+        /// rounded to 1/100,000 and at most `maximumWidth`, its points to 1/10,000 of the panel
+        /// (finer than a pixel of the largest mosaic) and kept within a panel's width of it.
         public init(kind: Kind, width: Double, points: [SIMD2<Double>]) {
+            self.kind = kind
+            self.width = Swift.min((width * 100_000).rounded() / 100_000, Self.maximumWidth)
+            self.points = points.map { p in
+                let q = (p * 10_000).rounded(.toNearestOrAwayFromZero) / 10_000
+                return SIMD2(Swift.min(Swift.max(q.x, -1), 2), Swift.min(Swift.max(q.y, -1), 2))
+            }
+        }
+
+        /// A mark as given, unrounded: the stroke scaled to pixels or canvas units, or a piece of it.
+        init(exactly kind: Kind, width: Double, points: [SIMD2<Double>]) {
             self.kind = kind; self.width = width; self.points = points
         }
 
         /// The widest stroke kept: half the panel.
         public static let maximumWidth = 0.5
+
+        /// A drawn line shorter than this (a share of the panel's long side) is a tap, not a line:
+        /// too short to lay a row along.
+        public static let shortestLine = 0.03
+
+        /// The path's length in the panel's unit square.
+        public var length: Double {
+            zip(points, points.dropFirst()).reduce(0) { $0 + (($1.1 - $1.0) * ($1.1 - $1.0)).sum().squareRoot() }
+        }
+
+        /// The stroke with points that add less than `tolerance` (in the panel's unit square) to its
+        /// shape left out (Ramer–Douglas–Peucker): a finger's drag is hundreds of points.
+        public func simplified(tolerance: Double = 0.0015) -> Mark {
+            guard points.count > 2 else { return self }
+            var keep = [Bool](repeating: false, count: points.count)
+            keep[0] = true; keep[points.count - 1] = true
+            var spans = [(0, points.count - 1)]
+            while let (a, b) = spans.popLast() {
+                guard b > a + 1 else { continue }
+                let segment = Mark(exactly: kind, width: width, points: [points[a], points[b]])
+                var far = a, most = 0.0
+                for i in (a + 1)..<b {
+                    let d = segment.distanceSquared(to: points[i])
+                    if d > most { most = d; far = i }
+                }
+                if most > tolerance * tolerance {
+                    keep[far] = true
+                    spans.append((a, far)); spans.append((far, b))
+                }
+            }
+            return Mark(kind: kind, width: width, points: points.indices.filter { keep[$0] }.map { points[$0] })
+        }
 
         private enum CodingKeys: String, CodingKey { case kind, width, points }
 
@@ -51,19 +96,15 @@ nonisolated extension MosaicEngine {
             guard width.isFinite, width > 0, !flat.isEmpty, flat.count.isMultiple(of: 2), flat.allSatisfy(\.isFinite) else {
                 throw DecodingError.dataCorruptedError(forKey: .points, in: c, debugDescription: "Malformed mark")
             }
-            self.kind = kind
-            self.width = Swift.min(width, Self.maximumWidth)
-            points = stride(from: 0, to: flat.count, by: 2).map { SIMD2(flat[$0], flat[$0 + 1]) }
+            self.init(kind: kind, width: width, points: stride(from: 0, to: flat.count, by: 2).map { SIMD2(flat[$0], flat[$0 + 1]) })
         }
 
-        /// Rounded to 1/10,000 of the panel, finer than a pixel of the largest mosaic: a stroke
-        /// costs a few hundred bytes in `meta.json`.
+        /// As made (`init` rounds): a simplified stroke costs a few hundred bytes in `meta.json`.
         public func encode(to encoder: any Encoder) throws {
             var c = encoder.container(keyedBy: CodingKeys.self)
-            func r(_ v: Double) -> Double { (v * 10_000).rounded() / 10_000 }
             try c.encode(kind.rawValue, forKey: .kind)
-            try c.encode((width * 100_000).rounded() / 100_000, forKey: .width)
-            try c.encode(points.flatMap { [r($0.x), r($0.y)] }, forKey: .points)
+            try c.encode(width, forKey: .width)
+            try c.encode(points.flatMap { [$0.x, $0.y] }, forKey: .points)
         }
 
         /// The square of the distance from `p` to the stroke's path.
@@ -90,7 +131,7 @@ nonisolated extension MosaicEngine {
         /// its half-width in the same units.
         func scaled(width: Double, height: Double) -> (mark: Mark, radius: Double) {
             let k = SIMD2(width, height)
-            return (Mark(kind: kind, width: self.width, points: points.map { $0 * k }),
+            return (Mark(exactly: kind, width: self.width, points: points.map { $0 * k }),
                     self.width * Swift.max(width, height) / 2)
         }
 
@@ -108,32 +149,54 @@ nonisolated extension MosaicEngine {
         /// The stroke drawn into `contours` (0...1, `width` by `height`, row-major): a line raised to
         /// an outline's strength along its path (full in its middle, half at its edge, fading over
         /// as far again), or the contours rubbed out under it (gone within its width, back over a
-        /// half-width more). A gold mark changes nothing here.
+        /// half-width more). A gold mark changes nothing here. Each segment measures only its own
+        /// box, into the distance to the nearest one, so a long slow stroke costs no more than a
+        /// quick one.
         func draw(into contours: inout [Float], width: Int, height: Int) {
-            guard kind.movesTiles, width > 0, height > 0, contours.count == width * height else { return }
+            guard kind.movesTiles, width > 0, height > 0, contours.count == width * height, !points.isEmpty else { return }
             let (m, scaledRadius) = scaled(width: Double(width), height: Double(height))
-            // A line stays a pixel wide however small the draft.
-            let r = kind == .line ? Swift.max(scaledRadius, 1) : scaledRadius
+            // A line stays an outline however small the draft: the engine doubles the contours and
+            // blurs them (σ 2) before its cut, which takes a thinner one away.
+            let r = kind == .line ? Swift.max(scaledRadius, Self.thinnestLine) : scaledRadius
             let reach = kind == .line ? 2 * r : 1.5 * r
+            func clampX(_ v: Double) -> Int { Int(Swift.min(Swift.max(v, 0), Double(width - 1))) }
+            func clampY(_ v: Double) -> Int { Int(Swift.min(Swift.max(v, 0), Double(height - 1))) }
             let (lo, hi) = m.bounds(pad: reach)
-            let x0 = Swift.max(Int(lo.x.rounded(.down)), 0), x1 = Swift.min(Int(hi.x.rounded(.up)), width - 1)
-            let y0 = Swift.max(Int(lo.y.rounded(.down)), 0), y1 = Swift.min(Int(hi.y.rounded(.up)), height - 1)
-            guard x0 <= x1, y0 <= y1 else { return }
-            for y in y0...y1 {
-                for x in x0...x1 {
-                    let d = m.distanceSquared(to: SIMD2(Double(x) + 0.5, Double(y) + 0.5)).squareRoot()
+            guard hi.x >= 0, hi.y >= 0, lo.x <= Double(width), lo.y <= Double(height) else { return }
+            let bx0 = clampX(lo.x.rounded(.down)), bx1 = clampX(hi.x.rounded(.up))
+            let by0 = clampY(lo.y.rounded(.down)), by1 = clampY(hi.y.rounded(.up))
+            let bw = bx1 - bx0 + 1
+            var nearest = [Double](repeating: .infinity, count: bw * (by1 - by0 + 1))
+            let segments = m.points.count == 1 ? [(m.points[0], m.points[0])] : Array(zip(m.points, m.points.dropFirst()))
+            for (a, b) in segments {
+                let piece = Mark(exactly: kind, width: self.width, points: a == b ? [a] : [a, b])
+                let (slo, shi) = piece.bounds(pad: reach)
+                guard shi.x >= 0, shi.y >= 0, slo.x <= Double(width), slo.y <= Double(height) else { continue }
+                for y in clampY(slo.y.rounded(.down))...clampY(shi.y.rounded(.up)) {
+                    for x in clampX(slo.x.rounded(.down))...clampX(shi.x.rounded(.up)) {
+                        let d = piece.distanceSquared(to: SIMD2(Double(x) + 0.5, Double(y) + 0.5))
+                        let j = (y - by0) * bw + (x - bx0)
+                        if d < nearest[j] { nearest[j] = d }
+                    }
+                }
+            }
+            for y in by0...by1 {
+                for x in bx0...bx1 {
+                    let d = nearest[(y - by0) * bw + (x - bx0)].squareRoot()
                     guard d < reach else { continue }
                     let i = y * width + x
                     if kind == .line {
                         let v = d <= r ? 1 - 0.5 * (d / r) * (d / r) : 0.5 * (reach - d) / (reach - r)
                         contours[i] = Swift.max(contours[i], Float(v))
                     } else {
-                        let keep = d <= r ? 0 : (d - r) / (reach - r)
-                        contours[i] *= Float(keep)
+                        contours[i] *= Float(d <= r ? 0 : (d - r) / (reach - r))
                     }
                 }
             }
         }
+
+        /// A drawn line's least half-width in the contours' pixels.
+        static let thinnestLine = 1.5
 
         /// The stroke moved from one panel of a photo to another (each `Panel.rect`'s unit square,
         /// in a photo `photoWidth` by `photoHeight`), keeping its place and size on the photo.

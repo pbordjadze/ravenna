@@ -158,7 +158,7 @@ struct TemplatePreviewView: View {
                 if isFinal, !isRefining { previewFinal() }
                 #if DEBUG
                 // `create-refine` opens Refine once its marks are laid.
-                if isFinal, ShellDemo.current == .createRefine, !model.recipe.marks.isEmpty { isRefining = true }
+                if isFinal, ShellDemo.current == .createRefine, model.preview?.recipe.marks.isEmpty == false { isRefining = true }
                 #endif
             }
             // A start asked for early goes once the painting is made, unless something called it off.
@@ -174,6 +174,7 @@ struct TemplatePreviewView: View {
             }
             // Refine covers the preview: its tips leave with it, and come back with it.
             .onChange(of: isRefining) { _, refining in
+                model.isRefining = refining
                 if refining {
                     PaintTips.desk.leave(.preview)
                 } else {

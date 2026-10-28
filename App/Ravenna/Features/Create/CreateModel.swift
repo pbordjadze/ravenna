@@ -110,6 +110,9 @@ final class CreateModel {
             recipe = recipe.reframingMarks(from: oldValue, photoWidth: Double(photo.width), photoHeight: Double(photo.height))
         }
     }
+    /// Refine is open over the preview (`MosaicRefineView`): the flow under its cover disappears
+    /// while it shows, and its work goes on (`CreateFlowView`'s `onDisappear`).
+    var isRefining = false
     /// Start Painting was tapped before the mosaic was laid: it starts once it is.
     private(set) var startAsked = false
     /// The name typed for the painting; empty means `defaultTitle`.
@@ -163,6 +166,9 @@ final class CreateModel {
     @ObservationIgnored private var draftToken = UUID()
     @ObservationIgnored private var generation = 0
     @ObservationIgnored private var makingID = 0
+    /// The tiles `startGeneration`'s job lays, and that job: a change to what is laid on them only
+    /// (a gold mark, the ground) lets it finish while it is still `fullTask`.
+    @ObservationIgnored private var laying: (key: TileKey, task: Task<Void, Never>)?
     /// Bumped by every new photo: work for an earlier one changes nothing.
     @ObservationIgnored private var loadID = 0
 
@@ -414,17 +420,30 @@ final class CreateModel {
     /// Lays the recipe as the cancellable job at its own size, so changes supersede it; a quick
     /// draft first makes something appear at once (not for a bundled mosaic, which is there).
     private func startGeneration(draftFirst: Bool) {
+        let recipe = self.recipe, key = TileKey(recipe)
+        // The same tiles already under way, only what is laid on them changed (a gold mark in
+        // Refine, the ground): the job carries on, its contours with it, and lays the recipe it
+        // ends on.
+        if let laying, let fullTask, laying.task == fullTask, laying.key == key, !fullTask.isCancelled, draftTask == nil {
+            return
+        }
         fullTask?.cancel()
         stopDrafts()
-        let recipe = self.recipe
         let bundled = MosaicMaker.hasBundled(source?.sampleName, recipe: recipe)
-        fullTask = Task {
-            if draftFirst, !bundled, !made.contains(where: { $0.key == TileKey(recipe) }) {
+        let task = Task {
+            // Ended, it lays nothing more: a change then starts its own.
+            defer { if laying?.key == key { laying = nil } }
+            if draftFirst, !bundled, !made.contains(where: { $0.key == key }) {
                 await generate(draft: true, recipe: recipe)
                 guard !Task.isCancelled else { return }
             }
             await generate(draft: false, recipe: recipe)
+            guard !Task.isCancelled, self.recipe != recipe, TileKey(self.recipe) == key else { return }
+            laying = nil
+            startGeneration(draftFirst: false)
         }
+        fullTask = task
+        laying = (key, task)
     }
 
     private func requestDraft() {

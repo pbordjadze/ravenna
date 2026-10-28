@@ -129,6 +129,8 @@ struct CreateFlowView: View {
         }
         #endif
         .onDisappear {
+            // Refine's cover hides the flow without leaving it: the mosaic being laid carries on.
+            guard !model.isRefining else { return }
             model.cancelAll()
         }
     }

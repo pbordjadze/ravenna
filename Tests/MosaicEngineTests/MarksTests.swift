@@ -98,11 +98,49 @@ struct MarksTests {
         #expect(contours[20 * w + 100] == 0.3)
     }
 
-    @Test func aThinLineStaysAPixelWideOnADraft() {
-        var contours = [Float](repeating: 0, count: 60 * 60)
-        Recipe(marks: [Mark(kind: .line, width: 0.001, points: [SIMD2(0, 0.5), SIMD2(1, 0.5)])])
-            .mark(contours: &contours, width: 60, height: 60)
-        #expect((0..<60).allSatisfy { contours[30 * 60 + $0] > 0.72 || contours[29 * 60 + $0] > 0.72 })
+    /// A line across a plain photo at `side` px on its long side, as the app lays a draft or the
+    /// mosaic at its own size: the tiles laid along it as an outline (strands).
+    static func strandsAlongALine(side: Int, pieces: Double) throws -> Int {
+        let w = side * 3 / 4, h = side
+        let rgb = (0..<(w * h)).map { i -> SIMD3<Float> in
+            let y = Float(i / w) / Float(h)
+            return SIMD3(0.55 + 0.1 * y, 0.45, 0.35 - 0.1 * y)
+        }
+        let recipe = Recipe(pieces: pieces, marks: [Mark(kind: .line, width: 0.004, points: [SIMD2(0.1, 0.5), SIMD2(0.9, 0.5)])])
+        var contours = [Float](repeating: 0, count: w * h)
+        recipe.mark(contours: &contours, width: w, height: h)
+        var trace = MosaicEngine.Trace()
+        _ = try MosaicEngine.make(photo: .init(width: w, height: h, rgb: rgb), contours: contours, faces: [],
+                                  settings: recipe.settings(side: side), cancel: { false }, trace: &trace)
+        return trace.strand.filter { $0 }.count
+    }
+
+    @Test func aLineLaysARowOnADraftAndAtFullSize() throws {
+        // The draft's size (`MosaicMaker.draftLongSide`) at the fewest pieces and the most, and the
+        // mosaic at its own size.
+        #expect(try Self.strandsAlongALine(side: 600, pieces: 0) > 10)
+        #expect(try Self.strandsAlongALine(side: 600, pieces: 1) > 10)
+        #expect(try Self.strandsAlongALine(side: Recipe.longSide(pieces: 0), pieces: 0) > 10)
+        // Nothing drawn, no outline: the plain photo has none of its own.
+        var trace = MosaicEngine.Trace()
+        let w = 450, h = 600
+        _ = try MosaicEngine.make(photo: .init(width: w, height: h, rgb: Array(repeating: SIMD3(0.5, 0.4, 0.3), count: w * h)),
+                                  contours: Array(repeating: 0, count: w * h), faces: [], cancel: { false }, trace: &trace)
+        #expect(trace.strand.allSatisfy { !$0 })
+    }
+
+    @Test func aStrokeIsSimplifiedKeepingItsShapeAndRoundedAsKept() {
+        // A slow drag along a right angle: hundreds of points, three of which make its shape.
+        let along = (0...200).map { SIMD2(0.1 + 0.4 * Double($0) / 200, 0.2) }
+        let down = (1...200).map { SIMD2(0.5, 0.2 + 0.4 * Double($0) / 200) }
+        let m = Mark(kind: .line, width: 0.004, points: along + down).simplified()
+        #expect(m.points == [SIMD2(0.1, 0.2), SIMD2(0.5, 0.2), SIMD2(0.5, 0.6)])
+        #expect(abs(m.length - 0.8) < 1e-9 && m.length > Mark.shortestLine)
+        // Made as it is kept: rounded, and a point far off the panel brought back near it.
+        let odd = Mark(kind: .unline, width: 0.0123456, points: [SIMD2(0.123456, 1e300), SIMD2(-.infinity, 0.5)])
+        #expect(odd.width == 0.01235 && odd.points == [SIMD2(0.1235, 2), SIMD2(-1, 0.5)])
+        var contours = [Float](repeating: 1, count: 100)
+        odd.draw(into: &contours, width: 10, height: 10)
     }
 
     @Test func marksStayOnThePhotoWhenThePanelMoves() {

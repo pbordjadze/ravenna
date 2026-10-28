@@ -21,8 +21,10 @@ struct MosaicRefineView: View {
     @State private var tool: Tool = .lines
     @State private var erasing = false
     @State private var showsPhoto = false
-    /// The stroke under the finger, in the panel's unit square.
+    /// The stroke under the finger, in the panel's unit square, and where its drag began: a drag
+    /// the system cancels ends with no `onEnded`, so the next one starts afresh.
     @State private var stroke: [SIMD2<Double>] = []
+    @State private var strokeStart: CGPoint?
     /// The marks there were when Refine opened: what Cancel goes back to.
     @State private var original: [MosaicEngine.Mark]?
 
@@ -106,10 +108,10 @@ struct MosaicRefineView: View {
             : CGSize(width: room.width, height: room.width / aspect)
     }
 
-    /// The lines drawn, which the tiles follow, and the stroke under the finger. Rub-outs and gold
-    /// show in the mosaic itself.
+    /// The lines drawn, which the tiles follow, less what was rubbed out after them, and the stroke
+    /// under the finger. Gold shows in the mosaic itself.
     private func marks(in size: CGSize) -> some View {
-        let lines = model.recipe.marks.filter { $0.kind == .line }
+        let drawn = model.recipe.marks.filter(\.kind.movesTiles)
         let current = stroke, kind = self.kind, brush = brushWidth(in: size)
         return Canvas { context, _ in
             func path(_ points: [SIMD2<Double>]) -> Path {
@@ -121,10 +123,21 @@ struct MosaicRefineView: View {
                 for q in points.dropFirst() { p.addLine(to: at(q)) }
                 return p
             }
-            // Faint, so the row of tiles laid along it shows through.
+            // Faint, so the row of tiles laid along it shows through; in order, so a rub-out takes
+            // out what it went over.
             let line = StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round)
-            for mark in lines {
-                context.stroke(path(mark.points), with: .color(.white.opacity(0.5)), style: line)
+            context.drawLayer { layer in
+                for mark in drawn {
+                    if mark.kind == .line {
+                        layer.blendMode = .normal
+                        layer.stroke(path(mark.points), with: .color(.white.opacity(0.5)), style: line)
+                    } else {
+                        layer.blendMode = .destinationOut
+                        layer.stroke(path(mark.points), with: .color(.black),
+                                     style: StrokeStyle(lineWidth: CGFloat(mark.width) * max(size.width, size.height),
+                                                        lineCap: .round, lineJoin: .round))
+                    }
+                }
             }
             guard !current.isEmpty else { return }
             let width: CGFloat = kind == .line ? 2 : CGFloat(brush) * max(size.width, size.height)
@@ -182,6 +195,10 @@ struct MosaicRefineView: View {
         DragGesture(minimumDistance: 0, coordinateSpace: .local)
             .onChanged { value in
                 guard size.width > 0, size.height > 0 else { return }
+                if strokeStart != value.startLocation {
+                    strokeStart = value.startLocation
+                    stroke = []
+                }
                 let p = SIMD2(min(max(Double(value.location.x / size.width), 0), 1),
                               min(max(Double(value.location.y / size.height), 0), 1))
                 if let last = stroke.last {
@@ -193,9 +210,13 @@ struct MosaicRefineView: View {
             .onEnded { _ in
                 let points = stroke
                 stroke = []
+                strokeStart = nil
                 guard !points.isEmpty else { return }
                 let width = kind == .line ? Self.lineWidth : brushWidth(in: size)
-                model.recipe.marks.append(MosaicEngine.Mark(kind: kind, width: width, points: points))
+                let mark = MosaicEngine.Mark(kind: kind, width: width, points: points).simplified()
+                // A tap is no line to lay a row along; a brush's dab is a mark.
+                guard kind != .line || mark.length >= MosaicEngine.Mark.shortestLine else { return }
+                model.recipe.marks.append(mark)
                 model.recipeChanged()
             }
     }

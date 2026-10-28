@@ -68,8 +68,13 @@ go back into it (#5).
   when there are some): lines and rub-outs are drawn into the contours (`Recipe.mark(contours:)`,
   in `MosaicMaker.make`), so the engine lays the mosaic again (a draft first), and gold marks are
   laid on its tiles (`Recipe.laid`, `goldTiles`), so `TileKey` (`Recipe.forTiles`) keeps the
-  engine's mosaic for them; a new photo clears the marks and a moved panel carries them
-  (`CreateModel.recipe`'s `didSet`, `reframingMarks`). The preview's tips wait while it is open.
+  engine's mosaic for them, and a job laying the same tiles finishes and takes the new gold
+  (`startGeneration`'s `laying`); a new photo clears the marks and a moved panel carries them
+  (`CreateModel.recipe`'s `didSet`, `reframingMarks`). A stroke is simplified when the finger
+  lifts (`Mark.simplified`), a tap in Lines is no line (`shortestLine`), and a line is drawn at
+  least 1.5 px wide so a draft keeps it. Its cover hides the create flow without ending it
+  (`CreateModel.isRefining`, which `CreateFlowView`'s `onDisappear` heeds); the preview's tips
+  wait while it is open.
 - **The making-of:** `Features/MakingOf` is v0's show (MosaicKit's `MakingOf.Show`, its cards and
   sources from docs/making-of.md) behind Paint by Moonlight's `MakingOfView` interface and hand-off
   (`StartHandoff`), with v0's options in a menu; always on (`SettingsDefault.playsMakingOf`, its
