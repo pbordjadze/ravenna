@@ -35,13 +35,6 @@
 	<false/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<false/>
-	<key>UIAppFonts</key>
-	<array>
-		<string>Alegreya-Variable.ttf</string>
-		<string>Alegreya-Italic-Variable.ttf</string>
-		<string>AlegreyaSC-Medium.ttf</string>
-		<string>AlegreyaSC-Bold.ttf</string>
-	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

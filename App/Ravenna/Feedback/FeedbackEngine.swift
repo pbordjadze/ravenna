@@ -10,8 +10,8 @@ import PaintCore
 /// synthesized melody and Core Haptics patterns. A painting that isn't a mosaic sounds as glass.
 ///
 /// Preferences (read live, set from Settings): `SettingsKey.haptics`, `SettingsKey.sounds`
-/// (both default on), `SettingsKey.sky`, whose sky of the moment puts the tune in major (Sun) or
-/// minor (Moon), and `TileOptions.rowSound`.
+/// (both default on) and `SettingsKey.sky`, whose sky of the moment puts the tune in major (Sun) or
+/// minor (Moon).
 final class FeedbackEngine {
     static let shared = FeedbackEngine()
 
@@ -82,7 +82,6 @@ final class FeedbackEngine {
         let mode = Self.mode()
         switch event {
         case let .painted(regions, _):
-            let row = TileOptions.rowSound()
             for (k, r) in regions.enumerated() {
                 let voice: Voice, size: Double
                 if let wall = session.wall, wall.isTile(r) {
@@ -95,7 +94,7 @@ final class FeedbackEngine {
                     size = Double(min(1, (session.template.regions[r].area / canvas).squareRoot() * 6))
                 }
                 let delay = k < tileContacts.count ? tileContacts[k] : 0
-                if soundsOn { sounds.play(voice, size: size, mode: mode, row: row, after: delay) }
+                if soundsOn { sounds.play(voice, size: size, mode: mode, after: delay) }
                 if hapticsOn { touch.set(voice, size: size, after: delay) }
             }
             // Spent: a fill the canvas didn't time plays at once.
