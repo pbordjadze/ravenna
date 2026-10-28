@@ -77,14 +77,6 @@ Qiong Yan, Yang Xia and Jiaya Jia, 2012), Potrace (Peter Selinger, 2003) and Dou
 and Polylabel are under the same ISC License as Ravenna's (below). Paint by Moonlight's
 line-drawing model (Informative Drawings) and its picture library are not shipped in Ravenna.
 
-## Type
-
-Alegreya and Alegreya SC, designed by Juan Pablo del Peral for Huerta Tipográfica
-(https://github.com/huertatipografica/Alegreya), copied from Google Fonts
-(https://github.com/google/fonts, `ofl/alegreya`, `ofl/alegreyasc`) into
-`App/Ravenna/Resources/Fonts`. Copyright 2011 The Alegreya Project Authors. SIL Open Font
-License 1.1, in full beside the fonts (`Alegreya-OFL.txt`, the same for both families).
-
 ## Sound
 
 Every sound in the app is synthesized by it (`Sources/MosaicKit/Hand.swift`, `Voice`): a tap of

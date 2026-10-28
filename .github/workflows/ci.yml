@@ -143,7 +143,7 @@ jobs:
           }
           ALL="gallery-first-run create-samples create-preview create-custom making-of making-of-end paint paint-progress paint-complete"
           # The painting screen's tiles, at the default text size only.
-          TILES="paint-zoom paint-setting paint-setting-flat paint-setting-bed paint-finish paint-replay paint-mosaic-measure"
+          TILES="paint-zoom paint-setting paint-finish paint-replay paint-mosaic-measure"
           for kind in "iPhone 17 Pro:iphone" "iPad Pro 11:ipad"; do
             dev=$(pick "${kind%%:*}") label=${kind##*:}
             xcrun simctl boot "$dev"; xcrun simctl bootstatus "$dev" -b >/dev/null
