@@ -123,10 +123,12 @@ go back into it (#5).
   ancient works are paintings), colors, Nightfall and the unlock sheet (neither shows in Ravenna),
   and the engine's acknowledgements. The feedback report's header names the app from
   `FeedbackCapture`.
-- **The paints' names** (#16): `ColorNameText.nicknames` names every mosaic's paints, those made
+- **The paints' names** (#16): `ColorNameText.nicknames` names every artwork's paints, those made
   before too, from MosaicCore's `PaintNames` (Roman and Byzantine stones, glass, metals and
   pigments, sourced in docs/paint-names.md) through PaintCore's `ColorNickname.Vocabulary(table:)`
   and its seeded draw: derived at load from the artwork's seed, English only as before, and a paint
   with no material near keeps its structured name. `meta.json`'s `nicknameVersion` stays written
   for Paint by Moonlight's vocabulary; the table is frozen once shipped, so a change is a new table
-  with a version of Ravenna's own recorded per artwork.
+  with a version of Ravenna's own recorded per artwork (absent meaning the first). The feedback
+  report's `pbn names` line (`FeedbackReport`, `PaintingSession`'s notes) reproduces Paint by
+  Moonlight's names, not these: its `paints[].nickname` are what the painter saw.

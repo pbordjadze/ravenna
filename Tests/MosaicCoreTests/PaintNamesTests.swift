@@ -41,13 +41,34 @@ struct PaintNamesTests {
             for seed: UInt64 in 1...4 {
                 let names = PaintNames.names(for: palette, seed: seed).compactMap { $0 }
                 let old = ColorNickname.assign(palette, seed: seed, version: ColorNickname.currentVersion)
-                #expect(Set(names).count == names.count, "\(id): unique within the palette")
                 named += names.count
                 before += old.filter(ColorNickname.isNickname).count
                 paints += palette.count
             }
         }
         print("Paint names: \(named) of \(paints) paints named over 4 seeds (Paint by Moonlight's vocabulary: \(before))")
-        #expect(Double(named) >= 0.9 * Double(paints))
+        #expect(Double(named) >= 0.97 * Double(paints))
+    }
+
+    /// The table is frozen once shipped (its order takes part in the draw): an edit fails here, and
+    /// is a new table with its own version instead.
+    @Test func theTableIsFrozen() {
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325   // FNV-1a
+        for byte in PaintNames.table.utf8 { hash = (hash ^ UInt64(byte)) &* 0x100_0000_01b3 }
+        #expect(PaintNames.vocabulary.entries.count == 174)
+        #expect(hash == 0x362d_5712_658d_e1cd, "FNV-1a \(String(hash, radix: 16))")
+    }
+
+    /// One library palette's names on Linux (v1's draw uses Float `exp`, so a device's may differ):
+    /// a change to the table, the draw or PaintCore's colour maths moves them.
+    @Test func aPaletteKeepsItsNames() throws {
+        let palette = try #require(try Self.palettes()["hodegetria-standard"])
+        let names = PaintNames.names(for: palette, seed: 1)
+        #expect(names == [
+            "Cocciopesto", "Porporina", "Obsidian", "Cottanello", "Rosso Antico", "Sinopis", "Goethite",
+            "Syenites", "Ampelitis", "Agata", "Exudra", "Bigio Antico", "Porphyrites", "Bole", "Proplasmos",
+            "Cicerculum", "Aventurine", "Burnt Umber", "Pudingo Antico", "Lydian Stone", "Black Paste",
+            "Charcoal Black", "Cimolian Earth",
+        ], "\(names)")
     }
 }

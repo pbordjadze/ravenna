@@ -2,7 +2,8 @@
 
 Paul, October 28: "the paints should have their own names that'd be cool" (issue #16). Each
 mosaic's paints are named after the real materials and colours of Roman and Byzantine mosaic and
-wall painting: the stones and marbles of the floors and walls, the pigments of the painters
+wall painting, and a few materials of their world (Egyptian faience, the Fayum portraits'
+limewood and linen, Byzantine enamel): the stones and marbles of the floors and walls, the pigments of the painters
 (Pliny, Vitruvius, Theophilus, the Byzantine painters' manual, the analyses of the Fayum
 portraits) and the glass, metals and ceramics of the tesserae. The table is `PaintNames.table` in
 `Sources/MosaicCore/PaintNames.swift`, in this page's order; how the app uses it is in
@@ -16,7 +17,9 @@ within the palette. A paint with no material near keeps its structured name ("Bl
 green"). In the library's 27 mosaics (9 works, 3 tile counts, over 4 seeds) the table names 2264
 of 2312 paints (97.9%); the 48 left are pure black (#000000), which no material's colour comes
 within reach of, and stay "Black". Paint by Moonlight's vocabulary names them all, but with
-nicknames like "Cappuccino".
+nicknames like "Cappuccino". The library's colours sit near the ancient materials; a painter's
+own photo has more colours far from all of them (pure blue, violet, hot pink, the darkest black),
+and more of its paints keep their structured names.
 
 ## How the entries were chosen
 

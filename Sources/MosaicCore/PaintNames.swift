@@ -1,7 +1,8 @@
 import PaintCore
 
-/// Ravenna's names for a mosaic's paints ("12 · Giallo Antico"): the stones, glass, metals and
-/// pigments of Roman and Byzantine mosaic and wall painting, each with its source in
+/// Ravenna's names for a painting's paints ("12 · Giallo Antico"): the stones, glass, metals and
+/// pigments of Roman and Byzantine mosaic and wall painting, and a few materials of their world
+/// (Egyptian faience, the Fayum portraits' limewood and linen), each with its source in
 /// docs/paint-names.md (issue #16). They take the place of Paint by Moonlight's nicknames through
 /// PaintCore's own door for a custom table (`ColorNickname.Vocabulary(table:)` and its seeded
 /// draw), so the names are derived at load, never stored, and the same painting always reads the
@@ -9,12 +10,14 @@ import PaintCore
 public enum PaintNames {
     /// One entry per line: the sRGB hex of the material's colour, then its name. PaintCore's style
     /// guide holds (`Vocabulary.problems()`: one or two Title Case words, at most 16 characters,
-    /// no colour word on a colour of another family), except its size and gamut checks, which are
-    /// for a vocabulary that names every colour: a colour with no material near keeps its
-    /// structured name ("Dark green").
+    /// no English colour word on a colour of another family; the Italian and Latin ones, "Rosso",
+    /// "Verde", go unchecked), except its size and gamut checks, which are for a vocabulary that
+    /// names every colour: a colour with no material near keeps its structured name ("Dark green").
     ///
     /// Frozen once shipped: its order breaks distance ties and takes part in the seeded draw, so a
-    /// change is a new table and a version recorded per artwork, never an edit of this one.
+    /// change is a new table and a version recorded per artwork (absent meaning this one), never an
+    /// edit of this one. The draw is PaintCore's v1 (Float `exp`): the same on every launch of one
+    /// platform, but Linux's names may differ from the device's.
     public static let table = """
     D4B071 Giallo Antico
     533426 Rosso Antico
