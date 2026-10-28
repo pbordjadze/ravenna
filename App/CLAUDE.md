@@ -48,7 +48,8 @@ go back into it (#5).
   preview's card (`TemplatePreviewView`) is Paint by Moonlight's folded one (`foldsSettings`, as
   `UNRELEASED` builds have it; `SettingsKey.previewShowsSettings`): the title, Adjust, the summary
   and Start the Mosaic; Adjust shows Pieces and the Ground where the sliders were. The Panel (its
-  sheet, `PanelFramingView`) is the enlarged preview's alone, a third group in its chooser; the
+  sheet, `PanelFramingView`) is the enlarged preview's, a third group in its chooser, and where
+  the copy offers no enlarged preview (the iPad, side by side) Adjust's, after the Ground; the
   Eyes and the Mouth take the engine's defaults, and recipes saved with others keep them (Paul,
   October 28, issue #14). Out: Suggested settings (`AutoSettings`, the chip,
   Settings › Painting Length), Settings › Preview and Line Weight, the line-art picture (`CompareView`,

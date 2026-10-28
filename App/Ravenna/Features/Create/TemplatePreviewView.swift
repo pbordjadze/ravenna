@@ -14,7 +14,8 @@ import UIKit
 /// Ravenna's seam: Ravenna's recipe (`MosaicEngine.Recipe`) where Paint by Moonlight's Colors,
 /// Detail, Smoothness and Lines sliders were, with no suggestion chip or Refine (Paul, October 28,
 /// issue #14: Paint by Moonlight's minimalism). Adjust holds Pieces and the Ground; the Panel is
-/// the enlarged preview's alone; the Eyes and the Mouth take the engine's defaults.
+/// the enlarged preview's, or Adjust's after the Ground where there is no enlarged preview (the
+/// iPad); the Eyes and the Mouth take the engine's defaults.
 struct TemplatePreviewView: View {
     @Bindable var model: CreateModel
     var onStart: () async throws -> Void
@@ -182,10 +183,10 @@ struct TemplatePreviewView: View {
     private var chosenLayout: Bool {
         let room = roomSize.width > 0 && roomSize.height > 0 ? roomSize : size
         guard room.width.isFinite, room.height.isFinite, room.width > 0, room.height > 0 else { return false }
-        // The stacked controls card: title row, Adjust, the recipe, summary, Start and the free
-        // paintings under it. With its settings shown, folded or not: Adjust then never moves the
-        // card from under the finger.
-        let card: CGFloat = (room.width < Self.compactWidth ? 364 : 420) + (showsFreeCount ? 30 : 0)
+        // The stacked controls card: title row, Adjust, the recipe (with the Panel in a wide
+        // window), summary, Start and the free paintings under it. With its settings shown, folded
+        // or not: Adjust then never moves the card from under the finger.
+        let card: CGFloat = (room.width < Self.compactWidth ? 364 : 500) + (showsFreeCount ? 30 : 0)
         let stacked = Self.fittedArea(
             width: room.width - 2 * sidePadding, height: room.height - card, aspect: photoAspect)
         let beside = Self.fittedArea(
@@ -329,6 +330,8 @@ struct TemplatePreviewView: View {
             if showsSettings {
                 group(.pieces)
                 group(.ground)
+                // The Panel is the enlarged preview's, where there is one (a phone's card).
+                if !offersEnlarging { group(.panel) }
             }
             summary
 
