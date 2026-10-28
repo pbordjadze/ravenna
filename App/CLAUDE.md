@@ -14,11 +14,12 @@ changing the copied code. Type and file names stay Paint by Moonlight's, so the 
 Every change to the copy, kept small and listed here, so the copy can follow its source and one day
 go back into it (#5).
 
-- **Identity:** the target, bundle identifier and display name (`App/Ravenna.xcodeproj`,
-  `InfoPlist.xcstrings`); `Config/Info.plist`'s own file type (`com.pbordjadze.ravenna.mosaic`,
-  `.ravenna`, so neither app claims the other's files); the log subsystem and queue
-  labels; the gallery's title and the PDF's footer; feedback reports name the app ("Ravenna …"
-  in `FeedbackCapture`), since they reach Paint by Moonlight's relay.
+- **Identity:** the target, bundle identifier, display name and icon (Apse, below)
+  (`App/Ravenna.xcodeproj`, `InfoPlist.xcstrings`, the catalog's `AppIcon`); `Config/Info.plist`'s
+  own file type (`com.pbordjadze.ravenna.mosaic`, `.ravenna`, so neither app claims the other's
+  files); the log subsystem and queue labels; the gallery's title and the PDF's footer; feedback
+  reports name the app ("Ravenna …" in `FeedbackCapture`), since they reach Paint by Moonlight's
+  relay.
 - **Nothing sold:** `UnlimitedPaintings.forLaunch`. Every configuration defines `UNRELEASED`:
   Ravenna is only ever a SideStore build.
 - **The library:** `Resources/Samples/library.json` lists the ancient works of
@@ -83,10 +84,11 @@ go back into it (#5).
 - **The row tip sooner:** Lay a Row (`DragPaintTip`) after 3 single taps, looked at every 3
   (`PaintChromeState.dragCheckEvery`), where Paint by Moonlight waits for 15: v0's first lesson
   taught the row right after the first tile.
-- **The icon:** `App/AppIcon.swift`, v0's picker as Settings › Icon (`AppIconSection`), between
-  the halo (`AppIcon`) and the alternates `AppIcon-Stars`, `-Tessera` and `-Rows`
-  (`ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES`; their pictures are the catalog's `Icon-…`),
-  until Paul picks one.
+- **The icon:** Apse (Paul, October 28, issue #15), the catalog's `AppIcon` in light, dark and
+  tinted, drawn and put in by `sketchbook/icon_candidates.py` (its other candidates stay there).
+  No alternates and no Settings › Icon; `App/PrimaryIcon.swift` sets the primary back once on a
+  device still showing an old alternate (`PaintByNumberApp`, on the scene becoming active; iOS
+  shows its alert for that one switch). Apse is also the mode's icon in `docs/door-icon.md`.
 - **Demos:** `ShellDemo` has no Refine, draft, line-art or suggestion scenarios; `create-custom`
   moves Pieces so the engine lays a library picture, with Adjust opened (`showsPreviewSettings`;
   the other scenarios fold it). `[shots]` takes `create-custom`, `making-of`
@@ -105,9 +107,8 @@ go back into it (#5).
   started. One finger moves the wall, as in Paint by Moonlight, and a press then a drag lays a
   row (`TileWall.laying`, MosaicKit's `Laying`), a quick run of the tune. `TileOptions` holds
   the finish, Glass and Stone: Paul fixed the options on October 28 (issue #14), and Settings is
-  Paint by Moonlight's but for Music's Sun and Moon, which read Major and Minor, the tip's row and
-  Icon. A painting without a mosaic draws
-  as Paint by Moonlight's. Demos: `PaintDemoView`'s scenarios are mosaics; `paint-setting` and
+  Paint by Moonlight's but for Music's Sun and Moon, which read Major and Minor, and the tip's row
+  (Icon went with Paul's pick, #15). A painting without a mosaic draws as Paint by Moonlight's. Demos: `PaintDemoView`'s scenarios are mosaics; `paint-setting` and
   `paint-mosaic-measure` (frame time and memory, `FrameMeter`) are Ravenna's.
 - **Sound and haptics:** `FeedbackEngine` plays `TileSound` (v0's clinks of Paint by Moonlight's
   tune, major by Sun and minor by Moon) and `TileTouch` (v0's taps); `SoundPlayer`, `ToneSynth`,
