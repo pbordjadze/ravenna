@@ -34,8 +34,9 @@ public enum PaintNames {
     //
     // Frozen once shipped: its order breaks distance ties and takes part in the seeded draw, so a
     // change is a new table and a version recorded per artwork (absent meaning this one), never an
-    // edit of this one. The draw is PaintCore's v1 (Float `exp`): the same on every launch of one
-    // platform, but Linux's names may differ from the device's.
+    // edit of this one; `names(for:seed:)` and `maximumDistance` freeze with it. The draw is
+    // PaintCore's v1 (Float `exp`): the same on every launch of one platform, but Linux's names may
+    // differ from the device's.
 
     public static let vocabulary = ColorNickname.Vocabulary(table: table)
 
@@ -47,12 +48,29 @@ public enum PaintNames {
     /// (October 28: no name that isn't the paint's).
     public static let maximumDistance: Float = 0.08
 
-    /// The palette's names, index-aligned and unique within it: nil for a paint with no material
-    /// within `maximumDistance` (or none left), which keeps its structured name.
+    /// The palette's names, index-aligned and unique within it: PaintCore's seeded draw where it
+    /// lands within `maximumDistance`; else, in palette order, the nearest material within it that
+    /// no other paint has (the draw can land past the cutoff, or move a paint to a farther material
+    /// when its own are taken); else nil, and the paint keeps its structured name. Frozen with
+    /// `table` once shipped: saved paintings' names depend on both.
     public static func names(for palette: [PaletteColor], seed: UInt64) -> [String?] {
-        zip(palette, ColorNickname.assign(palette, seed: seed, vocabulary: vocabulary)).map { paint, name in
-            guard let entry = entries[name], ColorScience.distance(paint.oklab, entry.oklab) <= maximumDistance else { return nil }
+        func near(_ paint: PaletteColor, _ entry: ColorNickname.Entry) -> Bool {
+            ColorScience.distance(paint.oklab, entry.oklab) <= maximumDistance
+        }
+        var names: [String?] = zip(palette, ColorNickname.assign(palette, seed: seed, vocabulary: vocabulary)).map { paint, name in
+            guard let entry = entries[name], near(paint, entry) else { return nil }
             return name
         }
+        var taken = Set(names.compactMap { $0 })
+        for (index, paint) in palette.enumerated() where names[index] == nil {
+            let nearest = vocabulary.entries
+                .filter { !taken.contains($0.name) && near(paint, $0) }
+                .min { ColorScience.distance(paint.oklab, $0.oklab) < ColorScience.distance(paint.oklab, $1.oklab) }
+            if let nearest {
+                names[index] = nearest.name
+                taken.insert(nearest.name)
+            }
+        }
+        return names
     }
 }

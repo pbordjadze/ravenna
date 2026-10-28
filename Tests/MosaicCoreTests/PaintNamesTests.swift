@@ -93,7 +93,8 @@ struct PaintNamesTests {
     }
 
     /// A paint no material comes within `PaintNames.maximumDistance` of keeps its plain name, though
-    /// PaintCore's draw would reach farther: a vivid sky blue (#00A0FF, 0.093 from Armenium) and pure black have none.
+    /// PaintCore's draw would reach farther: a vivid sky blue (#00A0FF, 0.093 from Armenium). Pure
+    /// black has none either (PaintCore's own reach ends short of it).
     @Test func aFarPaintKeepsItsPlainName() {
         let palette = [SIMD3<Float>(0, 0.627, 1), SIMD3<Float>(0, 0, 0), SIMD3<Float>(0.831, 0.69, 0.443)].map {
             PaletteColor(oklab: ColorScience.encodedToOKLab($0, space: .sRGB), rgb: $0)
@@ -103,5 +104,28 @@ struct PaintNamesTests {
         #expect(names[2] != nil, "giallo antico's own colour is named")
         #expect(PaintNames.vocabulary.entries.map(\.name).contains(ColorNickname.assign(palette, seed: 1, vocabulary: PaintNames.vocabulary)[0]),
                 "PaintCore's draw alone would stretch a name to the sky blue")
+    }
+
+    /// The rule itself, on every library palette and four seeds: a paint without a name has no
+    /// material within `PaintNames.maximumDistance` that the palette's other names leave free, and
+    /// every name is within it. (PaintCore's draw alone can land past the cutoff, or move a paint
+    /// to a farther material when its own are taken.)
+    @Test func aPaintIsNamedWheneverAMaterialIsNear() throws {
+        #expect(PaintNames.maximumDistance == 0.08)
+        let entries = PaintNames.vocabulary.entries
+        for (id, palette) in try Self.palettes() {
+            for seed: UInt64 in 1...4 {
+                let names = PaintNames.names(for: palette, seed: seed)
+                let used = Set(names.compactMap { $0 })
+                for (paint, name) in zip(palette, names) {
+                    let near = entries.filter { ColorScience.distance(paint.oklab, $0.oklab) <= PaintNames.maximumDistance }
+                    if let name {
+                        #expect(near.contains { $0.name == name }, "\(id) seed \(seed): \(name) is farther than the cutoff")
+                    } else {
+                        #expect(near.allSatisfy { used.contains($0.name) }, "\(id) seed \(seed): \(paint.hexDigits) had a free material near")
+                    }
+                }
+            }
+        }
     }
 }
