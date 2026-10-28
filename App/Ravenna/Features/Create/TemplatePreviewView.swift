@@ -42,6 +42,8 @@ struct TemplatePreviewView: View {
     @AppStorage(SettingsKey.previewShowsSettings) private var opensSettings = SettingsDefault.previewShowsSettings
     /// The panel's sheet is up, and where the painter has moved the panel on it.
     @State private var isFraming = false
+    /// Refine is open over the preview (`MosaicRefineView`).
+    @State private var isRefining = false
     @State private var framingCentre = SIMD2<Double>(0.5, 0.5)
     @FocusState private var titleFocused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -133,6 +135,7 @@ struct TemplatePreviewView: View {
         .navigationBarBackButtonHidden(isEnlarged || isStarting)
         .background { ContentSwipeBackOff().frame(width: 0, height: 0) }
         .sheet(isPresented: $isFraming) { framingSheet }
+        .fullScreenCover(isPresented: $isRefining) { MosaicRefineView(model: model) }
     }
 
     /// What the preview does as the model changes: its tips' moments and a start asked for early.
@@ -151,7 +154,12 @@ struct TemplatePreviewView: View {
                 model.withdrawStart()
             }
             .onChange(of: model.isFinal) { _, isFinal in
-                if isFinal { previewFinal() }
+                // Under Refine the preview's tips wait: it lays the mosaic again and again.
+                if isFinal, !isRefining { previewFinal() }
+                #if DEBUG
+                // `create-refine` opens Refine once its marks are laid.
+                if isFinal, ShellDemo.current == .createRefine, !model.recipe.marks.isEmpty { isRefining = true }
+                #endif
             }
             // A start asked for early goes once the painting is made, unless something called it off.
             .onChange(of: model.startsNow) { _, now in
@@ -163,6 +171,15 @@ struct TemplatePreviewView: View {
             .onChange(of: model.isAdjusting) { _, adjusting in
                 // No suggestion to go back to: Ravenna's recipe is always the painter's own.
                 if !adjusting { PaintTips.sliderReleased(isCustom: false) }
+            }
+            // Refine covers the preview: its tips leave with it, and come back with it.
+            .onChange(of: isRefining) { _, refining in
+                if refining {
+                    PaintTips.desk.leave(.preview)
+                } else {
+                    PaintTips.desk.enter(.preview)
+                    if model.isFinal { previewFinal() }
+                }
             }
             // Start Painting saves the painting, and The Making-of may play: the preview says no more.
             .onChange(of: isStarting) { _, starting in
@@ -226,6 +243,18 @@ struct TemplatePreviewView: View {
             // painting.
             ToolbarItem(placement: .primaryAction) {
                 Button("Shrink Preview", systemImage: "arrow.down.right.and.arrow.up.left") { setEnlarged(false) }
+            }
+        }
+        // Ravenna's seam: Refine where Paint by Moonlight's was, a text button so it reads as a
+        // step, opening Ravenna's own (`MosaicRefineView`) on the mosaic as it is laid.
+        if !isEnlarged {
+            ToolbarItem(placement: .primaryAction) {
+                Button("Refine") {
+                    titleFocused = false
+                    isRefining = true
+                }
+                .disabled(model.preview == nil || model.isChoosingSettings || isStarting || model.startAsked)
+                .accessibilityIdentifier("refine")
             }
         }
         if offersEnlarging && !isEnlarged {

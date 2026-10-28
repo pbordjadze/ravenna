@@ -41,6 +41,34 @@
       "comment" : "Create flow button under the mosaic's title: shows the recipe's settings (Pieces and Ground), or folds them away again",
       "extractionState" : "manual"
     },
+    "Brush the gold ground where it should be." : {
+      "comment" : "Refine's hint: the Gold tool",
+      "extractionState" : "manual"
+    },
+    "Draw a line, and the rows of tiles follow it." : {
+      "comment" : "Refine's hint under its controls: the Lines tool",
+      "extractionState" : "manual"
+    },
+    "Erase" : {
+      "comment" : "Refine: the button that turns the tool into its eraser (a line rubbed out, the gold ground taken off)",
+      "extractionState" : "manual"
+    },
+    "Laying the tiles…" : {
+      "comment" : "Refine: the note while the mosaic is laid again after a mark",
+      "extractionState" : "manual"
+    },
+    "Lines" : {
+      "comment" : "Refine's tool: lines the mosaic's rows of tiles follow (Erase rubs out the photo's own)",
+      "extractionState" : "manual"
+    },
+    "Refine" : {
+      "comment" : "The new mosaic's preview: the bar button that opens Refine, where the painter draws lines the rows follow and brushes the gold ground",
+      "extractionState" : "manual"
+    },
+    "Rub out the photo’s lines where no outline should be." : {
+      "comment" : "Refine's hint: the Lines tool erasing",
+      "extractionState" : "manual"
+    },
     "Settings hidden" : {
       "comment" : "VoiceOver value of the create flow's Adjust button while the settings are folded away",
       "extractionState" : "manual"
@@ -2185,6 +2213,10 @@
       "comment" : "Title of the tip at a finished painting in the gallery about sharing its time-lapse",
       "extractionState" : "manual"
     },
+    "Show the Photo" : {
+      "comment" : "Refine: the button that shows the photo under the drawing instead of the mosaic",
+      "extractionState" : "manual"
+    },
     "Skip" : {
       "comment" : "Button over the making-of show that ends it and opens the new painting",
       "extractionState" : "manual"
@@ -2195,6 +2227,10 @@
     },
     "Stones, Marbles and Gems" : {
       "comment" : "Settings › Acknowledgements › The Paints’ Names: header of the stones and gems the paints are named after",
+      "extractionState" : "manual"
+    },
+    "Take the gold ground off where it shouldn’t be." : {
+      "comment" : "Refine's hint: the Gold tool erasing",
       "extractionState" : "manual"
     },
     "Tap + to turn one of your photos, or a sample, into a page to paint." : {
@@ -2293,6 +2329,10 @@
       "comment" : "Button in the alert after feedback couldn't be sent: opens the share sheet so the painter can send the feedback another way, such as Mail",
       "extractionState" : "manual"
     },
+    "The mosaic" : {
+      "comment" : "Refine: VoiceOver's name for the drawing area while it shows the mosaic",
+      "extractionState" : "manual"
+    },
     "The painting couldn’t be prepared for sending." : {
       "comment" : "Send Template sheet: shown when the painting's file can't be made (its template can't be read)",
       "extractionState" : "manual",
@@ -2320,6 +2360,10 @@
           }
         }
       }
+    },
+    "The photo" : {
+      "comment" : "Refine: VoiceOver's name for the drawing area while it shows the photo",
+      "extractionState" : "manual"
     },
     "The Setter’s Hand" : {
       "comment" : "Making-of options: switch showing the setter's hand pressing each tile home",
@@ -2351,6 +2395,10 @@
     },
     "Tips appear beside things as you reach them, one at a time. Turn them off here whenever you like." : {
       "comment" : "Footer of the Settings section with the Tips switch and Show Tips Again",
+      "extractionState" : "manual"
+    },
+    "Tool" : {
+      "comment" : "Refine: the segmented control choosing Lines or Gold (read by VoiceOver)",
       "extractionState" : "manual"
     },
     "Touch and hold a finished painting and choose Share for a time-lapse of it." : {

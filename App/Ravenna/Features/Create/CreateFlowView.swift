@@ -117,6 +117,12 @@ struct CreateFlowView: View {
                 model.recipeChanged()
                 return
             }
+            if let marks = ShellDemo.current?.refineMarks, model.recipe.marks.isEmpty {
+                // As a painter would in Refine: a line drawn and gold brushed, then laid.
+                model.recipe.marks = marks
+                model.recipeChanged()
+                return
+            }
             if openingSample != nil || ShellDemo.current == .createFromFile {
                 DemoMode.markReady()
             }

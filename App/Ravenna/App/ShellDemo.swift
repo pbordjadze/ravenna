@@ -1,6 +1,7 @@
 #if DEBUG
 import CoreGraphics
 import Foundation
+import MosaicEngine
 import os
 import PaintCore
 
@@ -32,6 +33,8 @@ import PaintCore
 /// - `create-custom`, `create-custom-long-text`: the first fixed picture after Pieces moved off the
 ///   standard count and let go: laid by the engine, not its bundled mosaic, with Adjust opened;
 ///   the second with every localized string twice as long.
+/// - `create-refine`: the first fixed picture with a line drawn across it and the gold ground
+///   brushed along its foot, laid by the engine, then Refine opened on it (`MosaicRefineView`).
 /// - `create-from-file`: a photo file opened as if shared from another app ("Open in Paint by
 ///   Moonlight"): the create flow on that photo's preview, titled with the file's name. The file
 ///   is the red fox written to the temporary directory at launch (`DemoMode.openFileURL`).
@@ -64,7 +67,7 @@ import PaintCore
 enum ShellDemo: Equatable {
     case gallery, galleryFavorites, gallerySearch, galleryNoFavorites, galleryLongText, galleryEmpty, galleryFirstRun, galleryPreparing,
          galleryOpen, gallerySend, galleryReceived, galleryDamaged, galleryTimelapse, galleryTimelapseLongText, create, createSamples, createSamplesPaintings,
-         createSamplesPhotographs, createPreview, createCustom, createFromFile,
+         createSamplesPhotographs, createPreview, createCustom, createRefine, createFromFile,
          createUnlock, galleryTip, galleryTipGear, galleryTipsOff, settingsTips, settingsTip,
          settings, settingsLongText, settingsAcknowledgements
 
@@ -90,6 +93,7 @@ enum ShellDemo: Equatable {
         case "create-samples-photographs": .createSamplesPhotographs
         case "create-preview", "create-preview-dark": .createPreview
         case "create-custom", "create-custom-long-text": .createCustom
+        case "create-refine": .createRefine
         case "create-from-file": .createFromFile
         case "create-unlock", "create-unlock-dark", "create-unlock-long-text": .createUnlock
         case "gallery-tip", "gallery-tip-dark", "gallery-tip-long-text": .galleryTip
@@ -144,7 +148,7 @@ enum ShellDemo: Equatable {
     var sendsTemplate: Bool { self == .gallerySend }
 
     var opensCreateFlow: Bool {
-        self == .create || opensSamples || self == .createPreview || self == .createCustom
+        self == .create || opensSamples || self == .createPreview || self == .createCustom || self == .createRefine
     }
 
     /// The create flow starts on its Samples pane (iPhone; iPad shows both panes).
@@ -168,7 +172,7 @@ enum ShellDemo: Equatable {
         switch self {
         // The library's first starter, or the first fixed picture.
         case .createPreview: showsLibrary ? Sample.starters.first : pictures.first
-        case .createCustom: pictures.first
+        case .createCustom, .createRefine: pictures.first
         default: nil
         }
     }
@@ -178,6 +182,16 @@ enum ShellDemo: Equatable {
 
     /// The painter moves Pieces off the standard count once the preview is final, and lets go.
     var movesASlider: Bool { self == .createCustom }
+
+    /// What `create-refine` draws once the preview is final: a line across the picture's upper
+    /// third and the gold ground brushed along its foot.
+    var refineMarks: [MosaicEngine.Mark]? {
+        guard self == .createRefine else { return nil }
+        return [
+            MosaicEngine.Mark(kind: .line, width: 0.004, points: [SIMD2(0.15, 0.32), SIMD2(0.5, 0.28), SIMD2(0.85, 0.34)]),
+            MosaicEngine.Mark(kind: .gold, width: 0.08, points: [SIMD2(0.05, 0.93), SIMD2(0.5, 0.95), SIMD2(0.95, 0.93)]),
+        ]
+    }
 
     /// The preview's card shows its settings, Adjust opened (`TemplatePreviewView.foldsSettings`);
     /// the other scenarios show it folded.
@@ -257,7 +271,7 @@ enum ShellDemo: Equatable {
         case .gallerySend:
             library.seed([Library.SeedItem(sample: pictures[0], painted: 0.42, photoMaxPixelSize: 560)])
         case .create, .createSamples, .createSamplesPaintings, .createSamplesPhotographs, .createPreview,
-             .createCustom, .createFromFile, .createUnlock, .galleryReceived, .galleryEmpty, .settings,
+             .createCustom, .createRefine, .createFromFile, .createUnlock, .galleryReceived, .galleryEmpty, .settings,
              .settingsTips, .settingsLongText, .settingsAcknowledgements:
             break
         }

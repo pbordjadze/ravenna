@@ -16,10 +16,11 @@ import SwiftUI
 ///
 /// Ravenna's seam: Paint by Moonlight's model generated templates from its sliders' settings,
 /// chose them for each photo (Suggested settings) and refined them (Refine, drafts); here the
-/// engine lays a mosaic (`MosaicMaker`), its template made from it, and none of that remains. A
-/// photo's contours and faces are found once for each panel of it (`MosaicMaker.analyze`); the
-/// engine's mosaics are kept by the recipe's tiles (`TileKey`), so a ground changes only how the
-/// same tiles are laid. A library picture whose recipe a bundled mosaic stands for is laid from it
+/// engine lays a mosaic (`MosaicMaker`), its template made from it, and of that only a Refine of
+/// Ravenna's own remains (`MosaicRefineView`: its marks are the recipe's). A photo's contours and
+/// faces are found once for each panel of it (`MosaicMaker.analyze`); the engine's mosaics are
+/// kept by the recipe's tiles (`TileKey`), so a ground or a gold mark changes only how the same
+/// tiles are laid. A library picture whose recipe a bundled mosaic stands for is laid from it
 /// at once. The preview draws the mosaic in the finish the app shows every mosaic in (`MosaicLook`).
 @Observable
 final class CreateModel {
@@ -101,8 +102,14 @@ final class CreateModel {
     private(set) var isAdjusting = false
     /// The recipe the mosaic at its own size is being laid with, while it is.
     private(set) var making: MosaicEngine.Recipe?
-    /// The painter's recipe: the card's controls bind to it, and call `recipeChanged()`.
-    var recipe = MosaicEngine.Recipe()
+    /// The painter's recipe: the card's controls and Refine bind to it, and call `recipeChanged()`.
+    var recipe = MosaicEngine.Recipe() {
+        didSet {
+            // What was drawn in Refine stays on the same part of the photo as the panel changes.
+            guard !recipe.marks.isEmpty, PanelKey(oldValue) != PanelKey(recipe), let photo = source?.preview else { return }
+            recipe = recipe.reframingMarks(from: oldValue, photoWidth: Double(photo.width), photoHeight: Double(photo.height))
+        }
+    }
     /// Start Painting was tapped before the mosaic was laid: it starts once it is.
     private(set) var startAsked = false
     /// The name typed for the painting; empty means `defaultTitle`.
@@ -134,14 +141,13 @@ final class CreateModel {
         }
     }
 
-    /// The recipe's tiles: what the engine's mosaic depends on (not the ground, laid on after).
+    /// The recipe's tiles: what the engine's mosaic depends on (not the ground or the gold marks,
+    /// laid on after: `Recipe.forTiles`).
     nonisolated struct TileKey: Equatable, Sendable {
         let recipe: MosaicEngine.Recipe
 
         init(_ recipe: MosaicEngine.Recipe) {
-            var r = recipe
-            r.ground = .picture
-            self.recipe = r
+            self.recipe = recipe.forTiles
         }
     }
 
@@ -271,7 +277,8 @@ final class CreateModel {
     private func begin(defaultTitle: String, sampleName: String?, decode: @escaping () async throws -> Decoded) {
         cancelAll()
         // A new photo gets a new default name, and anything typed for the last one goes; the
-        // painter's recipe stays, but for its panel, which was of the last photo.
+        // painter's recipe stays, but for its panel and what was drawn in Refine, which were of
+        // the last photo.
         self.defaultTitle = defaultTitle
         title = ""
         photoID = UUID()
@@ -282,6 +289,7 @@ final class CreateModel {
         stats = nil
         analysis = nil
         made = []
+        recipe.marks = []
         recipe.panel = .whole
         recipe.centre = SIMD2(0.5, 0.5)
         progress = 0
