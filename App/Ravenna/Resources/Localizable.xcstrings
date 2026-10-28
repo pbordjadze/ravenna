@@ -4309,14 +4309,50 @@
         }
       }
     },
-    "appIcon.stars" : {
-      "comment" : "Choice of Settings › Icon: the app icon of gold stars on blue",
+    "appIcon.halo.about" : {
+      "comment" : "Settings › Icon: what the Halo app icon shows",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stars"
+            "value" : "A gold halo in an apse of lapis rows"
+          }
+        }
+      }
+    },
+    "appIcon.moonlight" : {
+      "comment" : "Choice of Settings › Icon: the app icon of a crescent moon over hills, laid in mosaic",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moonlight"
+          }
+        }
+      }
+    },
+    "appIcon.delta" : {
+      "comment" : "Choice of Settings › Icon: the app icon of a night in mosaic with the Greek numeral four (Δʹ, delta)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delta"
+          }
+        }
+      }
+    },
+    "appIcon.star" : {
+      "comment" : "Choice of Settings › Icon: the app icon of one gold star on blue",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Star"
           }
         }
       }
@@ -4333,38 +4369,62 @@
         }
       }
     },
-    "appIcon.rows" : {
-      "comment" : "Choice of Settings › Icon: the app icon of an arch laid in rows of tiles",
+    "appIcon.nimbus" : {
+      "comment" : "Choice of Settings › Icon: the app icon of a moon in a gold halo (a nimbus)",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rows"
+            "value" : "Nimbus"
           }
         }
       }
     },
-    "appIcon.halo.about" : {
-      "comment" : "Settings › Icon: what the Halo app icon shows",
+    "appIcon.apse" : {
+      "comment" : "Choice of Settings › Icon: the app icon of an arch opening on a night sky",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A gold halo in an apse of lapis rows"
+            "value" : "Apse"
           }
         }
       }
     },
-    "appIcon.stars.about" : {
-      "comment" : "Settings › Icon: what the Stars app icon shows (the Mausoleum of Galla Placidia, Ravenna, a proper name)",
+    "appIcon.moonlight.about" : {
+      "comment" : "Settings › Icon: what the Moonlight app icon shows (Paint by Moonlight is an app's name; smalti are mosaic glass)",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gold stars on lapis, after the vault of Galla Placidia"
+            "value" : "Paint by Moonlight's night, set in smalti"
+          }
+        }
+      }
+    },
+    "appIcon.delta.about" : {
+      "comment" : "Settings › Icon: what the Delta app icon shows (Δʹ is the Greek numeral four; keep it as is)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The same night, its 4 written Δʹ, the Greek numeral"
+          }
+        }
+      }
+    },
+    "appIcon.star.about" : {
+      "comment" : "Settings › Icon: what the Star app icon shows (the Mausoleum of Galla Placidia, Ravenna, a proper name)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A gold star on lapis, after the vault of Galla Placidia"
           }
         }
       }
@@ -4376,19 +4436,31 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "One gold tessera being set"
+            "value" : "One gold tessera lifted over its place"
           }
         }
       }
     },
-    "appIcon.rows.about" : {
-      "comment" : "Settings › Icon: what the Rows app icon shows",
+    "appIcon.nimbus.about" : {
+      "comment" : "Settings › Icon: what the Nimbus app icon shows (San Vitale, a church in Ravenna, a proper name)",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "An arch laid from the inside out"
+            "value" : "The moon in a gold halo, as at San Vitale"
+          }
+        }
+      }
+    },
+    "appIcon.apse.about" : {
+      "comment" : "Settings › Icon: what the Apse app icon shows",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An arch of gold and red opening on the night"
           }
         }
       }

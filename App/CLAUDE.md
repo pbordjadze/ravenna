@@ -78,9 +78,11 @@ go back into it (#5).
   (`PaintChromeState.dragCheckEvery`), where Paint by Moonlight waits for 15: v0's first lesson
   taught the row right after the first tile.
 - **The icon:** `App/AppIcon.swift`, v0's picker as Settings › Icon (`AppIconSection`), between
-  the halo (`AppIcon`) and the alternates `AppIcon-Stars`, `-Tessera` and `-Rows`
-  (`ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES`; their pictures are the catalog's `Icon-…`),
-  until Paul picks one.
+  the halo (`AppIcon`) and issue #15's candidates `AppIcon-Moonlight`, `-Delta`, `-Star`,
+  `-Tessera`, `-Nimbus` and `-Apse`, each light, dark and tinted
+  (`ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES`; their pictures are the catalog's `Icon-…`;
+  drawn and put in by `sketchbook/icon_candidates.py`), until Paul picks one. The switch with the
+  mode, inside Paint by Moonlight, is `docs/door-icon.md`.
 - **Demos:** `ShellDemo` has no Refine, draft, line-art or suggestion scenarios; `create-custom`
   moves Pieces so the engine lays a library picture. `[shots]` takes `create-custom`, `making-of`
   and `making-of-end` beside Paint by Moonlight's (ci.yml's `ALL`).

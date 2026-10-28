@@ -41,3 +41,9 @@ controlnet_aux 0.0.10.
 `bundle.py` makes the app's bundled mosaics with the app's own engine (`swift build -c release`
 first; it runs `.build/release/mosaic`), so each tile carries its build stage for the making-of.
 The same inputs give the same files byte for byte.
+
+The icons: `icon.py` draws the halo, the app's icon until Paul picks (`icons.py` drew v0's Stars,
+Tessera and Rows, now retired). `icon_candidates.py OUT` draws issue #15's six candidates, each light,
+dark and tinted at 1024 px, laid in rows that follow their forms (opencv-python-headless 4.x,
+numpy); `icon_candidates.py OUT --catalog App/Ravenna/Resources/Assets.xcassets` puts them in the app
+(Pillow). Same files every run.
