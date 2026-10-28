@@ -13,19 +13,21 @@ The mode's name is Paul's to choose. Below it is **⟨the mode⟩**, and its ico
 
 While ⟨the mode⟩ is on, the home screen shows Ravenna's icon in place of Paint by Moonlight's (the
 same app, the same name under it). When the painter leaves the mode, Paint by Moonlight's icon comes
-back. The candidates for the icon are on the page linked from #15; Paul picks one.
+back. The icon is **Apse** (Paul, October 28): a round-headed arch of gold within red, opening on Paint by
+Moonlight's own night, the door itself. It is Ravenna's icon now too.
 
 ## How
 
 iOS lets an app change its own home-screen icon to one of a few sets it ships:
-`UIApplication.setAlternateIconName(_:)`. Ravenna's Settings › Icon already works this way.
+`UIApplication.setAlternateIconName(_:)`. Ravenna's Settings › Icon worked this way until Paul
+picked Apse.
 
-1. **The asset.** The chosen icon's set goes into Paint by Moonlight's asset catalog as
+1. **The asset.** Apse's set goes into Paint by Moonlight's asset catalog as
    `AppIcon-⟨Mode⟩.appiconset`: three 1024 px PNGs (light, dark and tinted, as its own `AppIcon` has
-   them) and their `Contents.json`, copied from Ravenna's catalog
-   (`App/Ravenna/Resources/Assets.xcassets/AppIcon-<Name>.appiconset`, drawn by
-   `sketchbook/icon_candidates.py`). About 1 MB. If the mode's settings show the icon, its 180 px
-   picture (`Icon-<Name>.imageset`) goes too.
+   them) and their `Contents.json`, copied from Ravenna's own icon
+   (`App/Ravenna/Resources/Assets.xcassets/AppIcon.appiconset`, drawn by
+   `sketchbook/icon_candidates.py`; renamed `AppIcon-⟨Mode⟩` there). About 0.8 MB. If the mode's
+   settings show the icon, a 180 px copy of it goes too, as an image set.
 2. **The build setting.** Both configurations of the app target name it as an alternate:
    `ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = AppIcon-⟨Mode⟩`. Without it, the compiled
    catalog leaves the set out and the switch fails.
@@ -83,7 +85,7 @@ limits:
    and expects. A switch in the mode's settings turns following off, and turning it off puts Paint by
    Moonlight's icon back.
 2. **Only on request.** No automatic switching: the mode's settings have the icon as a choice (as
-   Ravenna's Settings › Icon does now), and leaving the mode puts Paint by Moonlight's icon back
+   Ravenna's Settings › Icon did), and leaving the mode puts Paint by Moonlight's icon back
    only if the painter asks. Quietest, and the furthest from what Paul asked for.
 3. **Always.** The icon switches on every entry and exit with no question. Closest to the ask, but
    the alert then arrives unasked every time, and it shows the secret on screen. Not recommended.
@@ -93,7 +95,7 @@ the painter chose.
 
 ## What goes from Ravenna
 
-- The chosen `AppIcon-<Name>.appiconset` (light, dark, tinted) and, if shown, `Icon-<Name>.imageset`.
-- `sketchbook/icon_candidates.py`, if the icon is ever redrawn: it lays the six candidates with
-  andamento and is deterministic, so the set can be drawn again identically.
+- Ravenna's `AppIcon.appiconset` (Apse: light, dark, tinted), renamed `AppIcon-⟨Mode⟩.appiconset`.
+- `sketchbook/icon_candidates.py`, if the icon is ever redrawn: it lays Apse and the other
+  candidates with andamento and is deterministic, so the set can be drawn again identically.
 - No code: `ModeIcon` above is the whole of it, written in Paint by Moonlight's own style there.

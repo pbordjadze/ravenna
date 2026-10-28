@@ -1,5 +1,5 @@
-"""icon_candidates.py <out-dir> [name ...]: candidates for Ravenna's icon (issue #15), the one that would
-replace Paint by Moonlight's on the home screen when the mode is entered. Each is 1024 px in three
+"""icon_candidates.py <out-dir> [name ...]: the candidates for Ravenna's icon (issue #15), the one that
+would replace Paint by Moonlight's on the home screen when the mode is entered. Paul chose Apse. Each is 1024 px in three
 appearances, as Paint by Moonlight's appiconset has them: <name>.png (light), <name>-dark.png and
 <name>-tinted.png (grayscale, for iOS 18's tinted home screen).
 
@@ -21,7 +21,8 @@ plaster), the sky a little brighter. Dark: the painted bed of an apse.
   apse       A round-headed apse in lime plaster opening onto Paint by Moonlight's night: the door.
 
 Deterministic: each candidate is seeded by its name; the same OpenCV draws the same pixels.
-  icon_candidates.py <out-dir> --catalog App/Ravenna/Resources/Assets.xcassets   puts them in the app."""
+  icon_candidates.py <out-dir> --catalog App/Ravenna/Resources/Assets.xcassets [name]   makes one the
+  app's icon (default apse, Paul's pick, October 28; the others stay here to be drawn again)."""
 import sys, os, math, zlib
 import numpy as np, cv2
 
@@ -329,37 +330,29 @@ def save(img, path):
     cv2.imwrite(path, cv2.cvtColor((img * 255 + 0.5).astype(np.uint8), cv2.COLOR_RGB2BGR))
 
 
-def catalog(out, assets):
-    """Puts the drawn candidates (in out) into the app's asset catalog as alternate icons,
-    AppIcon-<Name>.appiconset in three appearances, and Icon-<Name>.imageset, Settings › Icon's
-    180 px picture (the dark one: the app is dark)."""
+def catalog(out, assets, name="apse"):
+    """Puts a drawn candidate (in out) into the app's asset catalog as its icon, AppIcon.appiconset
+    in three appearances. Apse is the app's (Paul, October 28)."""
     import json
     from PIL import Image
-    for name in CANDIDATES:
-        Name = name.capitalize()
-        d = os.path.join(assets, f"AppIcon-{Name}.appiconset"); os.makedirs(d, exist_ok=True)
-        images = []
-        for suffix, look in (("", None), ("-Dark", "dark"), ("-Tinted", "tinted")):
-            fn = f"AppIcon-{Name}{suffix}.png"
-            # Indexed (octree, 256 colours) and the tinted one gray: about a quarter of the bytes,
-            # no difference to see at any size the icon is shown.
-            im = Image.open(os.path.join(out, f"{name}{suffix.lower()}.png")).convert("RGB")
-            im = im.convert("L") if look == "tinted" else im.quantize(256, method=Image.Quantize.FASTOCTREE)
-            im.save(os.path.join(d, fn), optimize=True)
-            image = {"filename": fn, "idiom": "universal", "platform": "ios", "size": "1024x1024"}
-            if look: image = {"appearances": [{"appearance": "luminosity", "value": look}], **image}
-            images.append(image)
-        json.dump({"images": images, "info": {"author": "xcode", "version": 1}}, open(os.path.join(d, "Contents.json"), "w"), indent=2)
-        d = os.path.join(assets, f"Icon-{Name}.imageset"); os.makedirs(d, exist_ok=True)
-        small = cv2.resize(cv2.imread(os.path.join(out, f"{name}-dark.png")), (180, 180), interpolation=cv2.INTER_AREA)
-        cv2.imwrite(os.path.join(d, f"Icon-{Name}.png"), small)
-        json.dump({"images": [{"filename": f"Icon-{Name}.png", "idiom": "universal"}], "info": {"author": "xcode", "version": 1}},
-                  open(os.path.join(d, "Contents.json"), "w"), indent=2)
+    d = os.path.join(assets, "AppIcon.appiconset"); os.makedirs(d, exist_ok=True)
+    images = []
+    for suffix, look in (("", None), ("-Dark", "dark"), ("-Tinted", "tinted")):
+        fn = f"AppIcon{suffix}.png"
+        # Indexed (octree, 256 colours) and the tinted one gray: about a quarter of the bytes,
+        # no difference to see at any size the icon is shown.
+        im = Image.open(os.path.join(out, f"{name}{suffix.lower()}.png")).convert("RGB")
+        im = im.convert("L") if look == "tinted" else im.quantize(256, method=Image.Quantize.FASTOCTREE)
+        im.save(os.path.join(d, fn), optimize=True)
+        image = {"filename": fn, "idiom": "universal", "platform": "ios", "size": "1024x1024"}
+        if look: image = {"appearances": [{"appearance": "luminosity", "value": look}], **image}
+        images.append(image)
+    json.dump({"images": images, "info": {"author": "xcode", "version": 1}}, open(os.path.join(d, "Contents.json"), "w"), indent=2)
 
 
 if __name__ == "__main__":
     out = sys.argv[1]; os.makedirs(out, exist_ok=True)
-    if len(sys.argv) > 3 and sys.argv[2] == "--catalog": catalog(out, sys.argv[3]); sys.exit()
+    if len(sys.argv) > 3 and sys.argv[2] == "--catalog": catalog(out, *sys.argv[3:5]); sys.exit()
     for name in sys.argv[2:] or CANDIDATES:
         for light in (True, False):
             wall = Wall(name, light); CANDIDATES[name](wall); img = wall.finish()

@@ -42,8 +42,9 @@ controlnet_aux 0.0.10.
 first; it runs `.build/release/mosaic`), so each tile carries its build stage for the making-of.
 The same inputs give the same files byte for byte.
 
-The icons: `icon.py` draws the halo, the app's icon until Paul picks (`icons.py` drew v0's Stars,
-Tessera and Rows, now retired). `icon_candidates.py OUT` draws issue #15's six candidates, each light,
-dark and tinted at 1024 px, laid in rows that follow their forms (opencv-python-headless 4.x,
-numpy); `icon_candidates.py OUT --catalog App/Ravenna/Resources/Assets.xcassets` puts them in the app
-(Pillow). Same files every run.
+The icons: Apse is the app's (Paul, October 28, issue #15). `icon_candidates.py OUT` draws it and
+the other five candidates, each light, dark and tinted at 1024 px, laid in rows that follow their
+forms (opencv-python-headless 4.x, numpy); `icon_candidates.py OUT --catalog
+App/Ravenna/Resources/Assets.xcassets [name]` makes one the app's icon (Pillow; default apse). Same
+files every run. `icon.py` (v0's halo) and `icons.py` (v0's Stars, Tessera and Rows) drew the icons
+before it.
