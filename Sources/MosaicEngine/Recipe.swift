@@ -9,8 +9,9 @@ import MosaicKit
 
 nonisolated extension MosaicEngine {
     /// What a mosaic is made with, as the painter chose it in the create flow: how many pieces, how
-    /// the eyes and the mouth are set, the ground and the panel of the photo laid. Each is a creative
-    /// fork kept as an option until Paul narrows it. (The finish is how any mosaic is shown, the
+    /// the eyes and the mouth are set, the ground and the panel of the photo laid, and what they drew
+    /// on it in Refine (`marks`). Each is a creative fork kept as an option until Paul narrows it.
+    /// (The finish is how any mosaic is shown, the
     /// app's setting, as in v0: it changes no tile or paint. The gold ground gives the background a
     /// paint of its own, so it is the mosaic's.) The app records it with the
     /// artwork (`meta.json`'s `recipe`), so a mosaic is made again as it was made.
@@ -26,11 +27,15 @@ nonisolated extension MosaicEngine {
         public var panel: Panel
         /// The panel's centre in the photo's unit square (x right, y down).
         public var centre: SIMD2<Double>
+        /// What the painter drew in Refine, in order (`Mark`): lines the rows follow, contours
+        /// rubbed out, the gold ground brushed on or off.
+        public var marks: [Mark]
 
         public init(pieces: Double = Recipe.standardPieces, eyes: Eyes = .asTheyLook, mouth: Mouth = .asInThePhoto,
-                    ground: Ground = .picture, panel: Panel = .whole, centre: SIMD2<Double> = SIMD2(0.5, 0.5)) {
+                    ground: Ground = .picture, panel: Panel = .whole, centre: SIMD2<Double> = SIMD2(0.5, 0.5),
+                    marks: [Mark] = []) {
             self.pieces = pieces; self.eyes = eyes; self.mouth = mouth; self.ground = ground
-            self.panel = panel; self.centre = centre
+            self.panel = panel; self.centre = centre; self.marks = marks
         }
 
         /// The slider's position for the standard count (1024 px, the bundled mosaics' Standard).
@@ -53,9 +58,11 @@ nonisolated extension MosaicEngine {
 
         /// The bundled detail this recipe's tiles are, when a bundled mosaic made from the whole
         /// picture with the default eyes and mouth stands for what the engine would make; nil
-        /// otherwise. The ground changes no tile's place (it is laid on: `laid`).
+        /// otherwise. The ground and the gold marks change no tile's place (they are laid on:
+        /// `laid`); a line or a contour rubbed out does.
         public var bundledDetail: Detail? {
-            guard eyes == .asTheyLook, mouth == .asInThePhoto, panel == .whole else { return nil }
+            guard eyes == .asTheyLook, mouth == .asInThePhoto, panel == .whole,
+                  !marks.contains(where: \.kind.movesTiles) else { return nil }
             return Self.detailPieces.first { abs($0.value - pieces) < 1e-6 }?.key
         }
 
@@ -74,10 +81,20 @@ nonisolated extension MosaicEngine {
             return s
         }
 
-        /// The mosaic as this recipe lays it: with its background in gold, for the gold ground.
-        public func laid(_ mosaic: Mosaic) -> Mosaic { ground == .gold ? mosaic.goldGround() : mosaic }
+        /// The mosaic as this recipe lays it: with its background in gold, for the gold ground,
+        /// and the gold marks' tiles added to it or taken off (`goldTiles`).
+        public func laid(_ mosaic: Mosaic) -> Mosaic {
+            guard marks.contains(where: { !$0.kind.movesTiles }) else { return ground == .gold ? mosaic.goldGround() : mosaic }
+            return mosaic.goldGround(goldTiles(of: mosaic))
+        }
 
-        private enum CodingKeys: String, CodingKey { case pieces, eyes, mouth, ground, panel, centre }
+        private enum CodingKeys: String, CodingKey { case pieces, eyes, mouth, ground, panel, centre, marks }
+
+        /// One of `marks` as read: nil when it doesn't (`Mark.init(from:)`), so the others are kept.
+        private struct ReadMark: Decodable {
+            let mark: Mark?
+            init(from decoder: any Decoder) throws { mark = try? Mark(from: decoder) }
+        }
 
         public init(from decoder: any Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -94,6 +111,7 @@ nonisolated extension MosaicEngine {
             let xy = ((try? c.decodeIfPresent([Double].self, forKey: .centre)) ?? nil) ?? []
             centre = xy.count == 2 && xy.allSatisfy(\.isFinite)
                 ? SIMD2(min(max(xy[0], 0), 1), min(max(xy[1], 0), 1)) : d.centre
+            marks = ((try? c.decodeIfPresent([ReadMark].self, forKey: .marks)) ?? nil)?.compactMap(\.mark) ?? []
         }
 
         public func encode(to encoder: any Encoder) throws {
@@ -104,6 +122,8 @@ nonisolated extension MosaicEngine {
             try c.encode(ground.rawValue, forKey: .ground)
             try c.encode(panel.rawValue, forKey: .panel)
             try c.encode([centre.x, centre.y], forKey: .centre)
+            // Written only once there are some: a recipe never refined reads as it always has.
+            if !marks.isEmpty { try c.encode(marks, forKey: .marks) }
         }
     }
 

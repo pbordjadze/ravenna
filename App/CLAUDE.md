@@ -54,11 +54,27 @@ go back into it (#5).
   Eyes and the Mouth take the engine's defaults, and recipes saved with others keep them (Paul,
   October 28, issue #14). Out: Suggested settings (`AutoSettings`, the chip,
   Settings › Painting Length), Settings › Preview and Line Weight, the line-art picture (`CompareView`,
-  `LineArtDrawing`), Refine (`Features/Refine`, its button, tips, notes, `TemplateRefinements`,
-  `refinements.json`), drafts (`Drafts`, `CreateDraft`, `DraftRow`, `DraftSaveToast`), the
-  line-art inputs (`LineArtInputs`, `LineArtMapsCache`, `TextFinder`, `ObjectFinder`, `EyeFinder`,
+  `LineArtDrawing`), Paint by Moonlight's Refine (`Features/Refine`, its tips, notes,
+  `TemplateRefinements`, `refinements.json`; Ravenna's own is below), drafts (`Drafts`,
+  `CreateDraft`, `DraftRow`, `DraftSaveToast`), the line-art inputs (`LineArtInputs`, `LineArtMapsCache`, `TextFinder`, `ObjectFinder`, `EyeFinder`,
   `SubjectImportance`) and `DemoTemplateCache`. Their settings keys are retired
   (`Preferences.retiredKeys`); `PaintDemoView`'s book demo runs HED alone.
+- **Refine** (Paul, October 28): Ravenna's own, `Features/Create/MosaicRefineView`, opened by
+  the preview bar's Refine where Paint by Moonlight's was, before the mosaic is set. One finger
+  draws on the mosaic (or the photo, Show the Photo) with two tools: Lines, a line the rows
+  follow (Erase rubs the photo's contours out), and Gold, the gold ground brushed on (Erase takes
+  it off); Undo, Cancel (back to the marks it opened with) and Done. What is drawn is the recipe's
+  (`MosaicEngine.Mark`, `Recipe.marks`, in the panel's unit square, written in `meta.json` only
+  when there are some): lines and rub-outs are drawn into the contours (`Recipe.mark(contours:)`,
+  in `MosaicMaker.make`), so the engine lays the mosaic again (a draft first), and gold marks are
+  laid on its tiles (`Recipe.laid`, `goldTiles`), so `TileKey` (`Recipe.forTiles`) keeps the
+  engine's mosaic for them, and a job laying the same tiles finishes and takes the new gold
+  (`startGeneration`'s `laying`); a new photo clears the marks and a moved panel carries them
+  (`CreateModel.recipe`'s `didSet`, `reframingMarks`). A stroke is simplified when the finger
+  lifts (`Mark.simplified`), a tap in Lines is no line (`shortestLine`), and a line is drawn at
+  least 1.5 px wide so a draft keeps it. Its cover hides the create flow without ending it
+  (`CreateModel.isRefining`, which `CreateFlowView`'s `onDisappear` heeds); the preview's tips
+  wait while it is open.
 - **The making-of:** `Features/MakingOf` is v0's show (MosaicKit's `MakingOf.Show`, its cards and
   sources from docs/making-of.md) behind Paint by Moonlight's `MakingOfView` interface and hand-off
   (`StartHandoff`), with v0's options in a menu; always on (`SettingsDefault.playsMakingOf`, its
@@ -89,9 +105,10 @@ go back into it (#5).
   No alternates and no Settings › Icon; `App/PrimaryIcon.swift` sets the primary back once on a
   device still showing an old alternate (`PaintByNumberApp`, on the scene becoming active; iOS
   shows its alert for that one switch). Apse is also the mode's icon in `docs/door-icon.md`.
-- **Demos:** `ShellDemo` has no Refine, draft, line-art or suggestion scenarios; `create-custom`
+- **Demos:** `ShellDemo` has none of Paint by Moonlight's Refine, draft, line-art or suggestion scenarios; `create-custom`
   moves Pieces so the engine lays a library picture, with Adjust opened (`showsPreviewSettings`;
-  the other scenarios fold it). `[shots]` takes `create-custom`, `making-of`
+  the other scenarios fold it); `create-refine` draws a line and gold on it (`refineMarks`) and
+  opens Refine. `[shots]` takes `create-custom`, `create-refine`, `making-of`
   and `making-of-end` beside Paint by Moonlight's (ci.yml's `ALL`).
 - **Left behind:** Paint by Moonlight's picture library and its line-drawing model
   (`LineArt.mlpackage`). The HED model is the same file in both apps. No test targets: Ravenna's

@@ -60,8 +60,12 @@ nonisolated extension Mosaic {
     /// The mosaic with its background laid in gold: those tiles take one new gold paint, the last,
     /// and any paint left with no tiles is dropped (the others keep their order). Tile indices
     /// don't change, so the painter's setting carries over.
-    public func goldGround() -> Mosaic {
-        let back = background()
+    public func goldGround() -> Mosaic { goldGround(background()) }
+
+    /// The mosaic with the tiles `chosen` (indices into `tiles`) laid in gold, as `goldGround()`
+    /// lays the background: the gold ground the painter brushed on or off in Refine (`MosaicEngine.Mark`).
+    public func goldGround(_ chosen: [Int]) -> Mosaic {
+        let back = chosen.filter { tiles.indices.contains($0) }
         guard !back.isEmpty else { return self }
         var out = self
         let gold = palette.count

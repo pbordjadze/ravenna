@@ -96,7 +96,9 @@ nonisolated enum MosaicMaker {
             for i in 0..<(w * h) { rgb[i] = SIMD3(Float(p[i * 4]), Float(p[i * 4 + 1]), Float(p[i * 4 + 2])) / 255 }
         }
         let map = analysis.contours
-        let contours = bilinear(map.values.map { Float($0) / 255 }, map.width, map.height, to: w, h)
+        var contours = bilinear(map.values.map { Float($0) / 255 }, map.width, map.height, to: w, h)
+        // What the painter drew in Refine: lines the rows follow, contours rubbed out.
+        recipe.mark(contours: &contours, width: w, height: h)
         let scale = Float(w) / Float(max(map.width, 1))
         let faces = analysis.faces.map { $0.scaled(by: scale) }
         return try MosaicEngine.make(
