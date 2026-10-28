@@ -131,6 +131,17 @@ go back into it (#5).
   painting is a mosaic, an area a tile, to paint is to set (a page is the mosaic; "Lay a Row",
   "Start the Mosaic", "Ready to Set"), and the app is Ravenna. Left: the samples' Paintings (the
   ancient works are paintings), colors, Nightfall and the unlock sheet (neither shows in Ravenna),
-  the engine's acknowledgements, and the paints' nicknames, which are PaintCore's
-  (`ColorNickname`, seeded per artwork) and wait on Paul. The feedback report's header names the
-  app from `FeedbackCapture`.
+  and the engine's acknowledgements. The feedback report's header names the app from
+  `FeedbackCapture`.
+- **The paints' names** (#16): `ColorNameText.nicknames` names every artwork's paints, those made
+  before too, from MosaicCore's `PaintNames` (Roman and Byzantine stones, glass, metals and
+  pigments; one source, docs/paint-names.json, from which `tools/paint_names.py` writes
+  `PaintNamesTable.swift` and docs/paint-names.md) through PaintCore's `ColorNickname.Vocabulary(table:)`
+  and its seeded draw: derived at load from the artwork's seed, English only as before. A drawn
+  name is kept within `PaintNames.maximumDistance` (0.08, nearer than PaintCore's 0.12), else the
+  nearest free material within it, else the paint keeps its structured name. `meta.json`'s `nicknameVersion` stays written
+  for Paint by Moonlight's vocabulary; the table is frozen once shipped, so a change is a new table
+  with a version of Ravenna's own recorded per artwork (absent meaning the first). The feedback
+  report's `pbn names` line (`FeedbackReport`, `PaintingSession`'s notes) reproduces Paint by
+  Moonlight's names, not these: its `paints[].nickname` are what the painter saw. Their credits
+  are Acknowledgements' The Paints' Names (`PaintNamesView`, from `PaintNames.credits`).

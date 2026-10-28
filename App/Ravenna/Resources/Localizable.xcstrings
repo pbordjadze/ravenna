@@ -205,6 +205,14 @@
         }
       }
     },
+    "Each paint is named after a stone, pigment or glass of Roman and Byzantine mosaic and wall painting whose color is near it. A paint with none near keeps its plain name." : {
+      "comment" : "Settings › Acknowledgements › The Paints’ Names: the note above the list of materials the paints are named after",
+      "extractionState" : "manual"
+    },
+    "Glass and Other Materials" : {
+      "comment" : "Settings › Acknowledgements › The Paints’ Names: header of the glass tesserae, metals, ceramics, mortars and other materials the paints are named after",
+      "extractionState" : "manual"
+    },
     "Gold" : {
       "comment" : "Ground choice: the picture's background laid in gold smalti",
       "extractionState" : "manual"
@@ -281,12 +289,40 @@
       "comment" : "Menu over the making-of show (its VoiceOver label) with the show's choices: the drawing's colour, the build, the setter's hand",
       "extractionState" : "manual"
     },
+    "paintNames.source" : {
+      "comment" : "Settings › Acknowledgements › The Paints’ Names: the link to the page of the source a paint’s name is credited to",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "See the Source"
+          }
+        }
+      }
+    },
+    "paintNames.source.accessibility" : {
+      "comment" : "VoiceOver label of the link to a paint name’s source in Settings › Acknowledgements › The Paints’ Names; the argument is the name, e.g. “Source of Giallo Antico”",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Source of %@"
+          }
+        }
+      }
+    },
     "Panel" : {
       "comment" : "Create preview: the segment, its heading and the sheet's title for how much of the photo is laid (the whole photo or a panel of it)",
       "extractionState" : "manual"
     },
     "Pieces" : {
       "comment" : "Create preview: the segment and the slider of how many tiles the mosaic is laid in",
+      "extractionState" : "manual"
+    },
+    "Pigments" : {
+      "comment" : "Settings › Acknowledgements › The Paints’ Names: header of the pigments and painting materials the paints are named after",
       "extractionState" : "manual"
     },
     "Ravenna" : {
@@ -2157,6 +2193,10 @@
       "comment" : "Panel choice: a square panel of the photo",
       "extractionState" : "manual"
     },
+    "Stones, Marbles and Gems" : {
+      "comment" : "Settings › Acknowledgements › The Paints’ Names: header of the stones and gems the paints are named after",
+      "extractionState" : "manual"
+    },
     "Tap + to turn one of your photos, or a sample, into a page to paint." : {
       "comment" : "Message of the tip titled Make Your Own Page, at the gallery’s + (New Painting) button",
       "extractionState" : "manual",
@@ -2265,6 +2305,10 @@
         }
       }
     },
+    "The Paints’ Names" : {
+      "comment" : "Header in Acknowledgements of the section crediting the materials the paints are named after, and the title of its screen",
+      "extractionState" : "manual"
+    },
     "The Pencil paints while fingers move the page. Double-tap the Pencil for the next color." : {
       "comment" : "Message of the tip titled Paint with Apple Pencil; the page is the painting being painted",
       "extractionState" : "manual",
@@ -2279,6 +2323,14 @@
     },
     "The Setter’s Hand" : {
       "comment" : "Making-of options: switch showing the setter's hand pressing each tile home",
+      "extractionState" : "manual"
+    },
+    "The stones, pigments, glass and other materials of Roman and Byzantine mosaic that the paints are named after." : {
+      "comment" : "Footer under The Paints’ Names in Acknowledgements",
+      "extractionState" : "manual"
+    },
+    "Their Materials and Sources" : {
+      "comment" : "Acknowledgements › The Paints’ Names: the row that opens the list of materials the paints are named after, each with its source",
       "extractionState" : "manual"
     },
     "These settings were picked for this photo. You can just tap Start Painting." : {
