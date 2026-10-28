@@ -137,7 +137,8 @@ go back into it (#5).
   pigments; one source, docs/paint-names.json, from which `tools/paint_names.py` writes
   `PaintNamesTable.swift` and docs/paint-names.md) through PaintCore's `ColorNickname.Vocabulary(table:)`
   and its seeded draw: derived at load from the artwork's seed, English only as before, and a paint
-  with no material near keeps its structured name. `meta.json`'s `nicknameVersion` stays written
+  with no material within `PaintNames.maximumDistance` (0.08, nearer than PaintCore's 0.12) keeps
+  its structured name. `meta.json`'s `nicknameVersion` stays written
   for Paint by Moonlight's vocabulary; the table is frozen once shipped, so a change is a new table
   with a version of Ravenna's own recorded per artwork (absent meaning the first). The feedback
   report's `pbn names` line (`FeedbackReport`, `PaintingSession`'s notes) reproduces Paint by

@@ -55,8 +55,8 @@ struct PaintNamesTests {
     @Test func theTableIsFrozen() {
         var hash: UInt64 = 0xcbf2_9ce4_8422_2325   // FNV-1a
         for byte in PaintNames.table.utf8 { hash = (hash ^ UInt64(byte)) &* 0x100_0000_01b3 }
-        #expect(PaintNames.vocabulary.entries.count == 174)
-        #expect(hash == 0x362d_5712_658d_e1cd, "FNV-1a \(String(hash, radix: 16))")
+        #expect(PaintNames.vocabulary.entries.count == 189)
+        #expect(hash == 0xf5c8_5a2b_0226_c306, "FNV-1a \(String(hash, radix: 16))")
     }
 
     /// One library palette's names on Linux (v1's draw uses Float `exp`, so a device's may differ):
@@ -67,7 +67,7 @@ struct PaintNamesTests {
         #expect(names == [
             "Cocciopesto", "Porporina", "Obsidian", "Cottanello", "Rosso Antico", "Sinopis", "Goethite",
             "Syenites", "Ampelitis", "Agata", "Exudra", "Bigio Antico", "Porphyrites", "Bole", "Proplasmos",
-            "Cicerculum", "Aventurine", "Burnt Umber", "Pudingo Antico", "Lydian Stone", "Black Paste",
+            "Cicerculum", "Aventurine", "Burnt Umber", "Pudingo Antico", "Carbunculus", "Black Paste",
             "Charcoal Black", "Cimolian Earth",
         ], "\(names)")
     }
@@ -90,5 +90,18 @@ struct PaintNamesTests {
             #expect(!credit.citation.isEmpty && !credit.what.isEmpty)
             if let link = credit.link { #expect(URL(string: link)?.scheme == "https", "\(credit.name): \(link)") }
         }
+    }
+
+    /// A paint no material comes within `PaintNames.maximumDistance` of keeps its plain name, though
+    /// PaintCore's draw would reach farther: a vivid sky blue (#00A0FF, 0.093 from Armenium) and pure black have none.
+    @Test func aFarPaintKeepsItsPlainName() {
+        let palette = [SIMD3<Float>(0, 0.627, 1), SIMD3<Float>(0, 0, 0), SIMD3<Float>(0.831, 0.69, 0.443)].map {
+            PaletteColor(oklab: ColorScience.encodedToOKLab($0, space: .sRGB), rgb: $0)
+        }
+        let names = PaintNames.names(for: palette, seed: 1)
+        #expect(names[0] == nil && names[1] == nil, "\(names)")
+        #expect(names[2] != nil, "giallo antico's own colour is named")
+        #expect(PaintNames.vocabulary.entries.map(\.name).contains(ColorNickname.assign(palette, seed: 1, vocabulary: PaintNames.vocabulary)[0]),
+                "PaintCore's draw alone would stretch a name to the sky blue")
     }
 }

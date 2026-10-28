@@ -176,6 +176,21 @@ extension PaintNames {
     A87D40 Limewood
     B3A27C Linen
     CEAF85 Shell
+    98A152 Topazos
+    ADBD6C Pyrochlore
+    56703C Green Tessera
+    E6D23C Luteum
+    296E29 Weld Green
+    F0BE3A Crocus
+    4A191A Carbunculus
+    A8202E Coccum
+    7A1C32 Hysginum
+    E17E4A Curalium
+    58758A Glastum
+    24343F Vitrum
+    7B949A Beryl
+    B7BDA8 Callaina
+    8A5C78 Conchyliatum
     """
 
     public static let credits: [Credit] = [
@@ -875,5 +890,65 @@ extension PaintNames {
                what: "Mother-of-pearl shell; listed among the materials of San Vitale's Theodora mosaic.",
                citation: "BYZART, University of Bologna: San Vitale, Ravenna, Theodora and her retinue",
                link: "https://historica.unibo.it/handle/20.500.14008/441"),
+        Credit(name: "Topazos", hex: 0x98A152, kind: .stone,
+               what: "Pliny's topazos, the green gem of Topazos island in the Red Sea (now Zabargad): peridot (gem olivine), yellow-green.",
+               citation: "Pliny, Natural History 37.32; GIA, Peridot from Egypt; The Met, peridot ring stone (244991)",
+               link: "https://www.perseus.tufts.edu/hopper/text?doc=Perseus:text:1999.02.0137:book=37:chapter=32"),
+        Credit(name: "Pyrochlore", hex: 0xADBD6C, kind: .glass,
+               what: "Opaque yellow-green mosaic glass: lead antimonate (pyrochlore) crystals in a copper-tinted glass; the most abundant tesserae colors at 6th-c. Hierapolis and in late antique mosaics.",
+               citation: "Neri, Morvan, Colomban, Guerra and Prigent, “Late Roman and Byzantine mosaic opaque glass-ceramics tesserae (5th–9th century)”, Ceramics International 42 (2016), fig. 1",
+               link: "https://hal.sorbonne-universite.fr/hal-01375484/document"),
+        Credit(name: "Green Tessera", hex: 0x56703C, kind: .glass,
+               what: "Opaque leaf-green glass tessera, Byzantine; greens of this kind were made by dispersing yellow lead antimonate in copper-blue/green glass.",
+               citation: "The Met, Mosaic Tesserae, Byzantine (2016.11.1–.50); Neri, Morvan, Colomban, Guerra and Prigent, “Late Roman and Byzantine mosaic opaque glass-ceramics tesserae (5th–9th century)”, Ceramics International 42 (2016)",
+               link: "https://www.metmuseum.org/art/collection/search/708074"),
+        Credit(name: "Luteum", hex: 0xE6D23C, kind: .pigment,
+               what: "Weld (Reseda luteola), \"the herb called luteum\": the Romans' lightfast yellow dye, also laid over blue to make green.",
+               citation: "Vitruvius, De architectura 7.14.2",
+               link: "https://penelope.uchicago.edu/Thayer/E/Roman/Texts/Vitruvius/7*.html"),
+        Credit(name: "Weld Green", hex: 0x296E29, kind: .pigment,
+               what: "Vitruvius' cheap substitute for chrysocolla green: caeruleum (Egyptian blue) dyed over with weld, \"the most vivid green\".",
+               citation: "Vitruvius, De architectura 7.14.2 (tr. Gwilt)",
+               link: "https://penelope.uchicago.edu/Thayer/E/Roman/Texts/Vitruvius/7*.html"),
+        Credit(name: "Crocus", hex: 0xF0BE3A, kind: .pigment,
+               what: "Saffron (Crocus sativus), the costliest yellow dye and color of antiquity; Theophilus uses \"saffron, with which silk is colored\" over tin to imitate gold.",
+               citation: "Pliny, Natural History 21.17; Theophilus, De diversis artibus 1.32 (tr. Hendrie, 1847)",
+               link: "https://www.perseus.tufts.edu/hopper/text?doc=Perseus:text:1999.02.0137:book=21:chapter=17"),
+        Credit(name: "Carbunculus", hex: 0x4A191A, kind: .stone,
+               what: "Pliny's carbunculus, the fiery red gem (the Alabandic kind cut at Alabanda: almandine garnet); the garnet of late antique cloisonne.",
+               citation: "Pliny, Natural History 37.25; The Met, ring with garnet, Roman (243672)",
+               link: "https://www.perseus.tufts.edu/hopper/text?doc=Perseus:text:1999.02.0137:book=37:chapter=25"),
+        Credit(name: "Coccum", hex: 0xA8202E, kind: .pigment,
+               what: "Kermes (coccum, the \"scarlet berry\" of the holm oak, Kermes vermilio): the grain dye of Roman generals' cloaks.",
+               citation: "Pliny, Natural History 16.12, 21.22, 22.3",
+               link: "https://www.perseus.tufts.edu/hopper/text?doc=Perseus:text:1999.02.0137:book=16:chapter=12"),
+        Credit(name: "Hysginum", hex: 0x7A1C32, kind: .pigment,
+               what: "Hysginum: cloth first dyed with kermes, then steeped in Tyrian purple; Vitruvius also dyes chalk with it to make purple paint.",
+               citation: "Pliny, Natural History 9.65, 35.26; Vitruvius, De architectura 7.14.1 (tr. Gwilt)",
+               link: "https://www.perseus.tufts.edu/hopper/text?doc=Perseus:text:1999.02.0137:book=9:chapter=65"),
+        Credit(name: "Curalium", hex: 0xE17E4A, kind: .stone,
+               what: "Red coral (Corallium rubrum), Pliny's curalium, prized from the Stoechades and Sicily; coral beads in Coptic necklaces of the 4th-7th c.",
+               citation: "Pliny, Natural History 32.11; The Met, Coptic beads (479605)",
+               link: "https://www.perseus.tufts.edu/hopper/text?doc=Perseus:text:1999.02.0137:book=32:chapter=11"),
+        Credit(name: "Glastum", hex: 0x58758A, kind: .pigment,
+               what: "Woad (Isatis tinctoria), Pliny's Gaulish glastum: the European indigo-blue dye; a light woad dye on wool is a greyish slate blue.",
+               citation: "Pliny, Natural History 22.2; BioColour Library, woad on wool",
+               link: "https://www.perseus.tufts.edu/hopper/text?doc=Perseus:text:1999.02.0137:book=22:chapter=2"),
+        Credit(name: "Vitrum", hex: 0x24343F, kind: .pigment,
+               what: "Vitrum, the Latin name of woad (Greek isatis): the Britons' blue body dye in Caesar, and Vitruvius' dye for chalk to imitate indigo; a deep woad on wool.",
+               citation: "Vitruvius, De architectura 7.14.2; Caesar, Gallic War 5.14",
+               link: "https://penelope.uchicago.edu/Thayer/E/Roman/Texts/Vitruvius/7*.html"),
+        Credit(name: "Beryl", hex: 0x7B949A, kind: .stone,
+               what: "Beryl (aquamarine), which Pliny ranks best when it has \"the pure green of the sea\"; a Severan beryl intaglio.",
+               citation: "Pliny, Natural History 37.20; The Met, beryl intaglio of Julia Domna (251870)",
+               link: "https://www.perseus.tufts.edu/hopper/text?doc=Perseus:text:1999.02.0137:book=37:chapter=20"),
+        Credit(name: "Callaina", hex: 0xB7BDA8, kind: .stone,
+               what: "Pliny's callaina, a pale green stone \"easily counterfeited in glass\" (usually read as variscite/turquoise, callais); pale variscite beads on a Roman necklace.",
+               citation: "Pliny, Natural History 37.33; The Met, necklace with variscite beads (250988)",
+               link: "https://www.perseus.tufts.edu/hopper/text?doc=Perseus:text:1999.02.0137:book=37:chapter=33"),
+        Credit(name: "Conchyliatum", hex: 0x8A5C78, kind: .pigment,
+               what: "The \"conchyliated\" shellfish purple: the pale, highly esteemed tint got by dyeing with half-strength purple, shading through heliotrope and mallow.",
+               citation: "Pliny, Natural History 9.64, 21.22",
+               link: "https://www.perseus.tufts.edu/hopper/text?doc=Perseus:text:1999.02.0137:book=9:chapter=64"),
     ]
 }

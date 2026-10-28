@@ -39,11 +39,20 @@ public enum PaintNames {
 
     public static let vocabulary = ColorNickname.Vocabulary(table: table)
 
-    private static let names = Set(vocabulary.entries.map(\.name))
+    private static let entries = Dictionary(uniqueKeysWithValues: vocabulary.entries.map { ($0.name, $0) })
+
+    /// How far (ΔE, OKLab) a paint's material may be from it: about four just-noticeable
+    /// differences. PaintCore's draw reaches 0.12, where a vivid yellow-green drew "Gold Leaf";
+    /// a paint no real material comes this near keeps its plain name rather than a stretched one
+    /// (October 28: no name that isn't the paint's).
+    public static let maximumDistance: Float = 0.08
 
     /// The palette's names, index-aligned and unique within it: nil for a paint with no material
-    /// within `ColorNickname.maximumDistance` (or none left), which keeps its structured name.
+    /// within `maximumDistance` (or none left), which keeps its structured name.
     public static func names(for palette: [PaletteColor], seed: UInt64) -> [String?] {
-        ColorNickname.assign(palette, seed: seed, vocabulary: vocabulary).map { names.contains($0) ? $0 : nil }
+        zip(palette, ColorNickname.assign(palette, seed: seed, vocabulary: vocabulary)).map { paint, name in
+            guard let entry = entries[name], ColorScience.distance(paint.oklab, entry.oklab) <= maximumDistance else { return nil }
+            return name
+        }
     }
 }
