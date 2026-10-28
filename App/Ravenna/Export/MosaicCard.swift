@@ -11,8 +11,8 @@ import MosaicKit
 ///
 /// - The gallery's card (`Library.thumbnailPNG`): `pngData`.
 /// - The picture shared, saved or printed from a finished or begun mosaic (`ArtworkExporter
-///   .paintingPNG`, `CompletionShare`): `keepsake`, about 3,000 px, with the border Settings
-///   chooses (`Border`, v0's `Keepsake`).
+///   .paintingPNG`, `CompletionShare`): `keepsake`, about 3,000 px, with nothing round it (v0's
+///   `Keepsake` offered a border; Paul kept none, October 28).
 nonisolated enum MosaicCard {
     /// The card as PNG, at most `maxPixelSize` px on its long side; nil when `painted` (one flag per
     /// template region: tile i, then the grout) doesn't fit the mosaic.
@@ -21,12 +21,9 @@ nonisolated enum MosaicCard {
     }
 
     /// The picture to share: a finished wall has no outlines left, one begun shows where its tiles
-    /// still go; with the border round it.
-    static func keepsake(_ m: Mosaic, painted: [Bool], border: Border = TileOptions.border(), maxPixelSize: Int = 3000) -> CGImage? {
-        guard let wall = image(m, painted: painted, maxPixelSize: maxPixelSize) else { return nil }
-        // Every tile set (the grout, the last region, set or not).
-        let finished = !painted.dropLast().contains(false)
-        return border.around(wall, m, finished: finished) ?? wall
+    /// still go.
+    static func keepsake(_ m: Mosaic, painted: [Bool], maxPixelSize: Int = 3000) -> CGImage? {
+        image(m, painted: painted, maxPixelSize: maxPixelSize)
     }
 
     /// The painted bed's long side at most, as the canvas's (`TileScene.bed`).
@@ -56,58 +53,6 @@ nonisolated enum MosaicCard {
             cg.strokePath()
         }
         for i in drawing.paths.indices where painted[i] { drawing.draw(i, in: cg) }
-        return cg.makeImage()
-    }
-}
-
-/// What goes round a shared mosaic (v0's option, its key `border`): nothing, a margin of lime
-/// plaster, or a band of square tesserae in the plaster, as a panel's border is laid.
-nonisolated enum Border: String, CaseIterable, Sendable {
-    case none, plaster, band
-
-    /// `wall` with the border round it, or nil for none. The band alternates the mosaic's darkest
-    /// paint with gold on a finished wall, or with its lightest paint on one in progress.
-    func around(_ wall: CGImage, _ m: Mosaic, finished: Bool) -> CGImage? {
-        guard self != .none, let space = CGColorSpace(name: CGColorSpace.sRGB) else { return nil }
-        let w = CGFloat(wall.width), h = CGFloat(wall.height)
-        let tile = max(w, h) / 90, gap = tile * 0.16
-        let margin = self == .band ? tile * 3.2 : tile * 1.6
-        let size = CGSize(width: w + 2 * margin, height: h + 2 * margin)
-        guard let cg = CGContext(data: nil, width: Int(size.width), height: Int(size.height), bitsPerComponent: 8, bytesPerRow: 0,
-                                 space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
-        cg.setFillColor(red: 0.914, green: 0.886, blue: 0.827, alpha: 1)  // Theme's lime plaster
-        cg.fill(CGRect(origin: .zero, size: size))
-        cg.draw(wall, in: CGRect(x: margin, y: margin, width: w, height: h))
-        guard self == .band else { return cg.makeImage() }
-        let luma = { (c: SIMD3<Float>) in 0.2126 * c.x + 0.7152 * c.y + 0.0722 * c.z }
-        let dark = m.palette.min { luma($0) < luma($1) } ?? SIMD3(0.1, 0.1, 0.1)
-        let light = finished ? Mosaic.groundGold : (m.palette.max { luma($0) < luma($1) } ?? SIMD3(0.9, 0.9, 0.9))
-        // The band's centre line, a tile and a bit in from the edge; tiles fitted evenly along each side.
-        let inset = tile * 0.9 + tile / 2
-        let ring = CGRect(origin: .zero, size: size).insetBy(dx: inset, dy: inset)
-        var k = 0
-        for (a, b) in [(CGPoint(x: ring.minX, y: ring.minY), CGPoint(x: ring.maxX, y: ring.minY)),
-                       (CGPoint(x: ring.maxX, y: ring.minY), CGPoint(x: ring.maxX, y: ring.maxY)),
-                       (CGPoint(x: ring.maxX, y: ring.maxY), CGPoint(x: ring.minX, y: ring.maxY)),
-                       (CGPoint(x: ring.minX, y: ring.maxY), CGPoint(x: ring.minX, y: ring.minY))] {
-            let length = hypot(b.x - a.x, b.y - a.y), n = max(1, Int((length / (tile + gap)).rounded()))
-            for i in 0..<n {
-                let t = CGFloat(i) / CGFloat(n)
-                let c = CGPoint(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t)
-                let j = { (salt: UInt64) in CGFloat(TileColor.wobble(k, salt: salt)) * tile * 0.05 }
-                let body = k.isMultiple(of: 2) ? dark : light
-                cg.setFillColor(red: CGFloat(body.x), green: CGFloat(body.y), blue: CGFloat(body.z), alpha: 1)
-                let half = (tile - gap) / 2
-                cg.beginPath()
-                cg.move(to: CGPoint(x: c.x - half + j(1), y: c.y - half + j(2)))
-                cg.addLine(to: CGPoint(x: c.x + half + j(3), y: c.y - half + j(4)))
-                cg.addLine(to: CGPoint(x: c.x + half + j(5), y: c.y + half + j(6)))
-                cg.addLine(to: CGPoint(x: c.x - half + j(7), y: c.y + half + j(8)))
-                cg.closePath()
-                cg.fillPath()
-                k += 1
-            }
-        }
         return cg.makeImage()
     }
 }

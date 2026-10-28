@@ -14,7 +14,7 @@ import PaintCore
 ///     Settings/<work>-<detail>.json                   a bundled work's tiles set at a detail
 ///
 /// and the finish and the gold ground as options for every mosaic (UserDefaults `finish`,
-/// `ground`). v1 keeps the finish as it is (`MosaicLook`) and records the ground with each work,
+/// `ground`). v1 shows every mosaic in Glass and Stone (`MosaicLook`) and records the ground with each work,
 /// so it opens as it looked. Each becomes an artwork: its mosaic (a bundled work's from the
 /// bundle) with that ground laid on, which moves no tile, its template made of it, and its set
 /// tiles painted (`Setting.paintedRegions`: region i is tile i, the grout set). Only works with tiles set come over from the

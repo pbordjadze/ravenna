@@ -37,17 +37,17 @@
       "comment" : "Settings row, and the title of the screen it opens, crediting the sample pictures, artwork, and the code, models and methods behind the template engine",
       "extractionState" : "manual"
     },
-    "acknowledgements.alegreya.usage" : {
-      "comment" : "What a credited typeface is used for in Ravenna (Alegreya); shown in Settings under Acknowledgements",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The typeface Ravenna’s titles and words are set in."
-          }
-        }
-      }
+    "Adjust" : {
+      "comment" : "Create flow button under the mosaic's title: shows the recipe's settings (Pieces and Ground), or folds them away again",
+      "extractionState" : "manual"
+    },
+    "Settings hidden" : {
+      "comment" : "VoiceOver value of the create flow's Adjust button while the settings are folded away",
+      "extractionState" : "manual"
+    },
+    "Settings shown" : {
+      "comment" : "VoiceOver value of the create flow's Adjust button while the settings show",
+      "extractionState" : "manual"
     },
     "acknowledgements.faceLandmarks.usage" : {
       "comment" : "What a credited third-party method or library is used for in Ravenna's mosaic engine (face landmarks); shown in Settings under Acknowledgements",
@@ -101,64 +101,12 @@
       "comment" : "Create preview: the line under the Panel choice when it is Whole",
       "extractionState" : "manual"
     },
-    "As in the photo" : {
-      "comment" : "Mouth choice: the mouth laid as the photo has it",
-      "extractionState" : "manual"
-    },
     "As in the picture" : {
       "comment" : "Ground choice: the picture's background laid as it is",
       "extractionState" : "manual"
     },
-    "As they look" : {
-      "comment" : "Eyes choice: irises mixed brighter, as an eye catches the light",
-      "extractionState" : "manual"
-    },
-    "Border" : {
-      "comment" : "Settings picker choosing what goes round a shared mosaic (None, Plaster or A Band of Tesserae)",
-      "extractionState" : "manual"
-    },
-    "border.band" : {
-      "comment" : "Choice of Settings › Border: a shared mosaic has a band of square tiles laid round it in the plaster",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A Band of Tesserae"
-          }
-        }
-      }
-    },
-    "border.none" : {
-      "comment" : "Choice of Settings › Border: a shared mosaic has nothing round it",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "None"
-          }
-        }
-      }
-    },
-    "border.plaster" : {
-      "comment" : "Choice of Settings › Border: a shared mosaic has a margin of lime plaster round it",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plaster"
-          }
-        }
-      }
-    },
     "Brings back the other controls" : {
       "comment" : "Accessibility hint of the painting screen's progress ring while the top bar is quiet (faded to Back, the ring and Hint): a tap brings back Photo, Undo and More",
-      "extractionState" : "manual"
-    },
-    "Byzantine" : {
-      "comment" : "Mouth choice: the mouth set small and closed, as Byzantine faces were",
       "extractionState" : "manual"
     },
     "create.panel.place.all" : {
@@ -261,54 +209,6 @@
       "comment" : "Settings › Acknowledgements › The Paints’ Names: the note above the list of materials the paints are named after",
       "extractionState" : "manual"
     },
-    "Eyes" : {
-      "comment" : "Create preview: the choice of how a face's eyes are coloured",
-      "extractionState" : "manual"
-    },
-    "Face" : {
-      "comment" : "Create preview: the segment showing the Eyes and Mouth choices",
-      "extractionState" : "manual"
-    },
-    "Finish" : {
-      "comment" : "Settings picker choosing how set tiles look (Light Grout, Painted Bed or Glass and Stone)",
-      "extractionState" : "manual"
-    },
-    "finish.bed" : {
-      "comment" : "Choice of Settings › Finish: flat tiles on a bed painted in the colours of the tiles round each joint",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Painted Bed"
-          }
-        }
-      }
-    },
-    "finish.flat" : {
-      "comment" : "Choice of Settings › Finish: flat tiles on light grout, a thin dark edge",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Light Grout"
-          }
-        }
-      }
-    },
-    "finish.material" : {
-      "comment" : "Choice of Settings › Finish: tiles with a lit edge, glass that glints and matte stone in faces",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Glass and Stone"
-          }
-        }
-      }
-    },
     "Glass, Metal and Clay" : {
       "comment" : "Settings › Acknowledgements › The Paints’ Names: header of the glass tesserae, metals, ceramics and mortars the paints are named after",
       "extractionState" : "manual"
@@ -327,10 +227,6 @@
     },
     "Indigo, as at Hagia Sophia" : {
       "comment" : "Making-of options: the drawing in indigo",
-      "extractionState" : "manual"
-    },
-    "Kept as the photo has it, or set small and closed, as Byzantine faces were." : {
-      "comment" : "Create preview: the line under the Mouth choice",
       "extractionState" : "manual"
     },
     "makingOf.model.credit" : {
@@ -357,16 +253,8 @@
         }
       }
     },
-    "Mixed brighter, as an eye catches the light, or kept as the photo has them." : {
-      "comment" : "Create preview: the line under the Eyes choice",
-      "extractionState" : "manual"
-    },
     "Mosaic" : {
       "comment" : "Label of the create preview's comparison over the mosaic's side (the photo's side says Photo)",
-      "extractionState" : "manual"
-    },
-    "Mouth" : {
-      "comment" : "Create preview: the choice of how a face's mouth is set",
       "extractionState" : "manual"
     },
     "Move Down" : {
@@ -396,34 +284,6 @@
     "One continuous build" : {
       "comment" : "Making-of options: one build that quickens, its cards following the stage being set",
       "extractionState" : "manual"
-    },
-    "One Finger" : {
-      "comment" : "Settings picker choosing what one finger does on the mosaic (Lays Tiles or Moves the Mosaic)",
-      "extractionState" : "manual"
-    },
-    "oneFinger.lays" : {
-      "comment" : "Choice of Settings › One Finger: a drag lays a row of tiles, two fingers move the mosaic",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lays Tiles"
-          }
-        }
-      }
-    },
-    "oneFinger.moves" : {
-      "comment" : "Choice of Settings › One Finger: a drag moves the mosaic, a press then a drag lays a row",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Moves the Mosaic"
-          }
-        }
-      }
     },
     "Options" : {
       "comment" : "Menu over the making-of show (its VoiceOver label) with the show's choices: the drawing's colour, the build, the setter's hand",
@@ -472,34 +332,6 @@
     "Red earth, as at Ravenna" : {
       "comment" : "Making-of options: the drawing in red earth (sinopia)",
       "extractionState" : "manual"
-    },
-    "Row Sound" : {
-      "comment" : "Settings picker choosing what a row of tiles laid in one stroke sounds like (A Run of the Tune or One Note)",
-      "extractionState" : "manual"
-    },
-    "rowSound.note" : {
-      "comment" : "Choice of Settings › Row Sound: a row laid in one stroke plays one note",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "One Note"
-          }
-        }
-      }
-    },
-    "rowSound.run" : {
-      "comment" : "Choice of Settings › Row Sound: each tile laid in a row plays the tune's next note",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A Run of the Tune"
-          }
-        }
-      }
     },
     "Show Controls" : {
       "comment" : "Voice Control name and Large Content Viewer label of the painting screen's progress ring while the top bar is quiet: a tap brings back the other controls",
@@ -2489,10 +2321,6 @@
         }
       }
     },
-    "The photo’s colours" : {
-      "comment" : "Eyes choice: irises kept in the photo's own colours",
-      "extractionState" : "manual"
-    },
     "The Setter’s Hand" : {
       "comment" : "Making-of options: switch showing the setter's hand pressing each tile home",
       "extractionState" : "manual"
@@ -2556,39 +2384,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Drag along a row of tiles with this number to set them in one stroke. If one finger moves the mosaic, touch and hold first."
-          }
-        }
-      }
-    },
-    "Type" : {
-      "comment" : "Header of the Acknowledgements section crediting the typeface the app is set in (Alegreya)",
-      "extractionState" : "manual"
-    },
-    "Typeface" : {
-      "comment" : "Settings picker choosing the font of titles and numbers (Alegreya or System Serif)",
-      "extractionState" : "manual"
-    },
-    "typeface.alegreya" : {
-      "comment" : "Choice of Settings › Typeface: titles and numbers in Alegreya, a calligraphic serif (a font's name)",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Alegreya"
-          }
-        }
-      }
-    },
-    "typeface.systemSerif" : {
-      "comment" : "Choice of Settings › Typeface: titles and numbers in the system's own serif",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "System Serif"
+            "value" : "Touch and hold, then drag along a row of tiles with this number to set them in one stroke."
           }
         }
       }

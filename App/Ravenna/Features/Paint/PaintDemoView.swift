@@ -12,11 +12,10 @@ import simd
 
 /// Demo scenarios for the painting screen, deterministic for CI screenshots. Ravenna's seam: the
 /// scenarios below (all but `paint-book*`) set a bundled mosaic, Young Woman with a Gilded Wreath
-/// at standard detail (`Resources/Mosaics`), its photo the canvas's photo loader's; and three are
+/// at standard detail (`Resources/Mosaics`), its photo the canvas's photo loader's; and two are
 /// Ravenna's own:
 /// - `paint-setting`: ~40 % set, zoomed 4× onto the paint in hand, then a row of its tiles laid in
 ///   one stroke and slowed thirtyfold, so the shot catches the first raised over their places
-/// - `paint-setting-flat`, `paint-setting-bed`: `paint-setting` in the other finishes
 /// - `paint-mosaic-measure`: a mosaic of about 9,500 tiles (the Pieces slider's top; a jittered
 ///   grid, `measureMosaic`), fitted; once ready, rows are laid for eight seconds while
 ///   `FrameMeter` measures the frames, and its report goes to the log and to
@@ -295,12 +294,8 @@ private final class Demo {
                 camera = CanvasCamera(zoom: 3, center: Self.center(t, last))
                 lastArea = last
             }
-        case "paint-setting", "paint-setting-flat", "paint-setting-bed":
+        case "paint-setting":
             paint(fraction: 0.4)
-            if scenario != "paint-setting" {
-                let finish: Finish = scenario.hasSuffix("-flat") ? .flat : .bed
-                UserDefaults.standard.register(defaults: [TileOptions.finishKey: finish.rawValue])
-            }
             // Thirtyfold: the shot, two or three seconds after, catches the first tiles raised and
             // the rest still to come (at twelvefold they had all but settled).
             fillDurationScale = 30
@@ -438,7 +433,7 @@ private final class Demo {
 
     /// Scenario actions that need the canvas on screen.
     func run() async {
-        if scenario.hasPrefix("paint-setting"), !laying.isEmpty {
+        if scenario == "paint-setting", !laying.isEmpty {
             try? await Task.sleep(for: .seconds(1.5))
             // One stroke: its tiles settle a row's gap apart.
             session.beginStroke()

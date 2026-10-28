@@ -1,9 +1,9 @@
 import SwiftUI
 
 /// Settings › Acknowledgements: the ancient works and where they come from, the materials the paints
-/// are named after (`PaintNamesView`), then the open-source code, machine-learning model, type and
-/// published methods behind the mosaics, with the licenses the ported code, model weights and fonts
-/// are used under. (Ravenna's seam: the paints' names and Type sections.)
+/// are named after (`PaintNamesView`, Ravenna's seam), then the open-source code, machine-learning
+/// model and published methods behind the mosaics, with the licenses the ported code and model
+/// weights are used under.
 struct AcknowledgementsView: View {
     var body: some View {
         Form {
@@ -41,12 +41,6 @@ struct AcknowledgementsView: View {
                 Text("Models")
             } footer: {
                 Text(Acknowledgements.modelsFooter)
-            }
-
-            Section {
-                ForEach(Acknowledgements.typefaces) { AcknowledgementRow(item: $0) }
-            } header: {
-                Text("Type")
             }
 
             ForEach(License.allCases, id: \.self) { license in

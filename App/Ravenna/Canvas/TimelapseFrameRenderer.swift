@@ -57,7 +57,7 @@ nonisolated final class TimelapseFrameRenderer {
         var options = options
         // Read once, not for every frame.
         if scene.isColoringBook && options.lineWeight == nil { options.lineWeight = .stored() }
-        if wall != nil { options.palette = options.palette.onTiles(TileOptions.finish(), hasBed: bed != nil) }
+        if wall != nil { options.palette = options.palette.onTiles(TileOptions.finish, hasBed: bed != nil) }
         self.options = options
         CVMetalTextureCacheCreate(nil, nil, context.device, nil, &cache)
     }
