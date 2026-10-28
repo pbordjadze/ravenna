@@ -121,6 +121,12 @@ go back into it (#5).
   painting is a mosaic, an area a tile, to paint is to set (a page is the mosaic; "Lay a Row",
   "Start the Mosaic", "Ready to Set"), and the app is Ravenna. Left: the samples' Paintings (the
   ancient works are paintings), colors, Nightfall and the unlock sheet (neither shows in Ravenna),
-  the engine's acknowledgements, and the paints' nicknames, which are PaintCore's
-  (`ColorNickname`, seeded per artwork) and wait on Paul. The feedback report's header names the
-  app from `FeedbackCapture`.
+  and the engine's acknowledgements. The feedback report's header names the app from
+  `FeedbackCapture`.
+- **The paints' names** (#16): `ColorNameText.nicknames` names every mosaic's paints, those made
+  before too, from MosaicCore's `PaintNames` (Roman and Byzantine stones, glass, metals and
+  pigments, sourced in docs/paint-names.md) through PaintCore's `ColorNickname.Vocabulary(table:)`
+  and its seeded draw: derived at load from the artwork's seed, English only as before, and a paint
+  with no material near keeps its structured name. `meta.json`'s `nicknameVersion` stays written
+  for Paint by Moonlight's vocabulary; the table is frozen once shipped, so a change is a new table
+  with a version of Ravenna's own recorded per artwork.
