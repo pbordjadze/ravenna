@@ -28,10 +28,10 @@ import PaintCore
 /// - `create-samples-paintings`, `create-samples-photographs`: the Samples pane scrolled to its
 ///   Paintings or Photographs section.
 /// - `create-preview`, `create-preview-dark`: the painting starter laid as a mosaic (its bundled
-///   mosaic: the recipe's defaults), comparison at half.
+///   mosaic: the recipe's defaults), comparison at half, its card's settings folded.
 /// - `create-custom`, `create-custom-long-text`: the first fixed picture after Pieces moved off the
-///   standard count and let go: laid by the engine, not its bundled mosaic; the second with every
-///   localized string twice as long.
+///   standard count and let go: laid by the engine, not its bundled mosaic, with Adjust opened;
+///   the second with every localized string twice as long.
 /// - `create-from-file`: a photo file opened as if shared from another app ("Open in Paint by
 ///   Moonlight"): the create flow on that photo's preview, titled with the file's name. The file
 ///   is the red fox written to the temporary directory at launch (`DemoMode.openFileURL`).
@@ -178,6 +178,10 @@ enum ShellDemo: Equatable {
 
     /// The painter moves Pieces off the standard count once the preview is final, and lets go.
     var movesASlider: Bool { self == .createCustom }
+
+    /// The preview's card shows its settings, Adjust opened (`TemplatePreviewView.foldsSettings`);
+    /// the other scenarios show it folded.
+    var showsPreviewSettings: Bool { self == .createCustom }
 
     /// How long `create` and the `create-samples` scenarios give the library picker (and the
     /// sample tiles) to load before they signal readiness: the picker runs out of process and

@@ -17,11 +17,11 @@ nonisolated struct Acknowledgement: Identifiable, Hashable, Sendable {
 }
 
 /// Credits shown in Settings › Acknowledgements and repeated in `ACKNOWLEDGEMENTS.md`: the ancient
-/// works (`Sample.all`, as `library.json` records them), then the code, models, type and methods
-/// of Ravenna's engine and the PaintCore it builds on.
+/// works (`Sample.all`, as `library.json` records them), then the code, models and methods of
+/// Ravenna's engine and the PaintCore it builds on.
 ///
 /// Ravenna's seam: no line-drawing model or method (Informative Drawings: not shipped); the HED
-/// model's use is the mosaic's; scikit-image's thinning table, Alegreya, Zhang–Suen thinning and
+/// model's use is the mosaic's; scikit-image's thinning table, Zhang–Suen thinning and
 /// the face landmarks added.
 nonisolated enum Acknowledgements {
     /// "Katsushika Hokusai, c. 1830–32": who made a picture, and when.
@@ -74,18 +74,6 @@ nonisolated enum Acknowledgements {
                 localized: "acknowledgements.hedModel.mosaic.usage", defaultValue: "Finds the outlines of a photo, which the mosaic’s strands of tiles follow.",
                 comment: "What a credited machine-learning model is used for (ControlNet's HED edge detector) in Ravenna; shown in Settings under Acknowledgements"),
             license: .apache2),
-    ]
-
-    /// The typefaces the app is set in (`Resources/Fonts`).
-    static let typefaces: [Acknowledgement] = [
-        Acknowledgement(
-            name: "Alegreya and Alegreya SC",
-            credit: "Juan Pablo del Peral, Huerta Tipográfica (github.com/huertatipografica/Alegreya), from Google Fonts",
-            usage: String(
-                localized: "acknowledgements.alegreya.usage", defaultValue: "The typeface Ravenna’s titles and words are set in.",
-                comment: "What a credited typeface is used for in Ravenna (Alegreya); shown in Settings under Acknowledgements"),
-            copyright: "Copyright 2011 The Alegreya Project Authors",
-            license: .ofl),
     ]
 
     /// The footer under the model credits.

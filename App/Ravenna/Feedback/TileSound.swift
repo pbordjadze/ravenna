@@ -24,8 +24,8 @@ nonisolated final class TileSound: @unchecked Sendable {
     private var built = false
     private var missed: AVAudioPCMBuffer?
     private var melody = Melody()
-    /// When the last tile asked for a note, played or not, and when one last sounded.
-    private var lastAsked = Date.distantPast, lastPlayed = Date.distantPast
+    /// When a tile's note last sounded.
+    private var lastPlayed = Date.distantPast
 
     /// Builds the engine and makes `mode`'s glass notes ahead of the first tile.
     func prepare(mode: Melody.Mode) {
@@ -36,16 +36,12 @@ nonisolated final class TileSound: @unchecked Sendable {
     }
 
     /// The tile's note: the tune's next, unless a row is going in faster than notes can sound
-    /// (one every 40 ms at most), or `row` says one note a row. `size` 0...1, the tile's weight.
-    func play(_ voice: Voice, size: Double, mode: Melody.Mode, row: RowSound, after delay: TimeInterval = 0) {
+    /// (one every 40 ms at most), so a row plays a quick run of the tune. `size` 0...1, the tile's
+    /// weight.
+    func play(_ voice: Voice, size: Double, mode: Melody.Mode, after delay: TimeInterval = 0) {
         queue.asyncAfter(deadline: .now() + max(delay, 0)) { [self] in
             let now = Date.now
-            defer { lastAsked = now }
-            switch row {
-            case .run: guard now.timeIntervalSince(lastPlayed) > 0.04 else { return }
-            // A row's tiles come 45 ms apart; a tile after a pause begins a new row.
-            case .note: guard now.timeIntervalSince(lastAsked) > 0.09 else { return }
-            }
+            guard now.timeIntervalSince(lastPlayed) > 0.04 else { return }
             // A quick run is a patter, softer than tiles set one at a time.
             let quick = now.timeIntervalSince(lastPlayed) < 0.12
             lastPlayed = now

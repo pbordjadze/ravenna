@@ -48,8 +48,7 @@ enum PencilAction {
 /// is pressed, settles and catches the light (MosaicKit's `Motion`), the tiles of one stroke
 /// settling `Motion.rowGap` apart, instead of paint spreading and sparkles; finishing it, light
 /// rakes across the wall instead of the shine and the night (v0's finish), and a used-up paint's
-/// tiles catch a lesser light. Under Reduce Motion tiles fade in and nothing rakes. With
-/// `OneFinger.lays` (`TileOptions`) one finger lays a row as it drags, and two move the wall.
+/// tiles catch a lesser light. Under Reduce Motion tiles fade in and nothing rakes.
 final class CanvasView: UIView, PaintingCanvas {
     override class var layerClass: AnyClass { CAMetalLayer.self }
 
@@ -178,8 +177,6 @@ final class CanvasView: UIView, PaintingCanvas {
 
     // Gestures
     private var tapRecognizer: UITapGestureRecognizer!
-    /// `OneFinger.lays`' one-finger laying, when it is on.
-    private var layRecognizer: UIPanGestureRecognizer?
     private var tapBeganWhileMoving = false
     private var tapWasFinger = false
     private var lastTap: (time: CFTimeInterval, point: CGPoint, painted: Bool)?
@@ -341,18 +338,6 @@ final class CanvasView: UIView, PaintingCanvas {
         press.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.direct.rawValue)]
         scrollView.addGestureRecognizer(press)
 
-        if wall != nil, TileOptions.oneFinger() == .lays {
-            // One finger lays a row as it drags, at once; two move and zoom the wall.
-            press.isEnabled = false
-            let lay = UIPanGestureRecognizer(target: self, action: #selector(handleLay(_:)))
-            lay.maximumNumberOfTouches = 1
-            lay.allowedTouchTypes = Self.fingerTouches
-            lay.delegate = self
-            scrollView.addGestureRecognizer(lay)
-            layRecognizer = lay
-            followPencilOnlyDrawing()
-        }
-
         let pencil = UILongPressGestureRecognizer(target: self, action: #selector(handlePencil(_:)))
         pencil.minimumPressDuration = 0
         pencil.allowableMovement = .greatestFiniteMagnitude
@@ -361,14 +346,6 @@ final class CanvasView: UIView, PaintingCanvas {
 
         scrollView.addGestureRecognizer(UIHoverGestureRecognizer(target: self, action: #selector(handleHover(_:))))
         addInteraction(UIPencilInteraction(delegate: self))
-    }
-
-    /// With `OneFinger.lays`, one finger lays and two move the wall, unless the system's "Only Draw
-    /// with Apple Pencil" is on: then a finger moves it, as it does everywhere else, and a pointer
-    /// still lays.
-    private func followPencilOnlyDrawing() {
-        guard layRecognizer != nil else { return }
-        scrollView.panGestureRecognizer.minimumNumberOfTouches = UIPencilInteraction.prefersPencilOnlyDrawing ? 1 : 2
     }
 
     /// Fingers navigate; the Pencil paints.
@@ -833,7 +810,7 @@ final class CanvasView: UIView, PaintingCanvas {
 
     private func makeUniforms(time: Float, camera: Camera, palette: CanvasPalette) -> CanvasUniforms {
         let s = Float(contentScaleFactor)
-        let finish = TileOptions.finish()
+        let finish = TileOptions.finish
         let tiles = scene?.tiles.map { TileLook(finish: finish, hasBed: bedTexture != nil, grout: $0.grout, pace: fillDurationScale) }
         let palette = tiles == nil ? palette : palette.onTiles(finish, hasBed: bedTexture != nil)
         // Line art gets finer and lighter when zoomed out, where regions are small on screen.
@@ -1476,34 +1453,6 @@ final class CanvasView: UIView, PaintingCanvas {
         requestRender()
     }
 
-    /// `OneFinger.lays`: one finger laying a row from where it first touched.
-    @objc private func handleLay(_ g: UIPanGestureRecognizer) {
-        let location = g.location(in: zoomView)
-        let p = canvasPoint(location)
-        let radius = Float(Self.brushRadius / scrollView.zoomScale)
-        switch g.state {
-        case .began:
-            if showsPhoto {
-                onDismissPhoto?()
-                return
-            }
-            guard session.selectedColor != nil else { return }
-            let moved = g.translation(in: zoomView)
-            let first = canvasPoint(CGPoint(x: location.x - moved.x, y: location.y - moved.y))
-            dragLast = p
-            session.beginStroke()
-            session.drag(from: first, to: p, radius: radius)
-        case .changed:
-            guard let last = dragLast else { return }
-            session.drag(from: last, to: p, radius: radius)
-            dragLast = p
-        default:
-            guard dragLast != nil else { return }
-            dragLast = nil
-            session.endStroke()
-        }
-    }
-
     @objc private func handlePencil(_ g: UILongPressGestureRecognizer) {
         let p = canvasPoint(g.location(in: zoomView))
         switch g.state {
@@ -1892,10 +1841,6 @@ extension CanvasView: UIScrollViewDelegate {
 
 extension CanvasView: UIGestureRecognizerDelegate {
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
-        if gestureRecognizer === layRecognizer {
-            followPencilOnlyDrawing()
-            return !(touch.type == .direct && UIPencilInteraction.prefersPencilOnlyDrawing)
-        }
         if gestureRecognizer === tapRecognizer {
             // A tap that stops a fling only stops it. One during a camera flight (the hint's, Zen
             // Mode's) lands the flight where it is and paints: the painter is reaching for the

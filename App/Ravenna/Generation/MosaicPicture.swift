@@ -88,15 +88,13 @@ nonisolated struct MosaicDrawing: @unchecked Sendable {
     private func point(_ v: SIMD2<Float>) -> CGPoint { CGPoint(x: CGFloat(v.x), y: CGFloat(v.y)) }
 }
 
-/// How the app shows every mosaic, as v0 did (its option's key, `finish`, `Finish`'s raw value): the
-/// finish its tiles are drawn in, which changes no tile or paint; the canvas draws it too, and its
-/// settings set it. (The gold ground is each mosaic's own: `MosaicEngine.Recipe.ground`.)
+/// How the app shows every mosaic: the finish its tiles are drawn in (`TileOptions.finish`), which
+/// changes no tile or paint; the canvas draws it too. (The gold ground is each mosaic's own:
+/// `MosaicEngine.Recipe.ground`.)
 nonisolated struct MosaicLook: Sendable, Equatable {
     var finish: Finish
 
-    static var current: MosaicLook {
-        MosaicLook(finish: Finish(rawValue: UserDefaults.standard.string(forKey: "finish") ?? "") ?? .material)
-    }
+    static var current: MosaicLook { MosaicLook(finish: TileOptions.finish) }
 }
 
 /// The ground a mosaic is set on, and the whole of it drawn finished.

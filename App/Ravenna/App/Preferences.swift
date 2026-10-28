@@ -21,6 +21,9 @@ enum SettingsKey {
     /// Start Painting first plays the making-of show (`MakingOfView`): the mosaic set step by step,
     /// each technique named (Settings › The Making-of; on by default in Ravenna).
     static let playsMakingOf = "playsMakingOf"
+    /// The create flow's preview shows its settings: its Adjust was opened, and stays so
+    /// (`TemplatePreviewView.foldsSettings`).
+    static let previewShowsSettings = "previewShowsSettings"
     /// Whether the app gives small tips as the painter goes (Settings › Tips). On for everyone
     /// until they switch it off there: unset means on (`TipPreference`).
     nonisolated static let tipsEnabled = "tipsEnabled"
@@ -37,6 +40,7 @@ nonisolated enum SettingsDefault {
     static let zenMode = false
     /// Ravenna's seam: Paul's decision (issue #13), the making-of is on by default.
     static let playsMakingOf = true
+    static let previewShowsSettings = false
     static let tipsEnabled = true
 }
 
@@ -58,12 +62,14 @@ struct Preferences {
     /// Settings' paper size for printing and Color Names; the time-lapse's pace; Settings › Detail
     /// Brushes (later Text Corrections: Refine's Text tool is always there now); Settings › The
     /// Marginarium. Left in place, the first two would still shape new paintings, unseen. Ravenna's
-    /// seam: Settings › Preview and Painting Length, the preview's Adjust and Refine's own, which
-    /// it has none of.
+    /// seam: Settings › Preview and Painting Length and Refine's own, which it has none of; and
+    /// its own Finish, One Finger, Row Sound, Border (v0's keys) and Typeface, fixed since
+    /// October 28 (`TileOptions`, issue #14).
     static let retiredKeys = [
         "advancedLineArt", "advancedPipelineTuning", "advancedLineAppearance", "advancedPreviewPicture",
         "printPaperSize", "colorNameStyle", "timelapsePace", "refineDetailBrushes", "showsMarginarium",
-        "previewStyle", "paintingLength", "previewShowsSettings", "refineSnaps", "refinePenColors", "refineBrushSize",
+        "previewStyle", "paintingLength", "refineSnaps", "refinePenColors", "refineBrushSize",
+        "finish", "oneFinger", "rowSound", "border", "typeface",
     ] + [
         "paintNotes", "colorJingle", "finishFanfare", "wrongColorSound", "fillHaptics", "wrongColorHaptics",
         "finishHaptics", "fillSparkles", "finishShine",

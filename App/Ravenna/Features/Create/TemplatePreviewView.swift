@@ -7,13 +7,14 @@ import SwiftUI
 import UIKit
 
 /// Second step of the create flow: the mosaic, compared with the photo, tuned live with the
-/// recipe's few controls, and the painting's name. In compact windows (iPhone) the card shows one
-/// group of the recipe at a time, chosen above it, and the preview can be enlarged: the comparison
-/// then fills the page above that group, Pieces first.
+/// recipe's few controls, and the painting's name. In compact windows (iPhone) the preview can be
+/// enlarged: the comparison then fills the page above one group of the recipe, chosen above it,
+/// Pieces first.
 ///
-/// Ravenna's seam: the card holds Ravenna's recipe (`MosaicEngine.Recipe`: Pieces, Eyes and Mouth,
-/// the Ground, the Panel, as v0's new-mosaic sheet and options had them) where Paint by Moonlight's
-/// Colors, Detail, Smoothness and Lines sliders were, with no suggestion chip, Adjust or Refine.
+/// Ravenna's seam: Ravenna's recipe (`MosaicEngine.Recipe`) where Paint by Moonlight's Colors,
+/// Detail, Smoothness and Lines sliders were, with no suggestion chip or Refine (Paul, October 28,
+/// issue #14: Paint by Moonlight's minimalism). Adjust holds Pieces and the Ground; the Panel is
+/// the enlarged preview's alone; the Eyes and the Mouth take the engine's defaults.
 struct TemplatePreviewView: View {
     @Bindable var model: CreateModel
     var onStart: () async throws -> Void
@@ -34,8 +35,10 @@ struct TemplatePreviewView: View {
     /// Start Painting found no free painting left for the painter's own photo.
     @State private var offersUnlock = false
     @State private var isTuning = false
-    /// The group a compact window's card shows; nil until the painter picks one.
+    /// The group the enlarged preview shows; nil until the painter picks one.
     @State private var tunedSetting: Setting?
+    /// The painter opened Adjust, and the card shows its settings from then on (`foldsSettings`).
+    @AppStorage(SettingsKey.previewShowsSettings) private var opensSettings = SettingsDefault.previewShowsSettings
     /// The panel's sheet is up, and where the painter has moved the panel on it.
     @State private var isFraming = false
     @State private var framingCentre = SIMD2<Double>(0.5, 0.5)
@@ -138,6 +141,9 @@ struct TemplatePreviewView: View {
             .onAppear {
                 PaintTips.desk.enter(.preview)
                 if model.isFinal { previewFinal() }
+                #if DEBUG
+                if let demo = ShellDemo.current { opensSettings = demo.showsPreviewSettings }
+                #endif
             }
             .onDisappear {
                 PaintTips.desk.leave(.preview)
@@ -176,9 +182,10 @@ struct TemplatePreviewView: View {
     private var chosenLayout: Bool {
         let room = roomSize.width > 0 && roomSize.height > 0 ? roomSize : size
         guard room.width.isFinite, room.height.isFinite, room.width > 0, room.height > 0 else { return false }
-        // The stacked controls card: title row, the recipe (one group and its chooser in a compact
-        // window), summary, Start and the free paintings under it.
-        let card: CGFloat = (room.width < Self.compactWidth ? 330 : 560) + (showsFreeCount ? 30 : 0)
+        // The stacked controls card: title row, Adjust, the recipe, summary, Start and the free
+        // paintings under it. With its settings shown, folded or not: Adjust then never moves the
+        // card from under the finger.
+        let card: CGFloat = (room.width < Self.compactWidth ? 364 : 420) + (showsFreeCount ? 30 : 0)
         let stacked = Self.fittedArea(
             width: room.width - 2 * sidePadding, height: room.height - card, aspect: photoAspect)
         let beside = Self.fittedArea(
@@ -315,14 +322,13 @@ struct TemplatePreviewView: View {
     private var controls: some View {
         VStack(alignment: .leading, spacing: rowSpacing) {
             titleField
-            if isCompact && !isSideBySide {
-                // One group at a time on a phone (Paul's calmer menus, October 18): the card keeps
-                // the comparison large and asks one thing at once.
-                settingChooser
-                group(shownSetting)
-                    .id(shownSetting)
-            } else {
-                ForEach(Setting.allCases, id: \.self) { group($0) }
+            if Self.foldsSettings {
+                adjustButton
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            if showsSettings {
+                group(.pieces)
+                group(.ground)
             }
             summary
 
@@ -368,14 +374,51 @@ struct TemplatePreviewView: View {
         .padding(.bottom, 8)
     }
 
-    /// Which group a compact window's card shows: the painter's choice, else Pieces.
+    /// The card folds its settings away: the title, the summary and Start the Mosaic, and Adjust,
+    /// which shows them and keeps them shown for whoever opened it
+    /// (`SettingsKey.previewShowsSettings`), as Paint by Moonlight's SideStore build has it. Ravenna
+    /// is always `UNRELEASED`, so it always folds.
+    #if UNRELEASED
+    private static let foldsSettings = true
+    #else
+    private static let foldsSettings = false
+    #endif
+
+    private var showsSettings: Bool { !Self.foldsSettings || opensSettings }
+
+    /// Shows the settings, or folds them away again. Fewer or More Areas points here while they are
+    /// folded.
+    private var adjustButton: some View {
+        Button {
+            titleFocused = false
+            withAnimation(reduceMotion ? nil : .snappy) { opensSettings.toggle() }
+        } label: {
+            HStack(spacing: 4) {
+                Text("Adjust")
+                Image(systemName: "chevron.down")
+                    .rotationEffect(.degrees(opensSettings ? 180 : 0))
+                    .accessibilityHidden(true)
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(Theme.accent)
+            .padding(.vertical, 6)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .fixedSize()
+        .disabled(isStarting)
+        .accessibilityValue(opensSettings ? Text("Settings shown") : Text("Settings hidden"))
+        .accessibilityIdentifier("preview-adjust")
+        .gentleTip(.newPaintingSliders, active: !showsSettings, arrowEdge: .bottom)
+    }
+
+    /// Which group the enlarged preview shows: the painter's choice, else Pieces.
     private var shownSetting: Setting { tunedSetting ?? .pieces }
 
-    /// The segmented control over the one group of a compact window and the enlarged preview.
+    /// The segmented control over the enlarged preview's one group.
     private var settingChooser: some View {
         Picker("Setting", selection: Binding(get: { shownSetting }, set: { tunedSetting = $0 })) {
             Text("Pieces").tag(Setting.pieces)
-            Text("Face").tag(Setting.face)
             Text("Ground").tag(Setting.ground)
             Text("Panel").tag(Setting.panel)
         }
@@ -383,9 +426,8 @@ struct TemplatePreviewView: View {
         .accessibilityIdentifier("tuned-setting")
     }
 
-    /// The recipe's groups: how many pieces; the eyes and the mouth; the background; how much of
-    /// the photo is laid.
-    private enum Setting: Hashable, CaseIterable { case pieces, face, ground, panel }
+    /// The recipe's groups: how many pieces; the background; how much of the photo is laid.
+    private enum Setting: Hashable { case pieces, ground, panel }
 
     /// Locked while Start Painting makes the painting (a change then would lay the mosaic again
     /// under it), and while the photo's contours and faces are found.
@@ -403,22 +445,7 @@ struct TemplatePreviewView: View {
                 valueText: Self.piecesText(model.recipe.pieces), isPending: model.isChoosingSettings,
                 detent: MosaicEngine.Recipe.standardPieces, onEditing: model.setAdjusting)
                 // Fewer or More Areas: over the slider, clear of the preview's picture.
-                .gentleTip(.newPaintingSliders, arrowEdge: .bottom)
-        case .face:
-            VStack(alignment: .leading, spacing: 4) {
-                ChoiceRow(title: "Eyes", caption: "Mixed brighter, as an eye catches the light, or kept as the photo has them.") {
-                    Picker("Eyes", selection: choice(\.eyes)) {
-                        Text("As they look").tag(MosaicEngine.Eyes.asTheyLook)
-                        Text("The photo’s colours").tag(MosaicEngine.Eyes.asInThePhoto)
-                    }
-                }
-                ChoiceRow(title: "Mouth", caption: "Kept as the photo has it, or set small and closed, as Byzantine faces were.") {
-                    Picker("Mouth", selection: choice(\.mouth)) {
-                        Text("As in the photo").tag(MosaicEngine.Mouth.asInThePhoto)
-                        Text("Byzantine").tag(MosaicEngine.Mouth.byzantine)
-                    }
-                }
-            }
+                .gentleTip(.newPaintingSliders, active: showsSettings, arrowEdge: .bottom)
         case .ground:
             ChoiceRow(title: "Ground", caption: "Gold lays the picture’s background in gold smalti, as behind the figures at Ravenna.") {
                 Picker("Ground", selection: choice(\.ground)) {

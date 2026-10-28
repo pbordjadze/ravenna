@@ -1,22 +1,20 @@
 import Foundation
 
-/// A license the bundled third-party code, model weights and type are distributed under. The full
+/// A license the bundled third-party code and model weights are distributed under. The full
 /// texts are shown in Settings › Acknowledgements and repeated in `ACKNOWLEDGEMENTS.md`.
 ///
 /// Ravenna's seam: no MIT License (it was the line-drawing model's, which Ravenna doesn't ship);
-/// BSD-3-Clause for scikit-image's thinning table and the SIL Open Font License for Alegreya.
+/// BSD-3-Clause for scikit-image's thinning table.
 nonisolated enum License: CaseIterable, Sendable {
     case isc
     case apache2
     case bsd3
-    case ofl
 
     var name: String {
         switch self {
         case .isc: "ISC License"
         case .apache2: "Apache License, Version 2.0"
         case .bsd3: "BSD 3-Clause License"
-        case .ofl: "SIL Open Font License, Version 1.1"
         }
     }
 
@@ -25,7 +23,6 @@ nonisolated enum License: CaseIterable, Sendable {
         case .isc: Self.iscText
         case .apache2: Self.apache2Text
         case .bsd3: Self.bsd3Text
-        case .ofl: Self.oflText
         }
     }
 
@@ -41,13 +38,6 @@ nonisolated enum License: CaseIterable, Sendable {
 
         THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         """
-
-    /// The SIL Open Font License 1.1, as it ships beside the fonts (`Resources/Fonts/Alegreya-OFL.txt`).
-    private static var oflText: String {
-        Bundle.main.url(forResource: "Alegreya-OFL", withExtension: "txt")
-            .flatMap { try? String(contentsOf: $0, encoding: .utf8) }?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? "https://openfontlicense.org"
-    }
 
     private static let iscText = """
         Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.

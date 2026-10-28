@@ -16,7 +16,7 @@ go back into it (#5).
 
 - **Identity:** the target, bundle identifier and display name (`App/Ravenna.xcodeproj`,
   `InfoPlist.xcstrings`); `Config/Info.plist`'s own file type (`com.pbordjadze.ravenna.mosaic`,
-  `.ravenna`, so neither app claims the other's files) and Alegreya; the log subsystem and queue
+  `.ravenna`, so neither app claims the other's files); the log subsystem and queue
   labels; the gallery's title and the PDF's footer; feedback reports name the app ("Ravenna …"
   in `FeedbackCapture`), since they reach Paint by Moonlight's relay.
 - **Nothing sold:** `UnlimitedPaintings.forLaunch`. Every configuration defines `UNRELEASED`:
@@ -36,7 +36,7 @@ go back into it (#5).
   by `create` and `replaceContents`, read by `readMosaic`) and `meta.json` records `recipe`
   (`Artwork.recipe`, `MosaicEngine.Recipe`: pieces, eyes, mouth, ground, panel; tolerant;
   GenerationSettings stay written, unread). The finish is the app's, how every mosaic shows
-  (`MosaicLook`, v0's key `finish`), not the recipe's. A mosaic's grout region is
+  (`MosaicLook`: Glass and Stone, `TileOptions.finish`), not the recipe's. A mosaic's grout region is
   no part of `Artwork.isStarted`, `fractionComplete`, `paintedAreas` and `areaCount` while it has
   its mosaic (`Artwork.isMosaic`: `meta.json`'s `hasMosaic`, else a recipe); `loadForPainting`
   records a `mosaic.json` missing or damaged (`hasMosaic` false: the grout is painted and counts)
@@ -44,9 +44,13 @@ go back into it (#5).
   `Library.loadForPainting` and `regenerate` hand it out as `PaintingDocument.mosaic` (nil when
   missing or not one tile a region plus the grout). `ArtworkDraft` carries `mosaic` and `recipe`.
 - **The create flow:** `CreateModel` is Ravenna's (its recipe, drafts at `MosaicMaker.draftLongSide`
-  while Pieces moves, the engine's mosaics kept per tile recipe, a panel's analysis once); the
-  preview's card (`TemplatePreviewView`) holds Pieces, Eyes, Mouth, Ground and the Panel (its sheet,
-  `PanelFramingView`) where the sliders were. Out: Suggested settings (`AutoSettings`, the chip,
+  while Pieces moves, the engine's mosaics kept per tile recipe, a panel's analysis once). The
+  preview's card (`TemplatePreviewView`) is Paint by Moonlight's folded one (`foldsSettings`, as
+  `UNRELEASED` builds have it; `SettingsKey.previewShowsSettings`): the title, Adjust, the summary
+  and Start the Mosaic; Adjust shows Pieces and the Ground where the sliders were. The Panel (its
+  sheet, `PanelFramingView`) is the enlarged preview's alone, a third group in its chooser; the
+  Eyes and the Mouth take the engine's defaults, and recipes saved with others keep them (Paul,
+  October 28, issue #14). Out: Suggested settings (`AutoSettings`, the chip,
   Settings › Painting Length), Settings › Preview and Line Weight, the line-art picture (`CompareView`,
   `LineArtDrawing`), Refine (`Features/Refine`, its button, tips, notes, `TemplateRefinements`,
   `refinements.json`), drafts (`Drafts`, `CreateDraft`, `DraftRow`, `DraftSaveToast`), the
@@ -63,8 +67,9 @@ go back into it (#5).
   progress into the library once at launch (`Library.forLaunch`), a set tile a painted region,
   v0's app-wide `ground` recorded as each one's; a read failing just now is tried again at a later
   launch, a work failing 3 launches is given up, and the starters wait for it
-  (`Library.forLaunch`, made only if it leaves the library empty). v0's keys `finish`, `oneFinger`, `rowSound`,
-  `border` and `makingOf.*` are v1's own; `Preferences.carryV0Settings` (from
+  (`Library.forLaunch`, made only if it leaves the library empty). v0's keys `makingOf.*` are
+  v1's own; `finish`, `oneFinger`, `rowSound` and `border`, with v1's `typeface`, are retired
+  (`Preferences.retiredKeys`, issue #14); `Preferences.carryV0Settings` (from
   `removeRetiredSettings`) carries `sound`, `touch` and `tune` to Sounds, Haptics and Music where
   those are unset, removes them with `lesson` and `detail` (`retiredV0Keys`; v0's first lesson is
   the tips' Tap to Set and Lay a Row), and `ground` once the carry-over is done. v0's code is in
@@ -82,7 +87,8 @@ go back into it (#5).
   (`ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES`; their pictures are the catalog's `Icon-…`),
   until Paul picks one.
 - **Demos:** `ShellDemo` has no Refine, draft, line-art or suggestion scenarios; `create-custom`
-  moves Pieces so the engine lays a library picture. `[shots]` takes `create-custom`, `making-of`
+  moves Pieces so the engine lays a library picture, with Adjust opened (`showsPreviewSettings`;
+  the other scenarios fold it). `[shots]` takes `create-custom`, `making-of`
   and `making-of-end` beside Paint by Moonlight's (ci.yml's `ALL`).
 - **Left behind:** Paint by Moonlight's picture library and its line-drawing model
   (`LineArt.mlpackage`). The HED model is the same file in both apps. No test targets: Ravenna's
@@ -95,25 +101,27 @@ go back into it (#5).
   `.grout` and `CanvasFrame.tiles` carry the look. `CanvasView.setTiles` sets them a row's gap
   apart; the finish is the light raking across the wall (no `Nightfall`, no sparkles). The grout is
   the ground: set before the first tile (`PaintProgress.groutSet`), never undone, not counted as
-  started. A drag lays a row (`TileWall.laying`, MosaicKit's `Laying`). Options in
-  `TileOptions` (finish, one finger, a row's sound), v0's keys, with `Typeface`, shown in Settings (Music's
-  Sun and Moon read Major and Minor). A painting without a mosaic draws
-  as Paint by Moonlight's. Demos: `PaintDemoView`'s scenarios are mosaics; `paint-setting*` and
+  started. One finger moves the wall, as in Paint by Moonlight, and a press then a drag lays a
+  row (`TileWall.laying`, MosaicKit's `Laying`), a quick run of the tune. `TileOptions` holds
+  the finish, Glass and Stone: Paul fixed the options on October 28 (issue #14), and Settings is
+  Paint by Moonlight's but for Music's Sun and Moon, which read Major and Minor, the tip's row and
+  Icon. A painting without a mosaic draws
+  as Paint by Moonlight's. Demos: `PaintDemoView`'s scenarios are mosaics; `paint-setting` and
   `paint-mosaic-measure` (frame time and memory, `FrameMeter`) are Ravenna's.
 - **Sound and haptics:** `FeedbackEngine` plays `TileSound` (v0's clinks of Paint by Moonlight's
   tune, major by Sun and minor by Moon) and `TileTouch` (v0's taps); `SoundPlayer`, `ToneSynth`,
   `PaintingMelody` and `HapticsPlayer` are gone.
 - **The look** (phase 5): `Theme`'s tokens and the asset catalog's `Paper`, `Surface`, `Outline`
   and `AccentColor` are Ravenna's (apse, bench, joint, lime; lapis as `signature`; gold only where
-  a tile sets), from the design page linked in `Theme`; Alegreya SC in `Font.display`, the
-  navigation titles and the swatch numerals (`Font.numeral`), or the system serif (`Typeface`, an
-  option until Paul chooses); `CanvasPalette`'s sheet, ink and backdrop; the launch screen is
+  a tile sets), from the design page linked in `Theme`; titles and numerals in New York, as
+  Paint by Moonlight's (Paul kept the system serif, October 28); `CanvasPalette`'s sheet, ink and
+  backdrop; the launch screen is
   `LaunchGround`, and the app is dark only (`UIUserInterfaceStyle`).
 - **A mosaic as a picture:** `MosaicCard` draws a mosaic on the CPU (its ground, the places still to
   set faint on it, the set tiles in the app's finish, through `MosaicPicture` and `MosaicDrawing`),
   in place of Paint by Moonlight's light paper: the gallery's card (`Library.thumbnailPNG`) and the
   picture shared, saved or printed (`ArtworkExporter.paintingPNG`, `CompletionShare`), the latter
-  with v0's border (`Border`, Settings › Border, v0's key `border`). The time-lapse replays a mosaic
+  with nothing round it (v0's border, Paul's None, October 28). The time-lapse replays a mosaic
   as tiles on its bed with the canvas shaders (`TimelapseFrameRenderer`, `TimelapseSource.live`'s
   mosaic). The printable template (PDF) keeps Paint by Moonlight's page.
 - **The words** (phase 5): Ravenna's vocabulary is in `Localizable.xcstrings` as English values over
