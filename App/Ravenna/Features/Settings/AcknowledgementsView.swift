@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// Settings › Acknowledgements: the ancient works and where they come from, then the open-source
-/// code, machine-learning model, type and published methods behind the mosaics, with the licenses
-/// the ported code, model weights and fonts are used under. (Ravenna's seam: the Type section.)
+/// Settings › Acknowledgements: the ancient works and where they come from, the materials the paints
+/// are named after (`PaintNamesView`), then the open-source code, machine-learning model, type and
+/// published methods behind the mosaics, with the licenses the ported code, model weights and fonts
+/// are used under. (Ravenna's seam: the paints' names and Type sections.)
 struct AcknowledgementsView: View {
     var body: some View {
         Form {
@@ -12,6 +13,18 @@ struct AcknowledgementsView: View {
                 Text("Pictures")
             } footer: {
                 Text("With thanks to the museums and archives that share these pictures.")
+            }
+
+            Section {
+                NavigationLink {
+                    PaintNamesView()
+                } label: {
+                    Text("Their Materials and Sources")
+                }
+            } header: {
+                Text("The Paints’ Names")
+            } footer: {
+                Text("The stones, pigments and glass of Roman and Byzantine mosaic that the paints are named after.")
             }
 
             Section {

@@ -19,6 +19,15 @@ app (`App/Ravenna/Resources/Mosaics/catalog.json`).
 - *A Mother and Child in Gold Glass*, early 4th century, Roman, probably Alexandria: https://www.metmuseum.org/art/collection/search/463989 (17.190.109a). Checked October 23, 2026: the Met's record marks it public domain (Open Access, CC0) with no rights restriction.
 - *The Virgin and Child, a Hodegetria Icon*, 13th century, Byzantine or Crusader, Egypt: https://www.metmuseum.org/art/collection/search/831188 (2020.401). Checked October 23, 2026: the Met's record marks it public domain (Open Access, CC0) with no rights restriction.
 
+## The paints' names
+
+Each paint is named after a stone, pigment or glass of Roman and Byzantine mosaic and wall
+painting (issue #16). Every name, its colour, what it is and its source (Pliny's *Natural
+History*, Vitruvius, Theophilus, the Byzantine painters' manual, the Corsi collection at Oxford
+University Museum of Natural History, The Met, studies of Ravenna's glass, the Getty mosaic
+glossary and others) are in `docs/paint-names.md`, and in the app under Acknowledgements › The
+Paints' Names.
+
 ## Models
 
 ### ControlNet HED

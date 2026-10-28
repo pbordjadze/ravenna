@@ -71,4 +71,24 @@ struct PaintNamesTests {
             "Charcoal Black", "Cimolian Earth",
         ], "\(names)")
     }
+
+    /// The credits and the table are written from docs/paint-names.json (tools/paint_names.py): the
+    /// Swift says what the JSON says, in its order, and every name has its citation.
+    @Test func theCreditsAreTheJSONs() throws {
+        struct Entry: Decodable { let name, hex, kind, what, citation: String; let link: String? }
+        let url = TemplateTests.mosaics.deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("docs/paint-names.json")
+        let entries = try JSONDecoder().decode([Entry].self, from: Data(contentsOf: url))
+        let credits = PaintNames.credits
+        #expect(entries.count == credits.count)
+        #expect(credits.map(\.name) == PaintNames.vocabulary.entries.map(\.name))
+        #expect(credits.map(\.hex) == PaintNames.vocabulary.entries.map(\.hex))
+        for (entry, credit) in zip(entries, credits) {
+            #expect(entry.name == credit.name && UInt32(entry.hex, radix: 16) == credit.hex && entry.kind == credit.kind.rawValue
+                && entry.what == credit.what && entry.citation == credit.citation && entry.link == credit.link,
+                "\(entry.name): run tools/paint_names.py")
+            #expect(!credit.citation.isEmpty && !credit.what.isEmpty)
+            if let link = credit.link { #expect(URL(string: link)?.scheme == "https", "\(credit.name): \(link)") }
+        }
+    }
 }
