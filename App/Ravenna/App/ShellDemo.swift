@@ -33,7 +33,7 @@ import PaintCore
 /// - `create-custom`, `create-custom-long-text`: the first fixed picture after Pieces moved off the
 ///   standard count and let go: laid by the engine, not its bundled mosaic, with Adjust opened;
 ///   the second with every localized string twice as long.
-/// - `create-refine`: the first fixed picture with a line drawn across it and the gold ground
+/// - `create-refine`: the first fixed picture with a line drawn across its garment and the gold ground
 ///   brushed along its foot, laid by the engine, then Refine opened on it (`MosaicRefineView`).
 /// - `create-from-file`: a photo file opened as if shared from another app ("Open in Paint by
 ///   Moonlight"): the create flow on that photo's preview, titled with the file's name. The file
@@ -183,12 +183,13 @@ enum ShellDemo: Equatable {
     /// The painter moves Pieces off the standard count once the preview is final, and lets go.
     var movesASlider: Bool { self == .createCustom }
 
-    /// What `create-refine` draws once the preview is final: a line across the picture's upper
-    /// third and the gold ground brushed along its foot.
+    /// What `create-refine` draws once the preview is final: a wave across the figure's garment,
+    /// which a row of tiles follows, and the gold ground brushed along its foot.
     var refineMarks: [MosaicEngine.Mark]? {
         guard self == .createRefine else { return nil }
         return [
-            MosaicEngine.Mark(kind: .line, width: 0.004, points: [SIMD2(0.15, 0.32), SIMD2(0.5, 0.28), SIMD2(0.85, 0.34)]),
+            MosaicEngine.Mark(kind: .line, width: 0.004, points: [SIMD2(0.1, 0.72), SIMD2(0.3, 0.66), SIMD2(0.5, 0.7),
+                                                                 SIMD2(0.7, 0.64), SIMD2(0.9, 0.7)]),
             MosaicEngine.Mark(kind: .gold, width: 0.08, points: [SIMD2(0.05, 0.93), SIMD2(0.5, 0.95), SIMD2(0.95, 0.93)]),
         ]
     }

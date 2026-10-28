@@ -121,9 +121,10 @@ struct MosaicRefineView: View {
                 for q in points.dropFirst() { p.addLine(to: at(q)) }
                 return p
             }
-            let line = StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round)
+            // Faint, so the row of tiles laid along it shows through.
+            let line = StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round)
             for mark in lines {
-                context.stroke(path(mark.points), with: .color(.white.opacity(0.85)), style: line)
+                context.stroke(path(mark.points), with: .color(.white.opacity(0.5)), style: line)
             }
             guard !current.isEmpty else { return }
             let width: CGFloat = kind == .line ? 2 : CGFloat(brush) * max(size.width, size.height)

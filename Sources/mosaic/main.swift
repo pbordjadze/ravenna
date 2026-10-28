@@ -1,11 +1,14 @@
 // mosaic <photo.ppm> <contours.pgm> <out prefix> [--features f.json]... [--long-side N] [--bed bed.ppm]
 //        [--eyes asTheyLook|asInThePhoto] [--mouth asInThePhoto|byzantine] [--face-cut L]
+//        [--mark kind:width:x,y;x,y;...]...
 //
 // Runs the engine on files, for comparison with the prototype: reads a binary PPM (P6) photo, its
 // contour map as a binary PGM (P5) and any faces' features (sketchbook/features.py's JSON), and
 // writes <prefix>.json in the format prototype/mosaic_faces.py writes, so sketchbook/render.py can
 // draw it. Prints the tile and paint counts and each stage's time. --bed also writes the painted
-// bed (MosaicEngine.bed) at twice the photo's size, as render.py's `bed` finish draws it.
+// bed (MosaicEngine.bed) at twice the photo's size, as render.py's `bed` finish draws it. --mark
+// draws one of Refine's marks (`MosaicEngine.Mark`: line, unline, gold or ungold, its width a share
+// of the long side, its path in the photo's unit square) into the contours, or lays it on the tiles.
 import Foundation
 import MosaicEngine
 import MosaicKit
@@ -128,6 +131,7 @@ var featureFiles: [String] = []
 var longSide: Int?
 var bedFile: String?
 var settings = MosaicEngine.Settings()
+var marks: [MosaicEngine.Mark] = []
 var args = CommandLine.arguments.dropFirst()
 while let a = args.popFirst() {
     switch a {
@@ -137,12 +141,21 @@ while let a = args.popFirst() {
     case "--face-cut": guard let v = args.popFirst(), let c = Float(v), c > 0, c <= 1 else { fail("--face-cut needs a level in (0, 1]") }; settings.faceCut = c
     case "--mouth": guard let v = args.popFirst(), let m = MosaicEngine.Mouth(rawValue: v) else { fail("--mouth is asInThePhoto or byzantine") }; settings.mouth = m
     case "--eyes": guard let v = args.popFirst(), let e = MosaicEngine.Eyes(rawValue: v) else { fail("--eyes is asTheyLook or asInThePhoto") }; settings.eyes = e
+    case "--mark":
+        let parts = (args.popFirst() ?? "").split(separator: ":", maxSplits: 2).map(String.init)
+        let points = parts.count == 3 ? parts[2].split(separator: ";").compactMap { p -> SIMD2<Double>? in
+            let xy = p.split(separator: ",").compactMap { Double($0) }
+            return xy.count == 2 ? SIMD2(xy[0], xy[1]) : nil
+        } : []
+        guard parts.count == 3, let kind = MosaicEngine.Mark.Kind(rawValue: parts[0]), let width = Double(parts[1]), width > 0,
+              !points.isEmpty else { fail("--mark is kind:width:x,y;x,y;... (kind line, unline, gold or ungold)") }
+        marks.append(MosaicEngine.Mark(kind: kind, width: width, points: points))
     case "-h", "--help":
-        print("mosaic <photo.ppm> <contours.pgm> <out prefix> [--features f.json]... [--long-side N] [--bed bed.ppm] [--eyes asTheyLook|asInThePhoto] [--mouth asInThePhoto|byzantine] [--face-cut L]"); exit(0)
+        print("mosaic <photo.ppm> <contours.pgm> <out prefix> [--features f.json]... [--long-side N] [--bed bed.ppm] [--eyes asTheyLook|asInThePhoto] [--mouth asInThePhoto|byzantine] [--face-cut L] [--mark kind:width:x,y;...]..."); exit(0)
     default: positional.append(a)
     }
 }
-guard positional.count == 3 else { fail("usage: mosaic <photo.ppm> <contours.pgm> <out prefix> [--features f.json]... [--long-side N] [--bed bed.ppm] [--eyes asTheyLook|asInThePhoto] [--mouth asInThePhoto|byzantine] [--face-cut L]") }
+guard positional.count == 3 else { fail("usage: mosaic <photo.ppm> <contours.pgm> <out prefix> [--features f.json]... [--long-side N] [--bed bed.ppm] [--eyes asTheyLook|asInThePhoto] [--mouth asInThePhoto|byzantine] [--face-cut L] [--mark kind:width:x,y;...]...") }
 
 let clock = ContinuousClock()
 let started = clock.now
@@ -162,7 +175,9 @@ if let n = longSide, n != max(w, h) {
 }
 let contourFile = try PNM(path: positional[1])
 guard contourFile.channels == 1 else { fail("\(positional[1]): the contour map must be a PGM (P5)") }
-let contours = resample(contourFile.samples, contourFile.width, contourFile.height, channels: 1, to: w, h)
+var contours = resample(contourFile.samples, contourFile.width, contourFile.height, channels: 1, to: w, h)
+let recipe = MosaicEngine.Recipe(marks: marks)
+recipe.mark(contours: &contours, width: w, height: h)
 
 var faces: [MosaicEngine.Face] = []
 for f in featureFiles {
@@ -180,8 +195,8 @@ let read = clock.now - started
 
 var trace = MosaicEngine.Trace()
 let made = clock.now
-let mosaic = try MosaicEngine.make(photo: photo, contours: contours, faces: faces, settings: settings,
-                                   cancel: { false }, trace: &trace)
+let mosaic = recipe.laid(try MosaicEngine.make(photo: photo, contours: contours, faces: faces, settings: settings,
+                                               cancel: { false }, trace: &trace))
 let engine = clock.now - made
 
 // The prototype's design JSON: canvas at twice the photo, corners in photo pixels.
