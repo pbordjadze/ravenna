@@ -27,8 +27,10 @@ go back into it (#5).
   the demos' pictures (`ShellDemo.fixedPictures`, `PaintDemoView`) are theirs.
 - **The engine:** templates are mosaics. `Generation/MosaicMaker` (photo cut to its panel → HED
   contours from `EdgeDetector`, faces from `SubjectVision`'s Vision pass mapped by `MosaicFaces` as
-  v0 did → `MosaicEngine.make` → `MosaicCore.template(of:)`) stands where `TemplateGenerator` was,
-  in `ArtworkFactory` (`draft`, `made`, `source`), `CreateModel` and `Library.regenerate` (now
+  v0 did, or for a library picture the faces its bundled mosaics were laid with (`<id>-faces.json`,
+  `MosaicMaker.tracedFaces`, cut to the panel), since Vision may find no painted face and a line
+  in Refine then took the eyes away → `MosaicEngine.make` → `MosaicCore.template(of:)`) stands
+  where `TemplateGenerator` was, in `ArtworkFactory` (`draft`, `made`, `source`), `CreateModel` and `Library.regenerate` (now
   `regenerate(artwork:)`, from the artwork's recipe). A library picture whose recipe matches a
   bundled mosaic (`Recipe.bundledDetail`) is laid from it. `SubjectVision` runs only face landmarks
   and animals; `EdgeDetector` only HED. `Generation/MosaicPicture` draws a mosaic in its finish
@@ -45,7 +47,9 @@ go back into it (#5).
   `Library.loadForPainting` and `regenerate` hand it out as `PaintingDocument.mosaic` (nil when
   missing or not one tile a region plus the grout). `ArtworkDraft` carries `mosaic` and `recipe`.
 - **The create flow:** `CreateModel` is Ravenna's (its recipe, drafts at `MosaicMaker.draftLongSide`
-  while Pieces moves, the engine's mosaics kept per tile recipe, a panel's analysis once). The
+  while Pieces moves, the engine's mosaics kept per tile recipe, a panel's analysis once, which
+  carries on for the next change when the one that asked is superseded: a stroke after a stroke
+  in Refine waits for it rather than starting it again). The
   preview's card (`TemplatePreviewView`) is Paint by Moonlight's folded one (`foldsSettings`, as
   `UNRELEASED` builds have it; `SettingsKey.previewShowsSettings`): the title, Adjust, the summary
   and Start the Mosaic; Adjust shows Pieces and the Ground where the sliders were. The Panel (its

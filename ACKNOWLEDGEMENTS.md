@@ -73,7 +73,8 @@ Apache License, Version 2.0 (in full below).
 - Seeded randomness, so the same photo makes the same mosaic: SplitMix64, Guy Steele, Doug Lea and
   Christine Flood, "Fast Splittable Pseudorandom Number Generators" (2014).
 - Face landmarks: Apple's Vision framework on the device; on the sketchbook's bench, Google's
-  MediaPipe face landmarker (Apache-2.0), which never ships in the app.
+  MediaPipe face landmarker (Apache-2.0), which never ships in the app: the faces it traced on the
+  ancient works ship with their mosaics.
 
 ## PaintCore
 

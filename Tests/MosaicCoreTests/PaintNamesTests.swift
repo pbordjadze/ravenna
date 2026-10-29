@@ -12,7 +12,9 @@ struct PaintNamesTests {
     static func palettes() throws -> [String: [PaletteColor]] {
         let files = try FileManager.default.contentsOfDirectory(at: TemplateTests.mosaics, includingPropertiesForKeys: nil)
         var palettes: [String: [PaletteColor]] = [:]
-        for file in files where file.pathExtension == "json" && file.lastPathComponent != "catalog.json" {
+        // Each mosaic, not the catalog or the faces a work was laid with.
+        for file in files where file.pathExtension == "json" && file.lastPathComponent != "catalog.json"
+            && !file.lastPathComponent.hasSuffix("-faces.json") {
             let mosaic = try JSONDecoder().decode(Mosaic.self, from: Data(contentsOf: file))
             palettes[file.deletingPathExtension().lastPathComponent] = (mosaic.palette + [mosaic.grout]).map {
                 PaletteColor(oklab: ColorScience.encodedToOKLab($0, space: .sRGB), rgb: $0)
