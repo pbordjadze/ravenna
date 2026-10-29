@@ -1,0 +1,80 @@
+{
+  "name": "Ravenna (CI builds)",
+  "identifier": "com.pbordjadze.ravenna.source",
+  "subtitle": "Automatic builds",
+  "iconURL": "https://raw.githubusercontent.com/pbordjadze/ravenna/sidestore/icon.png",
+  "website": "https://github.com/pbordjadze/ravenna",
+  "tintColor": "#C9A24A",
+  "apps": [
+    {
+      "name": "Ravenna",
+      "bundleIdentifier": "com.pbordjadze.ravenna",
+      "developerName": "pbordjadze",
+      "subtitle": "Set a mosaic, tile by tile",
+      "localizedDescription": "Ancient pictures laid as Byzantine mosaics, to set tile by tile. A workshop build: unfinished, and not announced.",
+      "iconURL": "https://raw.githubusercontent.com/pbordjadze/ravenna/sidestore/icon.png",
+      "tintColor": "#C9A24A",
+      "category": "entertainment",
+      "versions": [
+        {
+          "version": "0.1.172",
+          "buildVersion": "172",
+          "date": "2026-10-29T16:11:26Z",
+          "localizedDescription": "Merge claude/ravenna-refine-screen-qa-gs4t1v: Refine keeps a library picture's eyes (#18)",
+          "downloadURL": "https://github.com/pbordjadze/ravenna/releases/download/build-172/Ravenna.ipa",
+          "size": 36223260,
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1.169",
+          "buildVersion": "169",
+          "date": "2026-10-28T06:52:24Z",
+          "localizedDescription": "Merge claude/v1-refine: Refine, Ravenna's own (closes #18)",
+          "downloadURL": "https://github.com/pbordjadze/ravenna/releases/download/build-169/Ravenna.ipa",
+          "size": 36210660,
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1.165",
+          "buildVersion": "165",
+          "date": "2026-10-28T03:20:34Z",
+          "localizedDescription": "Merge claude/v1-names: the paints get their own names (closes #16)",
+          "downloadURL": "https://github.com/pbordjadze/ravenna/releases/download/build-165/Ravenna.ipa",
+          "size": 36165738,
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1.162",
+          "buildVersion": "162",
+          "date": "2026-10-28T02:49:10Z",
+          "localizedDescription": "Merge claude/v1-icon: Apse is Ravenna's icon (closes #15)",
+          "downloadURL": "https://github.com/pbordjadze/ravenna/releases/download/build-162/Ravenna.ipa",
+          "size": 36133438,
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1.154",
+          "buildVersion": "154",
+          "date": "2026-10-28T02:15:49Z",
+          "localizedDescription": "Merge claude/v1-trim: fewer options, Paint by Moonlight's minimalism (#14)",
+          "downloadURL": "https://github.com/pbordjadze/ravenna/releases/download/build-154/Ravenna.ipa",
+          "size": 36686166,
+          "minOSVersion": "26.0"
+        }
+      ],
+      "version": "0.1.172",
+      "versionDate": "2026-10-29T16:11:26Z",
+      "versionDescription": "Merge claude/ravenna-refine-screen-qa-gs4t1v: Refine keeps a library picture's eyes (#18)",
+      "downloadURL": "https://github.com/pbordjadze/ravenna/releases/download/build-172/Ravenna.ipa",
+      "size": 36223260,
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSCameraUsageDescription": "Ravenna uses the camera to take a photo you can turn into a mosaic. The photo stays on your device.",
+          "NSPhotoLibraryAddUsageDescription": "Ravenna saves a mosaic or its time-lapse to your photo library when you choose Save Image or Save Video as you share it."
+        }
+      }
+    }
+  ],
+  "news": []
+}
