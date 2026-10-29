@@ -10,7 +10,10 @@ painted face, found once at Standard and scaled) and "features": "eyes" (only th
 lids, where the landmarker misreads the rest).
 Writes to <out dir>: <id>-<detail>.json (the design in Standard's canvas units: "size", "grout",
 "palette" as sRGB 0...1, "tiles" in laying order, each {"c": flat corners, "p": paint, "s": 1 when stone
-(inside the face), "g": the build stage}), <id>-photo.jpg and catalog.json. Run from the
+(inside the face), "g": the build stage}), <id>-faces.json (Standard's "size" and its "faces", each the
+features it was laid with, in its pixels; none for a work without a face: what the phone's engine lays
+the picture with when no bundled mosaic stands for its recipe, as Vision may find no painted face),
+<id>-photo.jpg and catalog.json. Run from the
 scratch directory that holds venv/, pbn/ (paint-by-number) and models/face_landmarker.task, after
 `swift build -c release` in the repository (MOSAIC= names another build of the CLI)."""
 import json, os, subprocess, sys, urllib.request
@@ -90,6 +93,8 @@ for m in spec["mosaics"]:
                   open(f"{out}/{i}-{detail}.json", "w"), separators=(",", ":"))
         if side == 1024:
             ph = Image.open(f"{work}/{i}-1024.ppm"); ph.save(f"{out}/{i}-photo.jpg", quality=85)
+    faces = [json.load(open(f"{work}/{i}-1024-features.json"))] if m["face"] else []
+    json.dump({"size": list(std), "faces": faces}, open(f"{out}/{i}-faces.json", "w"), separators=(",", ":"))
     entries.append({"id": i, "title": m["title"], "date": m["date"], "place": m["place"],
                     "medium": rec["medium"], "credit": f"The Metropolitan Museum of Art, {rec['creditLine']} ({rec['accessionNumber']}). Public domain.",
                     "url": rec["objectURL"], "tiles": counts})

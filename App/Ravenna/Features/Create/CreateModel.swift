@@ -155,6 +155,10 @@ final class CreateModel {
     }
 
     @ObservationIgnored private var analysis: (key: PanelKey, value: MosaicMaker.Analysis)?
+    /// The analysis under way and the panel and photo it is of: the mosaics asked for meanwhile (a
+    /// stroke after a stroke in Refine) wait for it rather than start it again; a new photo
+    /// cancels it (`cancelAll`).
+    @ObservationIgnored private var analyzing: (key: PanelKey, load: Int, task: Task<MosaicMaker.Analysis, any Error>)?
     /// The engine's mosaics at their own size, newest first, before their ground: a mosaic is a
     /// megabyte or so.
     @ObservationIgnored private var made: [(key: TileKey, mosaic: Mosaic)] = []
@@ -374,6 +378,8 @@ final class CreateModel {
     func cancelAll() {
         loadTask?.cancel()
         fullTask?.cancel()
+        analyzing?.task.cancel()
+        analyzing = nil
         stopDrafts()
         startAsked = false
     }
@@ -513,7 +519,7 @@ final class CreateModel {
             let earlier = draft ? nil : made.first(where: { $0.key == TileKey(recipe) })?.mosaic
             var analysis: MosaicMaker.Analysis?
             if earlier == nil, !MosaicMaker.hasBundled(sample, recipe: recipe) {
-                analysis = try await analysisOf(recipe, photo: photo, load: load)
+                analysis = try await analysisOf(recipe, photo: photo, sample: sample, load: load)
             }
             try Task.checkCancellation()
             let shown = try await Self.render(
@@ -555,8 +561,10 @@ final class CreateModel {
         }
     }
 
-    /// The contours and faces of the recipe's panel of `photo`, found once a panel.
-    private func analysisOf(_ recipe: MosaicEngine.Recipe, photo: CGImage, load: Int) async throws -> MosaicMaker.Analysis {
+    /// The contours and faces of the recipe's panel of `photo`, found once a panel: a library
+    /// picture's faces are those its bundled mosaics were laid with (`MosaicMaker.tracedFaces`).
+    /// The work that asked for it may be cancelled meanwhile; the analysis carries on for the next.
+    private func analysisOf(_ recipe: MosaicEngine.Recipe, photo: CGImage, sample: String?, load: Int) async throws -> MosaicMaker.Analysis {
         let key = PanelKey(recipe)
         if let analysis, analysis.key == key { return analysis.value }
         // Another panel: the status says the mosaic is being laid meanwhile.
@@ -564,7 +572,18 @@ final class CreateModel {
             phase = .generating
             progress = 0
         }
-        let found = try await MosaicMaker.analyze(MosaicMaker.framed(photo, panel: recipe.panel, centre: recipe.centre))
+        let task: Task<MosaicMaker.Analysis, any Error>
+        if let analyzing, analyzing.key == key, analyzing.load == load {
+            task = analyzing.task
+        } else {
+            analyzing?.task.cancel()
+            let traced = MosaicMaker.tracedFaces(sample, photo: photo, panel: recipe.panel, centre: recipe.centre)
+            let framed = MosaicMaker.framed(photo, panel: recipe.panel, centre: recipe.centre)
+            task = Task { try await MosaicMaker.analyze(framed, traced: traced) }
+            analyzing = (key, load, task)
+        }
+        let found = try await task.value
+        if analyzing?.task == task { analyzing = nil }
         if load == loadID { analysis = (key, found) }
         return found
     }

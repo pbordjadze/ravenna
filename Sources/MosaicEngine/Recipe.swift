@@ -167,4 +167,22 @@ nonisolated extension MosaicEngine.Face {
         MosaicEngine.Face(box: box.map { $0 * k }, eyes: eyes.map { $0.map { $0 * k } },
                           lines: lines.map { .init(kind: $0.kind, pts: $0.pts.map { $0.map { $0 * k } }) })
     }
+
+    /// The face in a part of its photo scaled by `k`: the part `width` by `height` from `origin`
+    /// (in the scaled photo's pixels), its features in the part's own pixels. Nil when its box is
+    /// outside the part; else its box kept within the part, as a face found in it is.
+    public func cropped(scale k: Float, origin: SIMD2<Float>, width: Float, height: Float) -> MosaicEngine.Face? {
+        let face = scaled(by: k)
+        guard face.box.count >= 4 else { return nil }
+        let b = face.box
+        guard b[2] - origin.x > 0, b[3] - origin.y > 0, b[0] - origin.x < width, b[1] - origin.y < height else { return nil }
+        func moved(_ p: [Float]) -> [Float] {
+            p.count >= 2 ? [p[0] - origin.x, p[1] - origin.y] + p.dropFirst(2) : p
+        }
+        return MosaicEngine.Face(
+            box: [Swift.max(b[0] - origin.x, 0), Swift.max(b[1] - origin.y, 0),
+                  Swift.min(b[2] - origin.x, width), Swift.min(b[3] - origin.y, height)] + b.dropFirst(4),
+            eyes: face.eyes.map(moved),
+            lines: face.lines.map { .init(kind: $0.kind, pts: $0.pts.map(moved)) })
+    }
 }

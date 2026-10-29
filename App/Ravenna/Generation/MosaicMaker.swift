@@ -3,6 +3,7 @@ import Foundation
 import MosaicCore
 import MosaicEngine
 import MosaicKit
+import os
 import PaintCore
 
 /// Ravenna's engine in the app, where Paint by Moonlight's `TemplateGenerator` was: a photo, cut to
@@ -35,27 +36,61 @@ nonisolated enum MosaicMaker {
     /// `photo` cut to the recipe's panel (the whole of it for `.whole`).
     static func framed(_ photo: CGImage, panel: MosaicEngine.Panel, centre: SIMD2<Double>) -> CGImage {
         guard panel != .whole else { return photo }
-        let w = Double(photo.width), h = Double(photo.height)
-        let unit = panel.rect(width: w, height: h, centre: centre)
-        let r = CGRect(x: unit.x * w, y: unit.y * h, width: unit.width * w, height: unit.height * h).integral
-        return photo.cropping(to: r) ?? photo
+        return photo.cropping(to: panelRect(photo, panel: panel, centre: centre)) ?? photo
     }
 
-    /// The contours and faces of `framed`. Seconds of CPU (a VGG-16 pass and Vision's).
+    /// The part of `photo` its panel cuts (`framed`), in its pixels.
+    static func panelRect(_ photo: CGImage, panel: MosaicEngine.Panel, centre: SIMD2<Double>) -> CGRect {
+        let w = Double(photo.width), h = Double(photo.height)
+        guard panel != .whole else { return CGRect(x: 0, y: 0, width: w, height: h) }
+        let unit = panel.rect(width: w, height: h, centre: centre)
+        return CGRect(x: unit.x * w, y: unit.y * h, width: unit.width * w, height: unit.height * h).integral
+    }
+
+    /// A library picture's `<id>-faces.json`: the Standard picture's size, and its faces in its pixels.
+    private struct TracedFaces: Decodable {
+        let size: [Float]
+        let faces: [MosaicEngine.Face]
+    }
+
+    /// The faces the bench traced on a library picture for its bundled mosaics (MediaPipe's
+    /// landmarks, `<id>-faces.json` from sketchbook/bundle.py, none for a work without a face),
+    /// in the pixels of `photo` cut to its panel: so a mosaic the engine lays of it (a line drawn
+    /// in Refine, another count or panel) sets the eyes its bundled mosaic does, whatever Vision
+    /// makes of a painted face (in CI's simulator, the engine's mosaic of one had no eyes).
+    /// Nil for a picture without them (a photo: Vision's are its own).
+    static func tracedFaces(_ sample: String?, photo: CGImage, panel: MosaicEngine.Panel, centre: SIMD2<Double>) -> [MosaicEngine.Face]? {
+        guard let sample, let url = Bundle.main.url(forResource: "\(sample)-faces", withExtension: "json"),
+              let data = try? Data(contentsOf: url), let traced = try? JSONDecoder().decode(TracedFaces.self, from: data),
+              traced.size.count == 2, traced.size[0] > 0
+        else { return nil }
+        let r = panelRect(photo, panel: panel, centre: centre)
+        let k = Float(photo.width) / traced.size[0]
+        return traced.faces.compactMap {
+            $0.cropped(scale: k, origin: SIMD2(Float(r.minX), Float(r.minY)), width: Float(r.width), height: Float(r.height))
+        }
+    }
+
+    /// The contours and faces of `framed`: `traced`, in its pixels, when given
+    /// (`tracedFaces`), else Vision's. Seconds of CPU (a VGG-16 pass and Vision's).
     @concurrent
-    static func analyze(_ framed: CGImage) async throws -> Analysis {
+    static func analyze(_ framed: CGImage, traced: [MosaicEngine.Face]? = nil) async throws -> Analysis {
         let size = EdgeDetector.mapSize(width: framed.width, height: framed.height, maxLongSide: EdgeDetector.maximumLongSide)
         let small = try pixels(of: framed, width: size.width, height: size.height)
         try Task.checkCancellation()
         let contours = try EdgeDetector.edgeMap(for: small, maxLongSide: EdgeDetector.maximumLongSide, cancel: .task)
         try Task.checkCancellation()
         let faces: [MosaicEngine.Face]
-        if let image = PhotoLoader.cgImage(from: small) {
+        if let traced {
+            faces = traced.map { $0.scaled(by: Float(small.width) / Float(max(framed.width, 1))) }
+        } else if let image = PhotoLoader.cgImage(from: small) {
             let findings = await SubjectVision.findings(in: image)
             faces = MosaicFaces.features(findings, width: small.width, height: small.height, rgba: small.pixels)
         } else {
             faces = []
         }
+        let eyes = faces.reduce(0) { $0 + $1.eyes.count }, by = traced == nil ? "Vision" : "the bench"
+        Log.create.notice("Faces: \(faces.count, privacy: .public), with \(eyes, privacy: .public) eyes, from \(by, privacy: .public)")
         try Task.checkCancellation()
         return Analysis(contours: contours, faces: faces)
     }

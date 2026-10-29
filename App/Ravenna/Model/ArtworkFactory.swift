@@ -53,7 +53,8 @@ nonisolated enum ArtworkFactory {
             mosaic = bundled
         } else {
             let framed = MosaicMaker.framed(photo, panel: recipe.panel, centre: recipe.centre)
-            let analysis = try await MosaicMaker.analyze(framed)
+            let traced = MosaicMaker.tracedFaces(sampleName, photo: photo, panel: recipe.panel, centre: recipe.centre)
+            let analysis = try await MosaicMaker.analyze(framed, traced: traced)
             mosaic = recipe.laid(try MosaicMaker.make(framed, analysis: analysis, recipe: recipe, side: recipe.longSide,
                                                       progress: { progress?($0) }))
         }

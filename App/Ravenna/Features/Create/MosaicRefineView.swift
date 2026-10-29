@@ -172,6 +172,8 @@ struct MosaicRefineView: View {
 
     private var isLaying: Bool {
         guard let preview = model.preview else { return true }
+        // A mosaic that failed is laid no more: the note would turn for ever.
+        if case .failed = model.phase { return false }
         return preview.isDraft || preview.recipe != model.recipe || model.phase == .generating
     }
 
